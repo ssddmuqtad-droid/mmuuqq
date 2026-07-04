@@ -12,7 +12,8 @@
   "services": {
     "web": {
       "environment": {
-        "ALLOW_SQLITE_FALLBACK": "false"
+        "ALLOW_SQLITE_FALLBACK": "false",
+        "RAILWAY_DEPLOY_TIMESTAMP": "2026-07-04-16-30"
       }
     }
   }
