@@ -1,0 +1,12 @@
+{% extends 'properties/dashboard_base.html' %}
+{% block title %}حذف خطة{% endblock %}
+{% block dashboard_content %}
+<div class="card" style="padding:28px; max-width:480px;">
+  <p>هل تريد حذف خطة <strong>{{ plan.name }}</strong>؟</p>
+  <form method="post" style="display:flex; gap:12px; margin-top:20px;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">تأكيد الحذف</button>
+    <a href="{% url 'subscription_plans_list' %}" class="btn btn-outline">إلغاء</a>
+  </form>
+</div>
+{% endblock %}

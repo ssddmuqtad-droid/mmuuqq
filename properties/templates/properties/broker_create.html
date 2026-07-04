@@ -1,0 +1,25 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}إنشاء دلال جديد{% endblock %}
+
+{% block content %}
+<div class="dashboard-container" style="max-width:640px;margin:2rem auto">
+  <div class="dashboard-header">
+    <h1>إنشاء حساب دلال جديد</h1>
+    <a href="{% url 'broker_list' %}" class="btn btn-outline">← رجوع</a>
+  </div>
+  <div class="form-card">
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+      <div class="form-group" style="margin-bottom:1rem">
+        <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+        {{ field }}
+        {% if field.errors %}<div class="alert alert-error">{{ field.errors.0 }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary">إنشاء الحساب</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

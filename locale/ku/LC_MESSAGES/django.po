@@ -1,0 +1,80 @@
+# Kurdish translations
+msgid ""
+msgstr ""
+"Project-Id-Version: Muq Real Estate\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-30 14:55+0000\n"
+"PO-Revision-Date: 2026-06-30 14:55+0000\n"
+"Last-Translator: \n"
+"Language-Team: Kurdish\n"
+"Language: ku\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Channels"
+msgstr "کەناڵەکان"
+
+msgid "Property Channels"
+msgstr "کەناڵەکانی خانووبەرە"
+
+msgid "Browse properties by channel - Brokers, Users, and Admin"
+msgstr "خانووبەرەکان بەپێی کەناڵ - دەلالان، بەکارهێنەران، و بەڕێوەبەر"
+
+msgid "Search channels..."
+msgstr "گەڕان بە کەناڵەکان..."
+
+msgid "Search"
+msgstr "گەڕان"
+
+msgid "Brokers"
+msgstr "دەلالان"
+
+msgid "Browse all properties listed by verified brokers"
+msgstr "هەموو خانووبەرەکان پیشاندان لەلایەن دەلالانی پشتڕاستکراو"
+
+msgid "Users"
+msgstr "بەکارهێنەران"
+
+msgid "Browse all properties listed by users"
+msgstr "هەموو خانووبەرەکان پیشاندان لەلایەن بەکارهێنەران"
+
+msgid "Platform Admin"
+msgstr "بەڕێوەبەری پلاتفۆرم"
+
+msgid "Browse all properties in the platform (Admin view)"
+msgstr "هەموو خانووبەرەکان لە پلاتفۆرم (دۆخی بەڕێوەبەر)"
+
+msgid "Properties"
+msgstr "خانووبەرە"
+
+msgid "Members"
+msgstr "ئەندامان"
+
+msgid "Enter"
+msgstr "چوونەژوورەوە"
+
+msgid "No channels found"
+msgstr "هیچ کەناڵێک نەدۆزرایەوە"
+
+msgid "Try searching with different keywords"
+msgstr "هەوڵبدە بە گەڕان بە وشەی جیاواز"
+
+msgid "Channel link copied"
+msgstr "بەستەری کەناڵ کۆپی کرا"
+
+msgid "Home"
+msgstr "سەرەتا"
+
+msgid "Favorites"
+msgstr "دڵخوازەکان"
+
+msgid "Settings"
+msgstr "ڕێکخستنەکان"
+
+msgid "Login"
+msgstr "چوونەژوورەوە"
+
+msgid "Logout"
+msgstr "دەرچوون"

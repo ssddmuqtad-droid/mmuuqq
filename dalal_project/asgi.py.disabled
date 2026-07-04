@@ -1,0 +1,34 @@
+"""
+ASGI config for dalal_project.
+
+Uses Django HTTP by default. WebSocket routing is enabled when channels is
+installed and CHANNEL_LAYERS is configured in settings.
+"""
+
+import os
+import sys
+
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dalal_project.settings')
+
+from django.core.asgi import get_asgi_application
+
+django_asgi_app = get_asgi_application()
+
+try:
+    from channels.auth import AuthMiddlewareStack
+    from channels.routing import ProtocolTypeRouter, URLRouter
+
+    from . import routing
+
+    application = ProtocolTypeRouter({
+        'http': django_asgi_app,
+        'websocket': AuthMiddlewareStack(
+            URLRouter(routing.websocket_urlpatterns)
+        ),
+    })
+except ImportError:
+    application = django_asgi_app

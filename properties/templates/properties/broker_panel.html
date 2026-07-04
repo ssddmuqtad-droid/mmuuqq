@@ -1,0 +1,89 @@
+{% extends 'properties/base.html' %}
+{% load price_filters %}
+
+{% block title %}لوحة الدلال{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-badge"><span class="badge-icon">👤</span><span>لوحة الدلال</span></div>
+    <h1>{{ broker.display_name }}</h1>
+    <p>
+      {{ broker.get_role_display }} — {% if broker.subscription_plan %}{{ broker.subscription_plan.name }}{% else %}غير مشترك{% endif %}
+      {% if broker.is_verified %}<span class="verified-badge">✅ دلال موثق</span>{% endif %}
+    </p>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline">لوحة التحكم</a>
+      <a href="{% url 'broker_messages' %}" class="btn btn-sm btn-outline">الرسائل</a>
+      <a href="{% url 'properties_map' %}" class="btn btn-sm btn-outline">الخريطة</a>
+    </div>
+  </div>
+
+  <!-- Subscription Info Card -->
+  <div class="form-card" style="margin-top:1.5rem; background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 140, 90, 0.05) 50%, rgba(255, 107, 53, 0.1) 100%);">
+    <h3>معلومات الاشتراك</h3>
+    <div class="dashboard-stats" style="margin-top:1rem">
+      <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-content"><div class="stat-number">{% if property_limit == 'inf' %}غير محدود{% else %}{{ property_limit }}{% endif %}</div><div class="stat-label">الحد الأقصى للعقارات</div></div></div>
+      <div class="stat-card"><div class="stat-icon">🏠</div><div class="stat-content"><div class="stat-number">{{ stats.total_properties }}</div><div class="stat-label">العقارات المنشورة</div></div></div>
+      <div class="stat-card"><div class="stat-icon">➕</div><div class="stat-content"><div class="stat-number">{% if remaining_properties == 'inf' %}غير محدود{% else %}{{ remaining_properties }}{% endif %}</div><div class="stat-label">المتبقي</div></div></div>
+      <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-content"><div class="stat-number">{% if days_elapsed is None %}—{% else %}{{ days_elapsed }}{% endif %}</div><div class="stat-label">الأيام المنقضية</div></div></div>
+      <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-content"><div class="stat-number">{% if days_remaining is None %}—{% elif days_remaining == 0 %}منتهي{% else %}{{ days_remaining }}{% endif %}</div><div class="stat-label">الأيام المتبقية</div></div></div>
+      <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-content"><div class="stat-number">{{ subscription_status }}</div><div class="stat-label">حالة الاشتراك</div></div></div>
+    </div>
+    {% if not can_add_property %}
+    <div class="alert alert-warning" style="margin-top:1rem; padding:1rem; background:rgba(255, 193, 7, 0.1); border:1px solid rgba(255, 193, 7, 0.3); border-radius:8px;">
+      ⚠️ انتهت صلاحية اشتراكك أو وصلت إلى الحد الأقصى للعقارات. يرجى التجديد للاستمرار.
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="dashboard-stats">
+    <div class="stat-card"><div class="stat-icon">👁️</div><div class="stat-content"><div class="stat-number">{{ stats.total_views }}</div><div class="stat-label">المشاهدات</div></div></div>
+    <div class="stat-card"><div class="stat-icon">💬</div><div class="stat-content"><div class="stat-number">{{ stats.unread_messages }}</div><div class="stat-label">رسائل جديدة</div></div></div>
+    <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-content"><div class="stat-number">{{ stats.sold_properties }}</div><div class="stat-label">مباعة</div></div></div>
+    <div class="stat-card"><div class="stat-icon">🔑</div><div class="stat-content"><div class="stat-number">{{ stats.rent_properties }}</div><div class="stat-label">مؤجرة</div></div></div>
+    <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-content"><div class="stat-number">{{ stats.total_commissions|default:0|format_price }}</div><div class="stat-label">العمولات</div></div></div>
+  </div>
+
+  <div class="form-card" style="margin-top:1.5rem">
+    <h3>آخر العقارات</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>العقار</th><th>الحي</th><th>السعر</th><th>مشاهدات</th></tr></thead>
+        <tbody>
+          {% for p in my_properties %}
+          <tr>
+            <td><a href="{{ p.get_absolute_url }}">{{ p.display_title|truncatechars:35 }}</a></td>
+            <td>{{ p.district }}</td>
+            <td>{{ p.price_formatted }}</td>
+            <td>{{ p.views_count }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="text-align:center">لا توجد عقارات</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if sub_brokers %}
+  <div class="form-card" style="margin-top:1.5rem">
+    <h3>الدلالين التابعين</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>الاسم</th><th>العقارات</th><th>الحالة</th></tr></thead>
+        <tbody>
+          {% for b in sub_brokers %}
+          <tr>
+            <td>{{ b.display_name }}</td>
+            <td>{{ b.property_count }}</td>
+            <td>{% if b.is_active %}نشط{% else %}موقوف{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

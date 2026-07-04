@@ -1,0 +1,204 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}الرسائل{% endblock %}
+
+{% block content %}
+<section class="messages-section">
+  <div class="container">
+    <div class="section-header">
+      <h1 class="section-title">الرسائل</h1>
+      <p class="section-subtitle">التواصل مع الدلالين الآخرين</p>
+    </div>
+
+    <div class="messages-nav">
+      <a href="?type=inbox" class="nav-link {% if message_type == 'inbox' %}active{% endif %}">
+        <span class="nav-icon">📥</span>
+        <span>الوارد</span>
+      </a>
+      <a href="?type=sent" class="nav-link {% if message_type == 'sent' %}active{% endif %}">
+        <span class="nav-icon">📤</span>
+        <span>المرسلة</span>
+      </a>
+      <a href="{% url 'send_broker_message' %}" class="nav-link">
+        <span class="nav-icon">✏️</span>
+        <span>رسالة جديدة</span>
+      </a>
+    </div>
+
+    <div class="messages-container">
+      {% if messages %}
+        <div class="messages-list">
+          {% for msg in messages %}
+          <div class="message-item {% if not msg.is_read %}unread{% endif %}">
+            <div class="message-header">
+              <div class="message-sender">
+                {% if message_type == 'inbox' %}
+                  <span class="sender-name">{{ msg.sender.get_full_name|default:msg.sender.username }}</span>
+                {% else %}
+                  <span class="sender-name">إلى: {{ msg.recipient.get_full_name|default:msg.recipient.username }}</span>
+                {% endif %}
+                <span class="message-date">{{ msg.created_at|date:"Y-m-d H:i" }}</span>
+              </div>
+              <div class="message-actions">
+                <a href="{% url 'broker_message_detail' msg.id %}" class="btn btn-sm btn-primary">عرض</a>
+              </div>
+            </div>
+            <div class="message-content">
+              <p>{{ msg.message|truncatewords:20 }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="no-messages">
+          <p>لا توجد رسائل</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<style>
+.messages-section {
+  padding: 40px 0;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.section-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+}
+
+.section-subtitle {
+  color: #666;
+  margin: 0;
+}
+
+.messages-nav {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  justify-content: center;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: white;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+  transition: all 0.3s;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.nav-link.active {
+  background: #667eea;
+  color: white;
+}
+
+.nav-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+}
+
+.messages-container {
+  background: white;
+  border-radius: 10px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.message-item {
+  padding: 20px;
+  border: 2px solid #eee;
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+
+.message-item.unread {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.message-item:hover {
+  border-color: #667eea;
+  transform: translateX(5px);
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.message-sender {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sender-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.message-date {
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.message-content p {
+  color: #666;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background: #667eea;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #5568d3;
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 0.9rem;
+}
+
+.no-messages {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>{{ title }}</h1>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'dallal_subscriptions_list' %}" class="btn btn-outline">← قائمة الاشتراكات</a>
+    </div>
+  </div>
+
+  <div class="form-card" style="margin-top: 1.5rem;">
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="form-group">
+        <label class="form-label">الدلال</label>
+        {{ form.broker }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">نوع الاشتراك</label>
+        {{ form.subscription_type }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">تاريخ البداية</label>
+        {{ form.start_date }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">تاريخ النهاية</label>
+        {{ form.end_date }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">التجديد التلقائي</label>
+        {{ form.auto_renewal }}
+      </div>
+
+      {% if subscription %}
+      <div class="alert alert-info" style="margin-top: 1rem;">
+        <strong>معلومات إضافية:</strong><br>
+        الأيام المتبقية: {{ subscription.get_days_remaining }}<br>
+        الأيام المنقضية: {{ subscription.get_days_elapsed }}<br>
+        العقارات المتبقية: {{ subscription.get_properties_remaining }}<br>
+        منتهي: {% if subscription.is_expired %}نعم{% else %}لا{% endif %}
+      </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">حفظ</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

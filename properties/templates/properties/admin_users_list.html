@@ -1,0 +1,43 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}إدارة المستخدمين{% endblock %}
+{% block dashboard_title %}إدارة <span>المستخدمين</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'admin_create_user' %}" class="btn btn-primary">➕ مستخدم جديد</a>
+<a href="{% url 'dashboard' %}?tab=users" class="btn btn-outline">لوحة التحكم</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="padding:0; overflow:hidden;">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>المستخدم</th>
+        <th>البريد</th>
+        <th>النوع</th>
+        <th>التاريخ</th>
+        <th>إجراءات</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td><strong>{{ user.get_full_name|default:user.username }}</strong></td>
+        <td>{{ user.email|default:'—' }}</td>
+        <td><span class="badge">{{ user.user_type }}</span></td>
+        <td>{{ user.date_joined|date:"Y/m/d" }}</td>
+        <td style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a href="{% url 'admin_edit_user' user.id %}" class="btn btn-sm btn-outline">تعديل</a>
+          <a href="{% url 'admin_reset_password' user.id %}" class="btn btn-sm btn-outline">كلمة المرور</a>
+          <a href="{% url 'admin_change_user_type' user.id %}" class="btn btn-sm btn-outline">النوع</a>
+          <a href="{% url 'admin_delete_user' user.id %}" class="btn btn-sm btn-danger">حذف</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" style="text-align:center; padding:40px;">لا يوجد مستخدمين</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

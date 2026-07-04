@@ -1,0 +1,383 @@
+/**
+ * RESPONSIVE DESIGN
+ * Mobile-First Approach
+ * Optimized for all devices
+ */
+
+/* ============================================================================
+   MOBILE FIRST - 320px
+   ============================================================================ */
+
+@media (max-width: 480px) {
+  :root {
+    --text-5xl: 1.875rem;
+    --text-4xl: 1.5rem;
+    --text-3xl: 1.25rem;
+    --text-2xl: 1.125rem;
+    --spacing-lg: 1rem;
+    --spacing-xl: 1.5rem;
+  }
+
+  .container {
+    padding: 0 var(--spacing-md);
+  }
+
+  .navbar {
+    height: 60px;
+    padding: 0 var(--spacing-md);
+  }
+
+  .navbar-nav {
+    display: none;
+  }
+
+  .navbar-search {
+    max-width: none;
+    flex: 1;
+  }
+
+  .navbar-search input {
+    font-size: 16px;
+  }
+
+  .hero {
+    min-height: 70vh;
+    padding: var(--spacing-xl) var(--spacing-md);
+  }
+
+  .hero-title {
+    font-size: var(--text-3xl);
+  }
+
+  .hero-subtitle {
+    font-size: var(--text-base);
+  }
+
+  .hero-search {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .property-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .property-card {
+    height: auto;
+  }
+
+  .property-image {
+    height: 200px;
+  }
+
+  .btn {
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: var(--text-sm);
+    width: 100%;
+  }
+
+  .btn-sm {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--text-xs);
+  }
+
+  .form-group {
+    margin-bottom: var(--spacing-md);
+  }
+
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+
+  .bottom-nav {
+    display: flex;
+  }
+
+  body {
+    padding-bottom: 60px;
+  }
+
+  h1 { font-size: var(--text-3xl); }
+  h2 { font-size: var(--text-2xl); }
+  h3 { font-size: var(--text-xl); }
+
+  .section {
+    padding: var(--spacing-2xl) 0;
+  }
+
+  .section-title {
+    margin-bottom: var(--spacing-2xl);
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* ============================================================================
+   TABLET - 768px
+   ============================================================================ */
+
+@media (min-width: 481px) and (max-width: 1024px) {
+  :root {
+    --text-5xl: 2.5rem;
+    --text-4xl: 2rem;
+    --text-3xl: 1.5rem;
+  }
+
+  .container {
+    padding: 0 var(--spacing-lg);
+  }
+
+  .navbar-nav {
+    gap: var(--spacing-lg);
+  }
+
+  .hero-search {
+    grid-template-columns: 1fr 1fr auto;
+  }
+
+  .property-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .footer-content {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .bottom-nav {
+    display: flex;
+  }
+
+  body {
+    padding-bottom: 60px;
+  }
+
+  .hide-tablet {
+    display: none !important;
+  }
+}
+
+/* ============================================================================
+   DESKTOP - 1025px+
+   ============================================================================ */
+
+@media (min-width: 1025px) {
+  .navbar-nav {
+    display: flex !important;
+  }
+
+  .bottom-nav {
+    display: none !important;
+  }
+
+  body {
+    padding-bottom: 0 !important;
+  }
+
+  .property-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+
+  .hero-search {
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  }
+
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/* ============================================================================
+   LANDSCAPE MODE
+   ============================================================================ */
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .navbar {
+    height: 50px;
+  }
+
+  .hero {
+    min-height: 80vh;
+  }
+
+  .section {
+    padding: var(--spacing-lg) 0;
+  }
+
+  .hero-title {
+    margin-bottom: var(--spacing-md);
+  }
+
+  .hero-subtitle {
+    margin-bottom: var(--spacing-lg);
+  }
+}
+
+/* ============================================================================
+   LARGE SCREENS - 1440px+
+   ============================================================================ */
+
+@media (min-width: 1440px) {
+  .container {
+    max-width: 1440px;
+    padding: 0 var(--spacing-2xl);
+  }
+
+  .hero {
+    min-height: 100vh;
+  }
+
+  .property-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .section {
+    padding: var(--spacing-3xl) 0;
+  }
+
+  h1 { font-size: var(--text-6xl); }
+  h2 { font-size: var(--text-5xl); }
+  h3 { font-size: var(--text-4xl); }
+}
+
+/* ============================================================================
+   ULTRA WIDE - 1920px+
+   ============================================================================ */
+
+@media (min-width: 1920px) {
+  .container {
+    max-width: 1920px;
+    padding: 0 var(--spacing-3xl);
+  }
+
+  .property-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .section {
+    padding: var(--spacing-3xl) 0;
+  }
+}
+
+/* ============================================================================
+   TOUCH DEVICES
+   ============================================================================ */
+
+@media (hover: none) and (pointer: coarse) {
+  .btn {
+    padding: var(--spacing-lg) var(--spacing-xl);
+    min-height: 44px;
+  }
+
+  .navbar-icon-btn,
+  .property-action-btn,
+  .social-link {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .property-card:active {
+    transform: translateY(-4px);
+  }
+
+  /* Remove hover effects on touch */
+  .hover-lift:hover {
+    transform: none;
+  }
+
+  .property-actions {
+    opacity: 1;
+  }
+}
+
+/* ============================================================================
+   HIGH RESOLUTION DISPLAYS
+   ============================================================================ */
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Already using vector fonts and CSS, so no changes needed */
+}
+
+/* ============================================================================
+   REDUCED MOTION
+   ============================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================================
+   PRINT STYLES
+   ============================================================================ */
+
+@media print {
+  .navbar,
+  .bottom-nav,
+  .footer,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  .property-card {
+    page-break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+
+  a {
+    color: black;
+  }
+
+  a::after {
+    content: " (" attr(href) ")";
+  }
+}
+
+/* ============================================================================
+   SPECIFIC BREAKPOINTS
+   ============================================================================ */
+
+/* Small devices (320px - 480px) */
+@media (max-width: 480px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+  .grid-4 { grid-template-columns: 1fr; }
+}
+
+/* Medium devices (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Large devices (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-4 { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Extra large devices (1025px+) */
+@media (min-width: 1025px) {
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+}

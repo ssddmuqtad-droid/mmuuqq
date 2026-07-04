@@ -1,0 +1,445 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}تواصل معنا{% endblock %}
+
+{% block content %}
+<section class="contact-hero">
+  <div class="contact-hero-bg"></div>
+  <div class="container contact-hero-content">
+    <div class="contact-badge">
+      <span class="badge-icon">💬</span>
+      <span>تواصل معنا</span>
+    </div>
+    <h1>نحن هنا لمساعدتك</h1>
+    <p>تواصل مع فريق دلال في أي وقت — نحن سعداء بخدمتك</p>
+  </div>
+</section>
+
+<div class="container contact-container">
+  <div class="contact-info-section">
+    <div class="contact-info-header">
+      <h2>معلومات التواصل</h2>
+      <p>طرق متعددة للتواصل معنا</p>
+    </div>
+    
+    <div class="contact-cards">
+      <div class="contact-card">
+        <div class="contact-card-icon">
+          <span class="icon-emoji">📞</span>
+        </div>
+        <div class="contact-card-content">
+          <h3>الهاتف</h3>
+          <p><a href="tel:{{ settings.broker_phone }}">{{ settings.broker_phone }}</a></p>
+        </div>
+      </div>
+      
+      {% if settings.broker_email %}
+      <div class="contact-card">
+        <div class="contact-card-icon">
+          <span class="icon-emoji">✉️</span>
+        </div>
+        <div class="contact-card-content">
+          <h3>البريد الإلكتروني</h3>
+          <p><a href="mailto:{{ settings.broker_email }}">{{ settings.broker_email }}</a></p>
+        </div>
+      </div>
+      {% endif %}
+      
+      {% if settings.broker_address %}
+      <div class="contact-card">
+        <div class="contact-card-icon">
+          <span class="icon-emoji">📍</span>
+        </div>
+        <div class="contact-card-content">
+          <h3>العنوان</h3>
+          <p>{{ settings.broker_address }}</p>
+        </div>
+      </div>
+      {% endif %}
+      
+      {% if settings.whatsapp %}
+      <a href="https://wa.me/{{ settings.whatsapp }}" class="whatsapp-btn" target="_blank" rel="noopener">
+        <span class="whatsapp-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.881 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </span>
+        <span>محادثة واتساب</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="contact-form-section">
+    <div class="contact-form-card">
+      <div class="form-header">
+        <div class="form-icon">✉️</div>
+        <h2>أرسل رسالة</h2>
+        <p>املأ النموذج أدناه وسنتواصل معك قريباً</p>
+      </div>
+      
+      <form method="post" action="{% url 'send_message' %}" class="contact-form">
+        {% csrf_token %}
+        <div class="form-group">
+          <label>
+            <span class="label-icon">👤</span>
+            {{ form.name.label }}
+          </label>
+          {{ form.name }}
+        </div>
+        
+        <div class="form-group">
+          <label>
+            <span class="label-icon">📧</span>
+            {{ form.email.label }}
+          </label>
+          {{ form.email }}
+        </div>
+        
+        <div class="form-group">
+          <label>
+            <span class="label-icon">📱</span>
+            {{ form.phone.label }}
+          </label>
+          {{ form.phone }}
+        </div>
+        
+        <div class="form-group">
+          <label>
+            <span class="label-icon">💬</span>
+            {{ form.message.label }}
+          </label>
+          {{ form.message }}
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-lg submit-btn">
+          <span class="btn-icon">🚀</span>
+          <span>إرسال الرسالة</span>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.contact-hero {
+  position: relative;
+  padding: 100px 20px 60px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.contact-hero-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 140, 90, 0.05) 50%, rgba(255, 107, 53, 0.1) 100%);
+  z-index: 1;
+}
+
+.contact-hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+.contact-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 107, 53, 0.2);
+  border: 1px solid rgba(255, 107, 53, 0.3);
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 24px;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.contact-hero h1 {
+  font-size: 3rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ffffff 0%, #ff8c5a 50%, #ff6b35 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 16px;
+  letter-spacing: -0.5px;
+}
+
+.contact-hero p {
+  font-size: 1.2rem;
+  color: var(--text-light);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.contact-container {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 48px;
+  padding: 60px 20px;
+  max-width: 1200px;
+}
+
+.contact-info-section {
+  animation: slideInRight 0.6s ease-out;
+}
+
+.contact-info-header {
+  margin-bottom: 32px;
+}
+
+.contact-info-header h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.contact-info-header p {
+  color: var(--text-light);
+  font-size: 1rem;
+}
+
+.contact-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.contact-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  transition: all 0.3s ease;
+}
+
+.contact-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.2);
+}
+
+.contact-card-icon {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-emoji {
+  font-size: 1.8rem;
+}
+
+.contact-card-content h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.contact-card-content p {
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.contact-card-content a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.contact-card-content a:hover {
+  color: var(--primary-light);
+}
+
+.whatsapp-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+  color: #fff;
+  text-decoration: none;
+  padding: 16px 24px;
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(37, 211, 102, 0.3);
+}
+
+.whatsapp-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(37, 211, 102, 0.4);
+}
+
+.whatsapp-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.contact-form-section {
+  animation: slideInLeft 0.6s ease-out;
+}
+
+.contact-form-card {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+.contact-form-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.form-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.form-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.form-header h2 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.form-header p {
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.contact-form .form-group {
+  margin-bottom: 0;
+}
+
+.contact-form label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.label-icon {
+  font-size: 1.1rem;
+}
+
+.contact-form input,
+.contact-form textarea {
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  width: 100%;
+  font-family: inherit;
+}
+
+.contact-form input:focus,
+.contact-form textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.contact-form input::placeholder,
+.contact-form textarea::placeholder {
+  color: var(--text-light);
+}
+
+.contact-form textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 32px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(255, 107, 53, 0.4);
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+}
+
+@media (max-width: 768px) {
+  .contact-container {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 40px 20px;
+  }
+
+  .contact-hero h1 {
+    font-size: 2rem;
+  }
+
+  .contact-hero p {
+    font-size: 1rem;
+  }
+
+  .contact-form-card {
+    padding: 28px;
+  }
+
+  .form-header h2 {
+    font-size: 1.5rem;
+  }
+}
+</style>
+{% endblock %}

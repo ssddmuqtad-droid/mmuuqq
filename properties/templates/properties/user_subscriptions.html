@@ -1,0 +1,9 @@
+{% extends 'properties/dashboard_base.html' %}
+{% block title %}اشتراكاتي{% endblock %}
+{% block dashboard_content %}
+<div class="card" style="padding:20px;">
+  {% for sub in subscriptions %}
+  <div style="padding:12px 0; border-bottom:1px solid var(--border);">{{ sub }}</div>
+  {% empty %}<p>لا توجد اشتراكات نشطة</p>{% endfor %}
+</div>
+{% endblock %}

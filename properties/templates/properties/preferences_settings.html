@@ -1,0 +1,165 @@
+{% extends "properties/base.html" %}
+{% load static %}
+
+{% block title %}التفضيلات{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-info">
+      <h1>التفضيلات</h1>
+      <p>تخصيص تجربتك في التطبيق</p>
+    </div>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم</a>
+    </div>
+  </div>
+
+  <div class="settings-container">
+    <form method="post" class="settings-form">
+      {% csrf_token %}
+      
+      <!-- Language -->
+      <div class="settings-section">
+        <h2>اللغة</h2>
+        
+        <div class="form-group">
+          <label>لغة التطبيق</label>
+          <select name="language" class="form-select">
+            <option value="ar" {% if settings.language == 'ar' %}selected{% endif %}>العربية</option>
+            <option value="en" {% if settings.language == 'en' %}selected{% endif %}>English</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Theme -->
+      <div class="settings-section">
+        <h2>المظهر</h2>
+        
+        <div class="form-group">
+          <label>سمة التطبيق</label>
+          <select name="theme" class="form-select">
+            <option value="light" {% if settings.theme == 'light' %}selected{% endif %}>فاتح</option>
+            <option value="dark" {% if settings.theme == 'dark' %}selected{% endif %}>داكن</option>
+            <option value="auto" {% if settings.theme == 'auto' %}selected{% endif %}>تلقائي</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Timezone -->
+      <div class="settings-section">
+        <h2>المنطقة الزمنية</h2>
+        
+        <div class="form-group">
+          <label>المنطقة الزمنية</label>
+          <select name="timezone" class="form-select">
+            <option value="Asia/Riyadh" {% if settings.timezone == 'Asia/Riyadh' %}selected{% endif %}>الرياض (GMT+3)</option>
+            <option value="Asia/Dubai" {% if settings.timezone == 'Asia/Dubai' %}selected{% endif %}>دبي (GMT+4)</option>
+            <option value="Asia/Cairo" {% if settings.timezone == 'Asia/Cairo' %}selected{% endif %}>القاهرة (GMT+2)</option>
+            <option value="Europe/London" {% if settings.timezone == 'Europe/London' %}selected{% endif %}>لندن (GMT+0)</option>
+            <option value="America/New_York" {% if settings.timezone == 'America/New_York' %}selected{% endif %}>نيويورك (GMT-5)</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Currency -->
+      <div class="settings-section">
+        <h2>العملة</h2>
+        
+        <div class="form-group">
+          <label>العملة الافتراضية</label>
+          <select name="currency" class="form-select">
+            <option value="SAR" {% if settings.currency == 'SAR' %}selected{% endif %}>ريال سعودي (SAR)</option>
+            <option value="AED" {% if settings.currency == 'AED' %}selected{% endif %}>درهم إماراتي (AED)</option>
+            <option value="EGP" {% if settings.currency == 'EGP' %}selected{% endif %}>جنيه مصري (EGP)</option>
+            <option value="USD" {% if settings.currency == 'USD' %}selected{% endif %}>دولار أمريكي (USD)</option>
+            <option value="EUR" {% if settings.currency == 'EUR' %}selected{% endif %}>يورو (EUR)</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.settings-container {
+  max-width: 800px;
+  margin: 2rem auto;
+}
+
+.settings-section {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.settings-section h2 {
+  margin: 0 0 1rem 0;
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.form-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-outline:hover {
+  background: var(--bg-alt);
+  border-color: var(--primary);
+}
+</style>
+{% endblock %}

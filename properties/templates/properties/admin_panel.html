@@ -1,0 +1,26 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}لوحة الإدارة{% endblock %}
+
+{% block content %}
+<div class="dashboard-container" style="text-align: center; padding: 60px 20px;">
+  <div style="max-width: 600px; margin: 0 auto;">
+    <div style="font-size: 80px; margin-bottom: 20px;">🔀</div>
+    <h1 style="font-size: 2rem; margin-bottom: 20px; color: var(--text);">تم دمج لوحة الإدارة</h1>
+    <p style="color: var(--text-light); margin-bottom: 30px; line-height: 1.6;">
+      تم دمج لوحة الإدارة مع لوحة التحكم الرئيسية في لوحة موحدة واحدة.
+      <br>
+      سيتم تحويلك تلقائياً إلى لوحة التحكم الموحدة...
+    </p>
+    <a href="{% url 'dashboard' %}?tab=users" class="btn btn-primary">
+      الذهاب إلى لوحة التحكم الموحدة
+    </a>
+  </div>
+</div>
+
+<script>
+setTimeout(function() {
+  window.location.href = "{% url 'dashboard' %}?tab=users";
+}, 2000);
+</script>
+{% endblock %}

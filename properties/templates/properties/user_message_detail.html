@@ -1,0 +1,129 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}رسالة - {% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>✉️ تفاصيل الرسالة</h1>
+                <a href="{% url 'user_messages' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-right"></i> العودة للرسائل
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">المحادثة</h5>
+                        <span class="text-muted">{{ message.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Sender info -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <i class="fas fa-user fa-2x text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">
+                                    {% if message.sender == request.user %}
+                                        أنت
+                                    {% else %}
+                                        {{ message.sender.get_full_name|default:message.sender.username }}
+                                    {% endif %}
+                                </h6>
+                                <small class="text-muted">
+                                    {% if message.sender == request.user %}
+                                        مرسل
+                                    {% else %}
+                                        مستلم
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Message content -->
+                    <div class="message-content mb-4">
+                        <div class="p-3 bg-light rounded">
+                            {{ message.message|linebreaks }}
+                        </div>
+                    </div>
+
+                    <!-- Property info if attached -->
+                    {% if message.property %}
+                    <div class="mb-4">
+                        <div class="card">
+                            <div class="card-body py-2">
+                                <i class="fas fa-home text-primary"></i>
+                                <a href="{% url 'property_detail' message.property.slug %}" target="_blank">
+                                    {{ message.property.display_title }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Reply section -->
+                    {% if message.recipient == request.user %}
+                    <div class="reply-section">
+                        <h6 class="mb-3">الرد على الرسالة</h6>
+                        <form action="{% url 'send_user_message' %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="recipient_id" value="{{ message.sender.id }}">
+                            <div class="mb-3">
+                                <textarea name="message" class="form-control" rows="4" placeholder="اكتب ردك هنا..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> إرسال الرد
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <form action="{% url 'delete_user_message' message.id %}" method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('هل أنت متأكد من حذف هذه الرسالة؟')">
+                                <i class="fas fa-trash"></i> حذف الرسالة
+                            </button>
+                        </form>
+                        {% if message.recipient == request.user %}
+                        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                            <i class="fas fa-print"></i> طباعة
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.user-avatar {
+    width: 50px;
+    height: 50px;
+    background: #e9ecef;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.message-content {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+}
+</style>
+{% endblock %}

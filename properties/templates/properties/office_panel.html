@@ -1,0 +1,91 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}المكتب العقاري{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>لوحة المكتب العقاري</h1>
+    <a href="{% url 'broker_list' %}" class="btn btn-outline">← الدلالين</a>
+  </div>
+
+  {% if offices.count > 1 %}
+  <div class="form-card" style="margin-bottom:1rem">
+    <form method="get">
+      <label>اختر المكتب:</label>
+      <select name="office" class="form-control" onchange="this.form.submit()">
+        {% for o in offices %}
+        <option value="{{ o.id }}" {% if office and office.id == o.id %}selected{% endif %}>{{ o.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if office %}
+  <div class="dashboard-stats">
+    <div class="stat-card"><div class="stat-icon">🏢</div><div class="stat-content"><div class="stat-number">{{ office.name }}</div><div class="stat-label">المكتب</div></div></div>
+    <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-content"><div class="stat-number">{{ office_brokers.count }}</div><div class="stat-label">الدلالين</div></div></div>
+    <div class="stat-card"><div class="stat-icon">🏠</div><div class="stat-content"><div class="stat-number">{{ office_properties.count }}</div><div class="stat-label">العقارات</div></div></div>
+  </div>
+
+  <div class="form-card" style="margin-top:1.5rem">
+    <h3>حالة التواجد</h3>
+    {% if office.presence %}
+    <div class="presence-status-card" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <div style="font-size: 48px;">{{ office.presence.get_status_emoji }}</div>
+        <div>
+          <h4 style="margin: 0 0 5px; color: #333;">{{ office.presence.get_status_display }}</h4>
+          <p style="margin: 0; color: #666;">آخر ظهور: {{ office.presence.get_last_seen_display }}</p>
+          {% if office.presence.expected_return %}
+          <p style="margin: 5px 0 0; color: #666;">العودة المتوقعة: {{ office.presence.get_expected_return_display }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <a href="{% url 'office_presence_settings' %}" class="btn btn-primary">إعدادات التواجد</a>
+    {% else %}
+    <p style="color: #666;">لم يتم إعداد حالة التواجد بعد</p>
+    <a href="{% url 'office_presence_settings' %}" class="btn btn-primary">إعداد التواجد</a>
+    {% endif %}
+  </div>
+
+  <div class="form-card" style="margin-top:1.5rem">
+    <h3>دلالين المكتب</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>الاسم</th><th>الدور</th><th>الهاتف</th><th>موثق</th></tr></thead>
+        <tbody>
+          {% for b in office_brokers %}
+          <tr>
+            <td>{{ b.display_name }}</td>
+            <td>{{ b.get_role_display }}</td>
+            <td>{{ b.phone }}</td>
+            <td>{% if b.is_verified %}✅{% else %}—{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="text-align:center">لا يوجد دلالين</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="form-card">
+    <h3>إنشاء مكتب عقاري</h3>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="create_office" value="1">
+      {% for field in form %}
+      <div class="form-group" style="margin-bottom:1rem">
+        <label>{{ field.label }}</label>
+        {{ field }}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary">إنشاء المكتب</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}المفضلة | دلال{% endblock %}
+
+{% block extra_css %}
+<style>
+.favorites-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.favorites-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.favorites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.property-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.property-card:hover {
+  transform: translateY(-5px);
+}
+
+.property-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.property-content {
+  padding: 20px;
+}
+
+.property-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.property-price {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0d9488;
+  margin-bottom: 10px;
+}
+
+.property-details {
+  display: flex;
+  gap: 15px;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.property-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-primary {
+  background: #0d9488;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-primary:hover {
+  background: #0b7e73;
+  text-decoration: none;
+  color: white;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+  text-decoration: none;
+  color: white;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+}
+
+.empty-state i {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.empty-state p {
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .favorites-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="favorites-container">
+  <div class="favorites-header">
+    <h1>العقارات المفضلة</h1>
+    <a href="{% url 'user_settings' %}" class="btn-secondary">عودة للإعدادات</a>
+  </div>
+  
+  {% if favorite_properties %}
+    <div class="favorites-grid">
+      {% for fav in favorite_properties %}
+        <div class="property-card">
+          {% if fav.property.get_main_image %}
+            <img src="{{ fav.property.get_main_image }}" alt="{{ fav.property.title }}" class="property-image">
+          {% else %}
+            <img src="{% static 'img/placeholder-property.svg' %}" alt="{{ fav.property.title }}" class="property-image">
+          {% endif %}
+          <div class="property-content">
+            <h3 class="property-title">{{ fav.property.display_title }}</h3>
+            <div class="property-price">{{ fav.property.price_formatted }}</div>
+            <div class="property-details">
+              <div class="property-detail-item">
+                <i class="fas fa-home"></i>
+                <span>{{ fav.property.get_type_display }}</span>
+              </div>
+              <div class="property-detail-item">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>{{ fav.property.district }}</span>
+              </div>
+            </div>
+            <a href="{% url 'property_detail' fav.property.slug %}" class="btn-primary">عرض التفاصيل</a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <i class="fas fa-heart"></i>
+      <p>لا توجد عقارات مفضلة</p>
+      <a href="{% url 'explore' %}" class="btn-primary">تصفح العقارات</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,57 @@
+# Git
+.git
+.gitignore
+
+# Docker
+.dockerignore
+
+# Documentation
+*.md
+CODE_CLEANUP_REPORT.md
+COMPREHENSIVE_AUDIT_REPORT.md
+DATABASE_ARCHITECTURE_REPORT.md
+DEPLOYMENT.md
+DEPLOYMENT_GUIDE.md
+DEPLOYMENT_REPORT.md
+INSTALLATION_GUIDE.md
+NASIRIYAH_TRANSFORMATION.md
+PERFORMANCE_REPORT.md
+PROJECT_STATUS.md
+QUICKSTART.md
+README.md
+ROUTES_API.md
+SECURITY_REPORT.md
+SETUP.md
+TRANSFORMATION_SUMMARY.md
+UI_UX_REPORT.md
+
+# Backup files
+*.backup
+dalal_project.backup
+realestate_project.backup
+
+# OneDrive
+OneDrive
+
+# Invalid files
+=3.14.0
+
+# Logs
+logs
+*.log
+
+# Database
+db.sqlite3
+
+# Environment
+.env
+.env.example
+
+# Misc
+*.lnk
+build.sh
+check_admin.py
+docker-compose.yml
+mise.toml
+package.json.backup
+runtime.txt

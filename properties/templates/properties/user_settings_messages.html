@@ -1,0 +1,252 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}الرسائل | دلال{% endblock %}
+
+{% block extra_css %}
+<style>
+.messages-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.messages-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.messages-section {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.messages-section h3 {
+  margin-bottom: 25px;
+  color: #333;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.message-item {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.message-item:last-child {
+  border-bottom: none;
+}
+
+.message-info {
+  flex: 1;
+}
+
+.message-sender {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.message-preview {
+  color: #666;
+  font-size: 14px;
+}
+
+.message-date {
+  color: #999;
+  font-size: 12px;
+}
+
+.blocked-user-item {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.blocked-user-item:last-child {
+  border-bottom: none;
+}
+
+.blocked-user-info {
+  flex: 1;
+}
+
+.blocked-user-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.blocked-user-reason {
+  color: #666;
+  font-size: 14px;
+}
+
+.btn-primary {
+  background: #0d9488;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-primary:hover {
+  background: #0b7e73;
+  text-decoration: none;
+  color: white;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+  text-decoration: none;
+  color: white;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+  text-decoration: none;
+  color: white;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+}
+
+.empty-state i {
+  font-size: 48px;
+  margin-bottom: 15px;
+}
+
+@media (max-width: 768px) {
+  .message-item,
+  .blocked-user-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="messages-container">
+  <div class="messages-header">
+    <h1>الرسائل</h1>
+    <a href="{% url 'user_settings' %}" class="btn-secondary">عودة للإعدادات</a>
+  </div>
+  
+  <div class="messages-section">
+    <h3>المحادثات الأخيرة</h3>
+    {% if messages %}
+      {% for message in messages %}
+        <div class="message-item">
+          <div class="message-info">
+            <div class="message-sender">{{ message.sender.get_full_name|default:message.sender.username }}</div>
+            <div class="message-preview">{{ message.message|truncatewords:10 }}</div>
+          </div>
+          <div class="message-date">{{ message.created_at|date:"Y-m-d H:i" }}</div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="fas fa-envelope"></i>
+        <p>لا توجد رسائل</p>
+      </div>
+    {% endif %}
+  </div>
+  
+  <div class="messages-section">
+    <h3>المستخدمون المحظورون</h3>
+    {% if blocked_users %}
+      {% for blocked in blocked_users %}
+        <div class="blocked-user-item">
+          <div class="blocked-user-info">
+            <div class="blocked-user-name">{{ blocked.blocked.get_full_name|default:blocked.blocked.username }}</div>
+            {% if blocked.reason %}
+              <div class="blocked-user-reason">السبب: {{ blocked.reason }}</div>
+            {% endif %}
+          </div>
+          <form action="{% url 'unblock_user' blocked.blocked_id %}" method="POST" onsubmit="return confirm('هل أنت متأكد من إلغاء حظر هذا المستخدم؟');">
+            {% csrf_token %}
+            <button type="submit" class="btn-danger">إلغاء الحظر</button>
+          </form>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="fas fa-ban"></i>
+        <p>لا يوجد مستخدمون محظورون</p>
+      </div>
+    {% endif %}
+  </div>
+  
+  <div class="messages-section">
+    <h3>حظر مستخدم جديد</h3>
+    <form action="{% url 'block_user' %}" method="POST">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="blocked_user">المستخدم</label>
+        <select name="blocked_user" id="blocked_user" class="form-control" required>
+          <option value="">اختر مستخدم</option>
+          {% for user in all_users %}
+            {% if user.id != request.user.id %}
+              <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="reason">السبب (اختياري)</label>
+        <textarea name="reason" id="reason" class="form-control" rows="3"></textarea>
+      </div>
+      <button type="submit" class="btn-danger">حظر المستخدم</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

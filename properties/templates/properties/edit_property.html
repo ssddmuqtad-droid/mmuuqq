@@ -1,0 +1,49 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}تعديل عقار{% endblock %}
+
+{% block content %}
+<div class="container" style="padding:2rem 0 3rem;max-width:900px">
+  <h1 style="margin-bottom:1.5rem">تعديل: {{ property.display_title }}</h1>
+
+  {% if property.gallery_images.all %}
+  <div style="margin-bottom:1.5rem">
+    <h3 style="margin-bottom:0.75rem">معرض الصور</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:0.75rem">
+      {% for img in property.gallery_images.all %}
+      <div style="position:relative">
+        <img src="{{ img.image.url }}" alt="" style="width:100px;height:70px;object-fit:cover;border-radius:8px">
+        <form method="post" action="{% url 'delete_property_image' img.id %}" style="margin-top:0.25rem">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm" style="color:var(--danger);font-size:0.75rem">حذف</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="form-card">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="form-row">
+        {% for field in form %}
+        <div class="form-group">
+          <label>{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<span style="color:var(--danger);font-size:0.85rem">{{ field.errors.0 }}</span>{% endif %}
+        </div>
+        {% endfor %}
+        <div class="form-group">
+          <label>صور إضافية جديدة</label>
+          <input type="file" name="gallery_images" class="form-control" accept="image/*" multiple>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+        <button type="submit" class="btn btn-primary">حفظ التعديلات</button>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

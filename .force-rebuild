@@ -1,0 +1,2 @@
+# Force Railway to rebuild with latest configuration
+# Updated to force rebuild after ALLOWED_HOSTS changes

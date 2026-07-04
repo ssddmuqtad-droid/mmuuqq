@@ -1,0 +1,368 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}تسجيل الدخول أو إنشاء حساب{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-icon">🏢</div>
+      <h1>منصة دلال</h1>
+      <p>منصة العقارات العراقية</p>
+    </div>
+
+    <!-- Login Form -->
+    <div class="auth-form-container active" id="login-form">
+      <form method="post" action="{% url 'login' %}" class="auth-form">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="username">
+            <span class="label-icon">👤</span>
+            اسم المستخدم
+          </label>
+          <input type="text" name="username" id="username" class="form-control" required autocomplete="username" placeholder="أدخل اسم المستخدم">
+        </div>
+        
+        <div class="form-group">
+          <label for="password">
+            <span class="label-icon">🔒</span>
+            كلمة المرور
+          </label>
+          <input type="password" name="password" id="password" class="form-control" required autocomplete="current-password" placeholder="أدخل كلمة المرور">
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-lg auth-submit">
+          <span class="btn-icon">🚀</span>
+          دخول
+        </button>
+      </form>
+
+      <div class="auth-switch">
+        <p>ليس لديك حساب؟
+          <button type="button" class="auth-switch-btn" data-tab="register">
+            إنشاء حساب جديد
+          </button>
+        </p>
+      </div>
+    </div>
+    
+    <!-- Register Form -->
+    <div class="auth-form-container" id="register-form">
+      <form method="post" action="{% url 'register' %}" class="auth-form">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="reg-username">
+            <span class="label-icon">👤</span>
+            اسم المستخدم
+          </label>
+          <input type="text" name="username" id="reg-username" class="form-control" required autocomplete="username" placeholder="اختر اسم مستخدم">
+        </div>
+        
+        <div class="form-group">
+          <label for="reg-email">
+            <span class="label-icon">📧</span>
+            البريد الإلكتروني
+          </label>
+          <input type="email" name="email" id="reg-email" class="form-control" required autocomplete="email" placeholder="أدخل بريدك الإلكتروني">
+        </div>
+        
+        <div class="form-group">
+          <label for="reg-password">
+            <span class="label-icon">🔒</span>
+            كلمة المرور
+          </label>
+          <input type="password" name="password" id="reg-password" class="form-control" required autocomplete="new-password" placeholder="اختر كلمة مرور قوية">
+        </div>
+        
+        <div class="form-group">
+          <label for="reg-confirm-password">
+            <span class="label-icon">🔐</span>
+            تأكيد كلمة المرور
+          </label>
+          <input type="password" name="confirm_password" id="reg-confirm-password" class="form-control" required autocomplete="new-password" placeholder="أعد إدخال كلمة المرور">
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-lg auth-submit">
+          <span class="btn-icon">✨</span>
+          إنشاء حساب
+        </button>
+      </form>
+
+      <div class="auth-switch">
+        <p>لديك حساب بالفعل؟
+          <button type="button" class="auth-switch-btn" data-tab="login">
+            تسجيل الدخول
+          </button>
+        </p>
+      </div>
+    </div>
+    
+    <div class="auth-footer">
+      <a href="{% url 'home' %}" class="back-link">
+        <span class="back-icon">←</span>
+        العودة للرئيسية
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--bg);
+}
+
+.auth-card {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.auth-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.auth-header h1 {
+  font-size: 2rem;
+  font-weight: 900;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.auth-header p {
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.auth-form-container {
+  display: none;
+}
+
+.auth-form-container.active {
+  display: block;
+}
+
+.auth-form {
+  margin-bottom: 24px;
+}
+
+.auth-form .form-group {
+  margin-bottom: 20px;
+}
+
+.auth-form label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.label-icon {
+  font-size: 1.1rem;
+}
+
+.auth-form .form-control {
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.auth-form .form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.auth-form .form-control::placeholder {
+  color: var(--text-light);
+}
+
+.auth-submit {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+}
+
+.auth-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+}
+
+.auth-submit:active {
+  transform: translateY(0);
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-light);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+}
+
+.back-link:hover {
+  color: var(--primary);
+  background: rgba(255, 107, 53, 0.1);
+}
+
+.back-icon {
+  transition: transform 0.3s ease;
+}
+
+.back-link:hover .back-icon {
+  transform: translateX(-4px);
+}
+
+.auth-switch {
+  text-align: center;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.auth-switch p {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.auth-switch-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.auth-switch-btn:hover {
+  background: rgba(255, 107, 53, 0.1);
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 28px;
+  }
+  
+  .auth-header h1 {
+    font-size: 1.6rem;
+  }
+  
+  .auth-icon {
+    font-size: 2.5rem;
+  }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const forms = document.querySelectorAll('.auth-form-container');
+  const switchBtns = document.querySelectorAll('.auth-switch-btn');
+
+  // Function to switch between forms
+  function switchForm(targetTab) {
+    // Update forms
+    forms.forEach(form => {
+      form.classList.remove('active');
+      if (form.id === `${targetTab}-form`) {
+        form.classList.add('active');
+      }
+    });
+  }
+
+  // Switch button click handlers
+  switchBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      switchForm(this.dataset.tab);
+    });
+  });
+
+  // Password confirmation validation
+  const regPassword = document.getElementById('reg-password');
+  const regConfirmPassword = document.getElementById('reg-confirm-password');
+  const regForm = document.querySelector('#register-form form');
+
+  if (regForm) {
+    regForm.addEventListener('submit', function(e) {
+      if (regPassword.value !== regConfirmPassword.value) {
+        e.preventDefault();
+        alert('كلمات المرور غير متطابقة!');
+        regConfirmPassword.focus();
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

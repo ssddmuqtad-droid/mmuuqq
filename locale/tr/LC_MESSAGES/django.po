@@ -1,0 +1,80 @@
+# Turkmen translations
+msgid ""
+msgstr ""
+"Project-Id-Version: Muq Real Estate\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-30 14:55+0000\n"
+"PO-Revision-Date: 2026-06-30 14:55+0000\n"
+"Last-Translator: \n"
+"Language-Team: Turkmen\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Channels"
+msgstr "Kanallar"
+
+msgid "Property Channels"
+msgstr "Emlak Kanallary"
+
+msgid "Browse properties by channel - Brokers, Users, and Admin"
+msgstr "Emlaklary kanala boýunça görüziň - Brokerlar, Ulanyjylar we Admin"
+
+msgid "Search channels..."
+msgstr "Kanallary gözle..."
+
+msgid "Search"
+msgstr "Gözle"
+
+msgid "Brokers"
+msgstr "Brokerlar"
+
+msgid "Browse all properties listed by verified brokers"
+msgstr "Tassyk edilen brokerlar tarapyndan sanalan ähli emlaklary görüziň"
+
+msgid "Users"
+msgstr "Ulanyjylar"
+
+msgid "Browse all properties listed by users"
+msgstr "Ulanyjylar tarapyndan sanalan ähli emlaklary görüziň"
+
+msgid "Platform Admin"
+msgstr "Platform Admin"
+
+msgid "Browse all properties in the platform (Admin view)"
+msgstr "Platformdaky ähli emlaklary görüziň (Admin görnüşi)"
+
+msgid "Properties"
+msgstr "Emlaklar"
+
+msgid "Members"
+msgstr "Agzalar"
+
+msgid "Enter"
+msgstr "Girmek"
+
+msgid "No channels found"
+msgstr "Kanal tapylmady"
+
+msgid "Try searching with different keywords"
+msgstr "Başga açar sözlere görä gözle"
+
+msgid "Channel link copied"
+msgstr "Kanal baglanyşy göçürildi"
+
+msgid "Home"
+msgstr "Baş sahypa"
+
+msgid "Favorites"
+msgstr "Halaýanlar"
+
+msgid "Settings"
+msgstr "Sazlamalar"
+
+msgid "Login"
+msgstr "Girmek"
+
+msgid "Logout"
+msgstr "Çykmak"

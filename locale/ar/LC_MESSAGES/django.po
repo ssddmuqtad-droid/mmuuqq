@@ -1,0 +1,80 @@
+# Arabic translations
+msgid ""
+msgstr ""
+"Project-Id-Version: Muq Real Estate\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-30 14:55+0000\n"
+"PO-Revision-Date: 2026-06-30 14:55+0000\n"
+"Last-Translator: \n"
+"Language-Team: Arabic\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
+
+msgid "Channels"
+msgstr "القنوات"
+
+msgid "Property Channels"
+msgstr "القنوات العقارية"
+
+msgid "Browse properties by channel - Brokers, Users, and Admin"
+msgstr "تصفح العقارات حسب القناة - الدلالين، المستخدمين، والمدير"
+
+msgid "Search channels..."
+msgstr "ابحث عن قناة..."
+
+msgid "Search"
+msgstr "بحث"
+
+msgid "Brokers"
+msgstr "الدلالين"
+
+msgid "Browse all properties listed by verified brokers"
+msgstr "تصفح جميع العقارات المعروضة من قبل الدلالين المعتمدين"
+
+msgid "Users"
+msgstr "المستخدمين"
+
+msgid "Browse all properties listed by users"
+msgstr "تصفح جميع العقارات المعروضة من قبل المستخدمين"
+
+msgid "Platform Admin"
+msgstr "مدير المنصة"
+
+msgid "Browse all properties in the platform (Admin view)"
+msgstr "تصفح جميع العقارات في المنصة (عرض المدير)"
+
+msgid "Properties"
+msgstr "عقارات"
+
+msgid "Members"
+msgstr "أعضاء"
+
+msgid "Enter"
+msgstr "دخول"
+
+msgid "No channels found"
+msgstr "لم يتم العثور على قنوات"
+
+msgid "Try searching with different keywords"
+msgstr "جرب البحث بكلمات مختلفة"
+
+msgid "Channel link copied"
+msgstr "تم نسخ رابط القناة"
+
+msgid "Home"
+msgstr "الرئيسية"
+
+msgid "Favorites"
+msgstr "المفضلة"
+
+msgid "Settings"
+msgstr "الإعدادات"
+
+msgid "Login"
+msgstr "دخول"
+
+msgid "Logout"
+msgstr "خروج"

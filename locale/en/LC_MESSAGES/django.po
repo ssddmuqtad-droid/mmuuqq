@@ -1,0 +1,80 @@
+# English translations
+msgid ""
+msgstr ""
+"Project-Id-Version: Muq Real Estate\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-30 14:55+0000\n"
+"PO-Revision-Date: 2026-06-30 14:55+0000\n"
+"Last-Translator: \n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Channels"
+msgstr "Channels"
+
+msgid "Property Channels"
+msgstr "Property Channels"
+
+msgid "Browse properties by channel - Brokers, Users, and Admin"
+msgstr "Browse properties by channel - Brokers, Users, and Admin"
+
+msgid "Search channels..."
+msgstr "Search channels..."
+
+msgid "Search"
+msgstr "Search"
+
+msgid "Brokers"
+msgstr "Brokers"
+
+msgid "Browse all properties listed by verified brokers"
+msgstr "Browse all properties listed by verified brokers"
+
+msgid "Users"
+msgstr "Users"
+
+msgid "Browse all properties listed by users"
+msgstr "Browse all properties listed by users"
+
+msgid "Platform Admin"
+msgstr "Platform Admin"
+
+msgid "Browse all properties in the platform (Admin view)"
+msgstr "Browse all properties in the platform (Admin view)"
+
+msgid "Properties"
+msgstr "Properties"
+
+msgid "Members"
+msgstr "Members"
+
+msgid "Enter"
+msgstr "Enter"
+
+msgid "No channels found"
+msgstr "No channels found"
+
+msgid "Try searching with different keywords"
+msgstr "Try searching with different keywords"
+
+msgid "Channel link copied"
+msgstr "Channel link copied"
+
+msgid "Home"
+msgstr "Home"
+
+msgid "Favorites"
+msgstr "Favorites"
+
+msgid "Settings"
+msgstr "Settings"
+
+msgid "Login"
+msgstr "Login"
+
+msgid "Logout"
+msgstr "Logout"

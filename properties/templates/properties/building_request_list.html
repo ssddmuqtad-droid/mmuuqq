@@ -1,0 +1,223 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}طلبات البناء{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>🏗️ طلبات البناء</h1>
+    <p>إدارة طلبات بناء منزلك</p>
+  </div>
+
+  <div class="page-actions">
+    <a href="{% url 'building_request_create' %}" class="btn btn-primary btn-lg">
+      <span class="btn-icon">➕</span>
+      <span>طلب بناء جديد</span>
+    </a>
+  </div>
+
+  {% if building_requests %}
+  <div class="requests-grid">
+    {% for request in building_requests %}
+    <div class="request-card">
+      <div class="request-header">
+        <h3>{{ request.owner_name }}</h3>
+        <div class="request-meta">
+          <span class="request-type">{{ request.get_request_type_display }}</span>
+          <span class="request-status status-{{ request.status }}">{{ request.get_status_display }}</span>
+        </div>
+      </div>
+      <div class="request-body">
+        <div class="request-info">
+          <span class="label">المنطقة:</span>
+          <span class="value">{{ request.owner_district }}</span>
+        </div>
+        <div class="request-info">
+          <span class="label">الموقع:</span>
+          <span class="value">{{ request.owner_location }}</span>
+        </div>
+        <div class="request-info">
+          <span class="label">رقم الهاتف:</span>
+          <span class="value">{{ request.owner_phone }}</span>
+        </div>
+        <div class="request-info">
+          <span class="label">تاريخ الإنشاء:</span>
+          <span class="value">{{ request.created_at|date:"Y-m-d H:i" }}</span>
+        </div>
+      </div>
+      <div class="request-footer">
+        <a href="{% url 'building_request_detail' request.id %}" class="btn btn-primary btn-block">
+          عرض التفاصيل
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">🏗️</div>
+    <h3>لا توجد طلبات بناء</h3>
+    <p>ابدأ بإنشاء طلب بناء منزلك الجديد</p>
+    <a href="{% url 'building_request_create' %}" class="btn btn-primary">
+      إنشاء طلب بناء
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.page-header {
+  text-align: center;
+  margin: 40px 0;
+}
+
+.page-header h1 {
+  font-size: 2.5rem;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.page-header p {
+  color: var(--text-light);
+  font-size: 1.1rem;
+}
+
+.page-actions {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.requests-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.request-card {
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.request-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.request-header {
+  padding: 20px;
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--border);
+}
+
+.request-header h3 {
+  margin: 0 0 12px 0;
+  font-size: 1.2rem;
+  color: var(--text);
+}
+
+.request-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.request-type,
+.request-status {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: white;
+}
+
+.request-type {
+  background: #3b82f6;
+}
+
+.status-pending {
+  background: #f59e0b;
+}
+
+.status-active {
+  background: #10b981;
+}
+
+.status-in_progress {
+  background: #3b82f6;
+}
+
+.status-completed {
+  background: #6b7280;
+}
+
+.status-cancelled {
+  background: #ef4444;
+}
+
+.request-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.request-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.request-info .label {
+  color: var(--text-light);
+}
+
+.request-info .value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.request-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-light);
+}
+
+.empty-state .icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.empty-state p {
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .requests-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .page-header h1 {
+    font-size: 2rem;
+  }
+}
+</style>
+{% endblock %}

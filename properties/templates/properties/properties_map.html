@@ -1,0 +1,1165 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}خريطة العقارات المتقدمة{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<style>
+.map-container {
+  display: flex;
+  height: calc(100vh - 80px);
+  margin-top: 1rem;
+}
+
+.map-sidebar {
+  width: 400px;
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.map-main {
+  flex: 1;
+  position: relative;
+}
+
+#properties-map {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-lg);
+}
+
+.map-filters {
+  padding: 20px;
+  border-bottom: 2px solid var(--border);
+  overflow-y: auto;
+  max-height: 40%;
+}
+
+.filter-group {
+  margin-bottom: 16px;
+}
+
+.filter-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.filter-group select,
+.filter-group input {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-alt);
+  color: var(--text);
+}
+
+.map-properties {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.property-card {
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.property-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.property-card.active {
+  border-color: var(--primary);
+  background: rgba(255, 107, 53, 0.05);
+}
+
+.property-card-image {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+}
+
+.property-card-price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.property-card-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.property-card-details {
+  display: flex;
+  gap: 16px;
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+.map-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-control-btn {
+  background: white;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.map-control-btn:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.map-layers {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1000;
+  background: white;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.map-layers button {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  margin-bottom: 4px;
+  background: var(--bg-alt);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.map-layers button:hover,
+.map-layers button.active {
+  background: var(--primary);
+  color: white;
+}
+
+.property-popup {
+  min-width: 250px;
+}
+
+.popup-image {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.popup-price {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.popup-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.popup-details {
+  display: flex;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-bottom: 8px;
+}
+
+.popup-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.popup-actions a {
+  flex: 1;
+  text-align: center;
+  padding: 8px;
+  background: var(--primary);
+  color: white;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: all 0.3s ease;
+}
+
+.popup-actions a:hover {
+  background: var(--primary-dark);
+}
+
+.custom-marker {
+  background: var(--primary);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.cluster-marker {
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .map-container {
+    flex-direction: column;
+  }
+  
+  .map-sidebar {
+    width: 100%;
+    height: 40%;
+  }
+  
+  .map-main {
+    height: 60%;
+  }
+  
+  .map-filters {
+    display: none;
+  }
+  
+  .map-filters.show {
+    display: block;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>🗺️ خريطة العقارات المتقدمة</h1>
+    <p>{{ total }} عقار على الخريطة</p>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline">← لوحة التحكم</a>
+  </div>
+  
+  <div class="map-container">
+    <div class="map-sidebar">
+      <div class="map-filters">
+        <h4>🔍 الفلاتر</h4>
+        
+        <div class="filter-group">
+          <label>المحافظة</label>
+          <select id="filter-governorate">
+            <option value="">الكل</option>
+            <option value="بغداد">بغداد</option>
+            <option value="البصرة">البصرة</option>
+            <option value="أربيل">أربيل</option>
+            <option value="نينوى">نينوى</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>نوع العقار</label>
+          <select id="filter-type">
+            <option value="">الكل</option>
+            <option value="apartment">شقة</option>
+            <option value="house">منزل</option>
+            <option value="villa">فيلا</option>
+            <option value="land">أرض</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>الحالة</label>
+          <select id="filter-status">
+            <option value="">الكل</option>
+            <option value="sale">للبيع</option>
+            <option value="rent">للإيجار</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>السعر من</label>
+          <input type="number" id="filter-price-min" placeholder="الحد الأدنى">
+        </div>
+        
+        <div class="filter-group">
+          <label>السعر إلى</label>
+          <input type="number" id="filter-price-max" placeholder="الحد الأقصى">
+        </div>
+        
+        <div class="filter-group">
+          <label>المساحة من (م²)</label>
+          <input type="number" id="filter-area-min" placeholder="الحد الأدنى">
+        </div>
+        
+        <div class="filter-group">
+          <label>المساحة إلى (م²)</label>
+          <input type="number" id="filter-area-max" placeholder="الحد الأقصى">
+        </div>
+        
+        <div class="filter-group">
+          <label>غرف نوم</label>
+          <select id="filter-bedrooms">
+            <option value="">الكل</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+            <option value="4">4+</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>
+            <input type="checkbox" id="filter-furnished">
+            مفروش
+          </label>
+        </div>
+        
+        <div class="filter-group">
+          <label>
+            <input type="checkbox" id="filter-featured">
+            عقارات مميزة فقط
+          </label>
+        </div>
+        
+        <button class="btn btn-primary btn-block" onclick="applyFilters()">
+          تطبيق الفلاتر
+        </button>
+        <button class="btn btn-outline btn-block" onclick="resetFilters()">
+          إعادة تعيين
+        </button>
+      </div>
+      
+      <div class="map-properties" id="property-list">
+        <!-- Properties will be loaded here -->
+      </div>
+    </div>
+    
+    <div class="map-main">
+      <div id="properties-map"></div>
+      
+      <div class="map-controls">
+        <button class="map-control-btn" onclick="locateUser()" title="موقعي">
+          📍
+        </button>
+        <button class="map-control-btn" onclick="toggleDraw()" title="رسم منطقة">
+          ✏️
+        </button>
+        <button class="map-control-btn" onclick="showNearbyPlaces()" title="الأماكن القريبة">
+          🏪
+        </button>
+        <button class="map-control-btn" onclick="getDirections()" title="الاتجاهات">
+          🧭
+        </button>
+        <button class="map-control-btn" onclick="toggleOffices()" title="المكاتب">
+          🏢
+        </button>
+        <button class="map-control-btn" onclick="toggleBrokers()" title="الوكلاء">
+          👥
+        </button>
+        <button class="map-control-btn" onclick="saveFavoriteArea()" title="حفظ المنطقة">
+          ⭐
+        </button>
+        <button class="map-control-btn" onclick="addToComparison()" title="إضافة للمقارنة">
+          📊
+        </button>
+        <button class="map-control-btn" onclick="showComparison()" title="عرض المقارنة">
+          📋
+        </button>
+        <button class="map-control-btn" onclick="toggleHeatmap()" title="Heatmap">
+          🔥
+        </button>
+        <button class="map-control-btn" onclick="toggleFullscreen()" title="ملء الشاشة">
+          ⛶
+        </button>
+      </div>
+      
+      <div class="map-layers">
+        <button class="active" onclick="setLayer('osm')">OpenStreetMap</button>
+        <button onclick="setLayer('satellite')">Satellite</button>
+        <button onclick="setLayer('dark')">Dark</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>
+(function() {
+  var map, markers, markerCluster, drawControl, heatLayer, officeMarkers, brokerMarkers;
+  var currentLayer = 'osm';
+  var heatmapEnabled = false;
+  var selectedProperty = null;
+  var officesShown = false;
+  var brokersShown = false;
+  
+  // Initialize map
+  function initMap() {
+    var initialData = {{ map_data_json|safe }};
+    
+    if (initialData.length > 0) {
+      map = L.map('properties-map').setView([initialData[0].lat, initialData[0].lng], 12);
+    } else {
+      map = L.map('properties-map').setView([33.3152, 44.3661], 6); // Iraq center
+    }
+    
+    // Add default layer
+    addLayer('osm');
+    
+    // Add marker cluster
+    markerCluster = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      maxClusterRadius: 80
+    });
+    
+    map.addLayer(markerCluster);
+    
+    // Add markers
+    addMarkers(initialData);
+    
+    // Load properties list
+    loadPropertyList(initialData);
+    
+    // Add draw control
+    addDrawControl();
+    
+    // Load properties on map move
+    map.on('moveend', debounce(loadPropertiesInView, 500));
+  }
+  
+  function addLayer(layerType) {
+    // Remove existing layers
+    map.eachLayer(function(layer) {
+      if (layer instanceof L.TileLayer) {
+        map.removeLayer(layer);
+      }
+    });
+    
+    var layer;
+    switch(layerType) {
+      case 'osm':
+        layer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        });
+        break;
+      case 'satellite':
+        layer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri'
+        });
+        break;
+      case 'dark':
+        layer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; CARTO'
+        });
+        break;
+    }
+    
+    if (layer) {
+      layer.addTo(map);
+    }
+    
+    currentLayer = layerType;
+    
+    // Update active button
+    document.querySelectorAll('.map-layers button').forEach(function(btn) {
+      btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+  }
+  
+  function addMarkers(properties) {
+    markerCluster.clearLayers();
+    
+    properties.forEach(function(p) {
+      var marker = createCustomMarker(p);
+      marker.on('click', function() {
+        selectProperty(p);
+      });
+      markerCluster.addLayer(marker);
+    });
+  }
+  
+  function createCustomMarker(property) {
+    var price = property.price || 'غير محدد';
+    var icon = L.divIcon({
+      className: 'custom-marker',
+      html: '<div class="custom-marker">' + price + '</div>',
+      iconSize: [80, 30],
+      iconAnchor: [40, 15]
+    });
+    
+    var marker = L.marker([property.lat, property.lng], { icon: icon });
+    
+    var popupContent = createPopupContent(property);
+    marker.bindPopup(popupContent, {
+      maxWidth: 300,
+      className: 'property-popup'
+    });
+    
+    return marker;
+  }
+  
+  function createPopupContent(property) {
+    var image = property.image || '/static/img/placeholder-property.svg';
+    var html = `
+      <div class="popup-image" style="background: url('${image}') center/cover;"></div>
+      <div class="popup-price">${property.price}</div>
+      <div class="popup-title">${property.title}</div>
+      <div class="popup-details">
+        <span>📍 ${property.district}</span>
+        <span>🏠 ${property.type}</span>
+        <span>📐 ${property.area} م²</span>
+      </div>
+      <div class="popup-actions">
+        <a href="${property.url}" target="_blank">عرض التفاصيل</a>
+      </div>
+    `;
+    return html;
+  }
+  
+  function loadPropertyList(properties) {
+    var container = document.getElementById('property-list');
+    container.innerHTML = '';
+    
+    properties.forEach(function(p) {
+      var card = createPropertyCard(p);
+      container.appendChild(card);
+    });
+  }
+  
+  function createPropertyCard(property) {
+    var image = property.image || '/static/img/placeholder-property.svg';
+    var card = document.createElement('div');
+    card.className = 'property-card';
+    card.dataset.id = property.id;
+    card.dataset.lat = property.lat;
+    card.dataset.lng = property.lng;
+    card.innerHTML = `
+      <img src="${image}" class="property-card-image" alt="${property.title}">
+      <div class="property-card-price">${property.price}</div>
+      <div class="property-card-title">${property.title}</div>
+      <div class="property-card-details">
+        <span>📍 ${property.district}</span>
+        <span>📐 ${property.area} م²</span>
+        <span>🛏️ ${property.bedrooms || '-'} غرفة</span>
+      </div>
+    `;
+    
+    card.onclick = function() {
+      selectProperty(property);
+    };
+    
+    return card;
+  }
+  
+  function selectProperty(property) {
+    // Update selected card
+    document.querySelectorAll('.property-card').forEach(function(card) {
+      card.classList.remove('active');
+    });
+    var selectedCard = document.querySelector('.property-card[data-id="' + property.id + '"]');
+    if (selectedCard) {
+      selectedCard.classList.add('active');
+      selectedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    // Pan to marker
+    map.setView([property.lat, property.lng], 15);
+    
+    selectedProperty = property;
+  }
+  
+  function applyFilters() {
+    var filters = {
+      governorate: document.getElementById('filter-governorate').value,
+      type: document.getElementById('filter-type').value,
+      status: document.getElementById('filter-status').value,
+      price_min: document.getElementById('filter-price-min').value,
+      price_max: document.getElementById('filter-price-max').value,
+      area_min: document.getElementById('filter-area-min').value,
+      area_max: document.getElementById('filter-area-max').value,
+      bedrooms: document.getElementById('filter-bedrooms').value,
+      furnished: document.getElementById('filter-furnished').checked,
+      featured: document.getElementById('filter-featured').checked
+    };
+    
+    loadFilteredProperties(filters);
+  }
+  
+  function resetFilters() {
+    document.getElementById('filter-governorate').value = '';
+    document.getElementById('filter-type').value = '';
+    document.getElementById('filter-status').value = '';
+    document.getElementById('filter-price-min').value = '';
+    document.getElementById('filter-price-max').value = '';
+    document.getElementById('filter-area-min').value = '';
+    document.getElementById('filter-area-max').value = '';
+    document.getElementById('filter-bedrooms').value = '';
+    document.getElementById('filter-furnished').checked = false;
+    document.getElementById('filter-featured').checked = false;
+    
+    loadInitialProperties();
+  }
+  
+  function loadFilteredProperties(filters) {
+    var params = new URLSearchParams(filters);
+    params.set('bounds', JSON.stringify(map.getBounds().toBBoxString()));
+    
+    fetch('{% url "properties_map" %}?' + params.toString(), {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      addMarkers(data.properties);
+      loadPropertyList(data.properties);
+    });
+  }
+  
+  function loadPropertiesInView() {
+    var bounds = map.getBounds();
+    var filters = {
+      bounds: JSON.stringify({
+        south: bounds.getSouth(),
+        north: bounds.getNorth(),
+        west: bounds.getWest(),
+        east: bounds.getEast()
+      })
+    };
+    
+    loadFilteredProperties(filters);
+  }
+  
+  function loadInitialProperties() {
+    var initialData = {{ map_data_json|safe }};
+    addMarkers(initialData);
+    loadPropertyList(initialData);
+  }
+  
+  function locateUser() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        var lat = position.coords.latitude;
+        var lng = position.coords.longitude;
+        map.setView([lat, lng], 15);
+        
+        L.marker([lat, lng], {
+          icon: L.divIcon({
+            className: 'user-location-marker',
+            html: '<div style="background: #007bff; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          })
+        }).addTo(map);
+      }, function(error) {
+        alert('تعذر الحصول على موقعك');
+      });
+    } else {
+      alert 'المتصفح لا يدعم تحديد الموقع';
+    }
+  }
+  
+  function addDrawControl() {
+    var drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+    
+    drawControl = new L.Control.Draw({
+      draw: {
+        polygon: true,
+        polyline: false,
+        rectangle: true,
+        circle: true,
+        marker: false,
+        circlemarker: false
+      },
+      edit: {
+        featureGroup: drawnItems,
+        remove: true
+      }
+    });
+    
+    map.addControl(drawControl);
+    
+    map.on(L.Draw.Event.CREATED, function(event) {
+      var layer = event.layer;
+      drawnItems.addLayer(layer);
+      
+      // Filter properties within drawn area
+      var bounds = layer.getBounds();
+      var filters = {
+        bounds: JSON.stringify({
+          south: bounds.getSouth(),
+          north: bounds.getNorth(),
+          west: bounds.getWest(),
+          east: bounds.getEast()
+        })
+      };
+      
+      loadFilteredProperties(filters);
+    });
+  }
+  
+  function toggleDraw() {
+    if (map.hasLayer(drawControl)) {
+      map.removeControl(drawControl);
+    } else {
+      map.addControl(drawControl);
+    }
+  }
+  
+  function toggleHeatmap() {
+    heatmapEnabled = !heatmapEnabled;
+    
+    if (heatmapEnabled) {
+      // Create heatmap from current properties
+      var heatData = [];
+      document.querySelectorAll('.property-card').forEach(function(card) {
+        var id = card.dataset.id;
+        var property = findPropertyById(id);
+        if (property) {
+          heatData.push([property.lat, property.lng, 0.5]);
+        }
+      });
+      
+      if (heatData.length > 0) {
+        heatLayer = L.heatLayer(heatData, {
+          radius: 25,
+          blur: 15,
+          maxZoom: 12,
+          gradient: {
+            0.0: 'blue',
+            0.3: 'cyan',
+            0.5: 'lime',
+            0.7: 'yellow',
+            1.0: 'red'
+          }
+        }).addTo(map);
+        
+        // Hide markers when heatmap is active
+        markerCluster.setOpacity(0.3);
+      }
+    } else {
+      if (heatLayer) {
+        map.removeLayer(heatLayer);
+        heatLayer = null;
+      }
+      markerCluster.setOpacity(1);
+    }
+  }
+  
+  function findPropertyById(id) {
+    var cards = document.querySelectorAll('.property-card');
+    for (var i = 0; i < cards.length; i++) {
+      if (cards[i].dataset.id == id) {
+        return {
+          lat: parseFloat(cards[i].dataset.lat),
+          lng: parseFloat(cards[i].dataset.lng)
+        };
+      }
+    }
+    return null;
+  }
+  
+  function showNearbyPlaces() {
+    if (!selectedProperty) {
+      alert('يرجى اختيار عقار أولاً');
+      return;
+    }
+    
+    var placeType = prompt('اختر نوع المكان:\nall - الكل\nschool - مدارس\nhospital - مستشفيات\nmosque - مساجد\nmarket - أسواق\nrestaurant - مطاعم\npark - حدائق', 'all');
+    
+    if (!placeType) return;
+    
+    var url = '{% url "map_api_nearby_places" %}?' + 
+      'lat=' + selectedProperty.lat + 
+      '&lng=' + selectedProperty.lng + 
+      '&type=' + placeType;
+    
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          alert('خطأ: ' + data.error);
+          return;
+        }
+        
+        // Clear existing place markers
+        map.eachLayer(function(layer) {
+          if (layer instanceof L.Marker && layer !== selectedProperty) {
+            map.removeLayer(layer);
+          }
+        });
+        
+        // Add place markers
+        data.places.forEach(function(place) {
+          var icon = L.divIcon({
+            className: 'place-marker',
+            html: '<div style="background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap;">' + place.name + '</div>',
+            iconSize: [80, 25],
+            iconAnchor: [40, 12]
+          });
+          
+          var marker = L.marker([place.lat, place.lng], { icon: icon })
+            .bindPopup('<strong>' + place.name + '</strong><br>' + place.type + '<br>' + place.distance + ' متر')
+            .addTo(map);
+        });
+        
+        alert('تم العثور على ' + data.total + ' مكان قريب');
+      })
+      .catch(error => {
+        alert('خطأ في جلب الأماكن: ' + error);
+      });
+  }
+  
+  function getDirections() {
+    if (!selectedProperty) {
+      alert('يرجى اختيار عقار أولاً');
+      return;
+    }
+    
+    // Get user location first
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        var startLat = position.coords.latitude;
+        var startLng = position.coords.longitude;
+        
+        var profile = prompt('اختر طريقة الوصول:\ndriving - سيارة\nwalking - مشي\ncycling - دراجة', 'driving');
+        
+        if (!profile) return;
+        
+        var url = '{% url "map_api_directions" %}?' +
+          'start_lat=' + startLat +
+          '&start_lng=' + startLng +
+          '&end_lat=' + selectedProperty.lat +
+          '&end_lng=' + selectedProperty.lng +
+          '&profile=' + profile;
+        
+        fetch(url)
+          .then(response => response.json())
+          .then(data => {
+            if (data.error) {
+              alert('خطأ: ' + data.error);
+              return;
+            }
+            
+            // Remove existing route layer
+            map.eachLayer(function(layer) {
+              if (layer instanceof L.GeoJSON) {
+                map.removeLayer(layer);
+              }
+            });
+            
+            // Add route to map
+            if (data.geometry) {
+              var routeLayer = L.geoJSON(data.geometry, {
+                style: {
+                  color: '#007bff',
+                  weight: 5,
+                  opacity: 0.7
+                }
+              }).addTo(map);
+              
+              map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
+            }
+            
+            var distanceKm = (data.distance / 1000).toFixed(2);
+            var durationMin = Math.round(data.duration / 60);
+            
+            alert('المسافة: ' + distanceKm + ' كم\nالوقت المتوقع: ' + durationMin + ' دقيقة');
+          })
+          .catch(error => {
+            alert('خطأ في جلب الاتجاهات: ' + error);
+          });
+      }, function(error) {
+        alert('تعذر الحصول على موقعك');
+      });
+    } else {
+      alert('المتصفح لا يدعم تحديد الموقع');
+    }
+  }
+  
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.querySelector('.map-main').requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
+  
+  function toggleOffices() {
+    officesShown = !officesShown;
+    
+    if (officesShown) {
+      fetch('{% url "map_api_offices" %}')
+        .then(response => response.json())
+        .then(data => {
+          officeMarkers = L.layerGroup();
+          
+          data.offices.forEach(function(office) {
+            var icon = L.divIcon({
+              className: 'office-marker',
+              html: '<div style="background: #6c757d; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap;">🏢 ' + office.name + '</div>',
+              iconSize: [100, 25],
+              iconAnchor: [50, 12]
+            });
+            
+            var marker = L.marker([office.lat, office.lng], { icon: icon })
+              .bindPopup('<strong>' + office.name + '</strong><br>' + office.address + '<br>' + office.phone)
+              .addTo(officeMarkers);
+          });
+          
+          officeMarkers.addTo(map);
+          alert('تم عرض ' + data.total + ' مكتب');
+        })
+        .catch(error => {
+          alert('خطأ في جلب المكاتب: ' + error);
+        });
+    } else {
+      if (officeMarkers) {
+        map.removeLayer(officeMarkers);
+        officeMarkers = null;
+      }
+    }
+  }
+  
+  function toggleBrokers() {
+    brokersShown = !brokersShown;
+    
+    if (brokersShown) {
+      fetch('{% url "map_api_brokers" %}')
+        .then(response => response.json())
+        .then(data => {
+          brokerMarkers = L.layerGroup();
+          
+          data.brokers.forEach(function(broker) {
+            if (broker.lat && broker.lng) {
+              var icon = L.divIcon({
+                className: 'broker-marker',
+                html: '<div style="background: #17a2b8; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap;">👤 ' + broker.name + '</div>',
+                iconSize: [100, 25],
+                iconAnchor: [50, 12]
+              });
+              
+              var marker = L.marker([broker.lat, broker.lng], { icon: icon })
+                .bindPopup('<strong>' + broker.name + '</strong><br>' + broker.company_name + '<br>' + broker.phone)
+                .addTo(brokerMarkers);
+            }
+          });
+          
+          brokerMarkers.addTo(map);
+          alert('تم عرض ' + data.total + ' دلال');
+        })
+        .catch(error => {
+          alert('خطأ في جلب الوكلاء: ' + error);
+        });
+    } else {
+      if (brokerMarkers) {
+        map.removeLayer(brokerMarkers);
+        brokerMarkers = null;
+      }
+    }
+  }
+  
+  function saveFavoriteArea() {
+    var bounds = map.getBounds();
+    var name = prompt('أدخل اسم المنطقة المفضلة:', 'منطقتي المفضلة');
+    
+    if (!name) return;
+    
+    var data = {
+      name: name,
+      south: bounds.getSouth(),
+      north: bounds.getNorth(),
+      west: bounds.getWest(),
+      east: bounds.getEast()
+    };
+    
+    fetch('{% url "map_api_save_favorite_area" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        alert(result.message);
+      } else {
+        alert('خطأ: ' + result.error);
+      }
+    })
+    .catch(error => {
+      alert('خطأ في حفظ المنطقة: ' + error);
+    });
+  }
+  
+  function addToComparison() {
+    if (!selectedProperty) {
+      alert('يرجى اختيار عقار أولاً');
+      return;
+    }
+    
+    var data = {
+      property_id: selectedProperty.id
+    };
+    
+    fetch('{% url "map_api_add_to_comparison" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        alert(result.message);
+      } else {
+        alert(result.message);
+      }
+    })
+    .catch(error => {
+      alert('خطأ في إضافة العقار للمقارنة: ' + error);
+    });
+  }
+  
+  function showComparison() {
+    fetch('{% url "map_api_comparison_list" %}')
+      .then(response => response.json())
+      .then(data => {
+        if (data.total === 0) {
+          alert('لا توجد عقارات في المقارنة');
+          return;
+        }
+        
+        var comparisonHtml = '<div style="max-height: 400px; overflow-y: auto;">';
+        comparisonHtml += '<h3>مقارنة العقارات (' + data.total + ')</h3>';
+        comparisonHtml += '<table style="width: 100%; border-collapse: collapse;">';
+        comparisonHtml += '<tr style="background: #f0f0f0;"><th>العقار</th><th>السعر</th><th>المساحة</th><th>غرف</th><th>الإجراء</th></tr>';
+        
+        data.comparisons.forEach(function(comp) {
+          comparisonHtml += '<tr style="border-bottom: 1px solid #ddd;">';
+          comparisonHtml += '<td>' + comp.title + '</td>';
+          comparisonHtml += '<td>' + comp.price + '</td>';
+          comparisonHtml += '<td>' + comp.area + ' م²</td>';
+          comparisonHtml += '<td>' + (comp.bedrooms || '-') + '</td>';
+          comparisonHtml += '<td><button onclick="removeFromComparison(' + comp.id + ')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; cursor: pointer;">إزالة</button></td>';
+          comparisonHtml += '</tr>';
+        });
+        
+        comparisonHtml += '</table></div>';
+        
+        // Create a modal-like alert
+        var modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 2000; max-width: 600px; width: 90%;';
+        modal.innerHTML = comparisonHtml + '<button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">إغلاق</button>';
+        document.body.appendChild(modal);
+      })
+      .catch(error => {
+        alert('خطأ في جلب المقارنة: ' + error);
+      });
+  }
+  
+  function removeFromComparison(comparisonId) {
+    fetch('{% url "map_api_remove_from_comparison" comparison_id=0 %}'.replace('0', comparisonId), {
+      method: 'DELETE',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+      }
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        alert(result.message);
+        showComparison(); // Refresh the comparison list
+      } else {
+        alert('خطأ: ' + result.error);
+      }
+    })
+    .catch(error => {
+      alert('خطأ في إزالة العقار: ' + error);
+    });
+  }
+  
+  function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      var cookies = document.cookie.split(';');
+      for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  
+  function debounce(func, wait) {
+    var timeout;
+    return function() {
+      var context = this, args = arguments;
+      clearTimeout(timeout);
+      timeout = setTimeout(function() {
+        func.apply(context, args);
+      }, wait);
+    };
+  }
+  
+  // Initialize on load
+  if (typeof L !== 'undefined') {
+    initMap();
+  } else {
+    console.error('Leaflet not loaded');
+  }
+})();
+</script>
+{% endblock %}

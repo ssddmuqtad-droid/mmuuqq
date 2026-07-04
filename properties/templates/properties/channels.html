@@ -1,0 +1,347 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}القنوات العقارية - منصة العقارات{% endblock %}
+
+{% block extra_css %}
+<style>
+.channels-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 60px 20px;
+  text-align: center;
+  color: white;
+  margin-bottom: 40px;
+}
+
+.channels-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.channels-header p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.search-container {
+  max-width: 600px;
+  margin: 0 auto 40px;
+}
+
+.search-box {
+  display: flex;
+  gap: 10px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 15px 20px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+
+.search-button {
+  padding: 15px 30px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.search-button:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.channels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 30px;
+  padding: 0 20px 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.channel-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+}
+
+.channel-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.channel-header {
+  padding: 30px;
+  color: white;
+  text-align: center;
+}
+
+.channel-icon {
+  font-size: 4rem;
+  margin-bottom: 15px;
+}
+
+.channel-name {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.channel-description {
+  font-size: 0.95rem;
+  opacity: 0.9;
+  line-height: 1.5;
+}
+
+.channel-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 20px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-top: 5px;
+}
+
+.channel-actions {
+  padding: 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.enter-button {
+  flex: 1;
+  padding: 12px 24px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.enter-button:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.share-button {
+  padding: 12px 20px;
+  background: var(--card-bg);
+  color: var(--text);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.share-button:hover {
+  background: var(--bg);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--text-light);
+}
+
+.empty-state-icon {
+  font-size: 5rem;
+  margin-bottom: 20px;
+}
+
+.copy-notification {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--primary);
+  color: white;
+  padding: 15px 30px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  z-index: 2000;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="channels-header">
+  <h1>📺 القنوات العقارية</h1>
+  <p>تصفح العقارات حسب القناة - الدلالين، المستخدمين، والمدير</p>
+</div>
+
+<div class="container">
+  <form method="get" class="search-container">
+    <div class="search-box">
+      <input 
+        type="text" 
+        name="search" 
+        class="search-input" 
+        placeholder="🔍 ابحث عن قناة..." 
+        value="{{ search_query }}"
+      >
+      <button type="submit" class="search-button">بحث</button>
+    </div>
+  </form>
+
+  {% if channels %}
+  <div class="channels-grid">
+    {% for channel in channels %}
+    <div class="channel-card">
+      <div class="channel-header" style="background: {{ channel.color }};">
+        <div class="channel-icon">{{ channel.icon }}</div>
+        <h2 class="channel-name">{{ channel.name }}</h2>
+        <p class="channel-description">{{ channel.description }}</p>
+      </div>
+      
+      <div class="channel-stats">
+        <div class="stat-item">
+          <div class="stat-number">{{ channel.properties_count }}</div>
+          <div class="stat-label">عقار</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">{{ channel.members_count }}</div>
+          <div class="stat-label">عضو</div>
+        </div>
+      </div>
+      
+      <div class="channel-actions">
+        {% if channel.url_args %}
+          <a href="{% url channel.url channel.url_args.0 %}" class="enter-button">
+            🚀 دخول
+          </a>
+          <button 
+            class="share-button" 
+            onclick="shareChannel('{{ channel.name }}', '{% url channel.url channel.url_args.0 %}')"
+            title="مشاركة القناة"
+          >
+            📤
+          </button>
+        {% else %}
+          <a href="{% url channel.url %}" class="enter-button">
+            🚀 دخول
+          </a>
+          <button 
+            class="share-button" 
+            onclick="shareChannel('{{ channel.name }}', '{% url channel.url %}')"
+            title="مشاركة القناة"
+          >
+            📤
+          </button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">🔍</div>
+    <h3>لم يتم العثور على قنوات</h3>
+    <p>جرب البحث بكلمات مختلفة</p>
+  </div>
+  {% endif %}
+</div>
+
+<div id="copy-notification" class="copy-notification" style="display: none;">
+  ✅ تم نسخ رابط القناة
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function shareChannel(channelName, channelUrl) {
+  const fullUrl = window.location.origin + channelUrl;
+  
+  // Try to use the Web Share API if available
+  if (navigator.share) {
+    navigator.share({
+      title: channelName + ' - منصة العقارات',
+      url: fullUrl
+    }).catch(err => {
+      // Fallback to copying to clipboard
+      copyToClipboard(fullUrl);
+    });
+  } else {
+    // Fallback to copying to clipboard
+    copyToClipboard(fullUrl);
+  }
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showNotification();
+  }).catch(err => {
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    showNotification();
+  });
+}
+
+function showNotification() {
+  const notification = document.getElementById('copy-notification');
+  notification.style.display = 'block';
+  setTimeout(() => {
+    notification.style.display = 'none';
+  }, 2000);
+}
+</script>
+{% endblock %}

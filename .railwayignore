@@ -1,0 +1,8 @@
+venv/
+*.pyc
+__pycache__/
+*.log
+server.js
+package.json.backup
+*.lnk
+*.backup

@@ -1,0 +1,360 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}إنشاء حساب جديد{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-icon">👤</div>
+      <h1>إنشاء حساب جديد</h1>
+      <p>انضم إلى دلال - منصة العقارات</p>
+    </div>
+    
+    <form method="post" action="{% url 'register' %}" class="auth-form">
+      {% csrf_token %}
+      
+      <div class="form-group">
+        <label for="username">
+          <span class="label-icon">👤</span>
+          اسم المستخدم
+        </label>
+        <input type="text" name="username" id="username" class="form-control" required autocomplete="username" placeholder="أدخل اسم المستخدم">
+      </div>
+      
+      <div class="form-group">
+        <label for="email">
+          <span class="label-icon">📧</span>
+          البريد الإلكتروني
+        </label>
+        <input type="email" name="email" id="email" class="form-control" required autocomplete="email" placeholder="أدخل البريد الإلكتروني">
+      </div>
+      
+      <div class="form-group">
+        <label for="first_name">
+          <span class="label-icon">📝</span>
+          الاسم الأول
+        </label>
+        <input type="text" name="first_name" id="first_name" class="form-control" autocomplete="given-name" placeholder="الاسم الأول">
+      </div>
+      
+      <div class="form-group">
+        <label for="last_name">
+          <span class="label-icon">📝</span>
+          الاسم الأخير
+        </label>
+        <input type="text" name="last_name" id="last_name" class="form-control" autocomplete="family-name" placeholder="الاسم الأخير">
+      </div>
+      
+      <div class="form-group">
+        <label for="phone">
+          <span class="label-icon">📱</span>
+          رقم الهاتف
+        </label>
+        <input type="tel" name="phone" id="phone" class="form-control" autocomplete="tel" placeholder="07XXXXXXXXX">
+      </div>
+      
+      <div class="form-group">
+        <label for="password">
+          <span class="label-icon">🔒</span>
+          كلمة المرور
+        </label>
+        <input type="password" name="password" id="password" class="form-control" required autocomplete="new-password" placeholder="أدخل كلمة المرور (6 أحرف على الأقل)">
+      </div>
+      
+      <div class="form-group">
+        <label for="confirm_password">
+          <span class="label-icon">🔒</span>
+          تأكيد كلمة المرور
+        </label>
+        <input type="password" name="confirm_password" id="confirm_password" class="form-control" required autocomplete="new-password" placeholder="أعد إدخال كلمة المرور">
+      </div>
+      
+      <button type="submit" class="btn btn-primary btn-lg auth-submit" onclick="console.log('Button clicked');">
+        <span class="btn-icon">🚀</span>
+        إنشاء الحساب
+      </button>
+    </form>
+    
+    <div class="auth-footer">
+      <div class="auth-links">
+        <p>لديك حساب بالفعل؟ <a href="{% url 'login' %}">سجل دخول</a></p>
+      </div>
+      <a href="{% url 'home' %}" class="back-link">
+        <span class="back-icon">←</span>
+        العودة للرئيسية
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--bg);
+}
+
+.auth-card {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.auth-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.auth-header h1 {
+  font-size: 2rem;
+  font-weight: 900;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.auth-header p {
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.auth-form {
+  margin-bottom: 24px;
+}
+
+.auth-form .form-group {
+  margin-bottom: 20px;
+}
+
+.auth-form label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.label-icon {
+  font-size: 1.1rem;
+}
+
+.auth-form .form-control {
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.auth-form .form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.auth-form .form-control::placeholder {
+  color: var(--text-light);
+}
+
+.auth-submit {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 10;
+}
+
+.auth-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+}
+
+.auth-submit:active {
+  transform: translateY(0);
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+}
+
+.auth-footer {
+  text-align: center;
+}
+
+.auth-links {
+  margin-bottom: 16px;
+}
+
+.auth-links p {
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.auth-links a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-links a:hover {
+  text-decoration: underline;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-light);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+}
+
+.back-link:hover {
+  color: var(--primary);
+  background: rgba(255, 107, 53, 0.1);
+}
+
+.back-icon {
+  transition: transform 0.3s ease;
+}
+
+.back-link:hover .back-icon {
+  transform: translateX(-4px);
+}
+
+.account-type-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.account-type-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.account-type-option:hover {
+  border-color: var(--primary);
+  background: rgba(255, 107, 53, 0.05);
+}
+
+.account-type-option input[type="radio"] {
+  display: none;
+}
+
+.account-type-option input[type="radio"]:checked + .account-type-icon {
+  transform: scale(1.2);
+}
+
+.account-type-option input[type="radio"]:checked ~ .account-type-label {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.account-type-icon {
+  font-size: 1.5rem;
+  transition: transform 0.3s ease;
+}
+
+.account-type-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.broker-field {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 28px;
+  }
+  
+  .auth-header h1 {
+    font-size: 1.6rem;
+  }
+  
+  .auth-icon {
+    font-size: 2.5rem;
+  }
+  
+  .account-type-selector {
+    flex-direction: column;
+  }
+}
+</style>
+{% endblock %}

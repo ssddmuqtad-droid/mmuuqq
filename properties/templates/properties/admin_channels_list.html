@@ -1,0 +1,352 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}إدارة القنوات - لوحة الإدارة{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-channels-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.channels-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.channels-header h1 {
+  color: var(--text);
+  margin: 0;
+}
+
+.filters-bar {
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: var(--radius);
+  margin-bottom: 30px;
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filters-bar input,
+.filters-bar select {
+  padding: 10px 15px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.filters-bar input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.filters-bar button {
+  padding: 10px 25px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.filters-bar button:hover {
+  background: var(--primary-dark);
+}
+
+.channels-table {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.channels-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.channels-table th,
+.channels-table td {
+  padding: 15px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.channels-table th {
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.channels-table tr:hover {
+  background: rgba(13, 148, 136, 0.05);
+}
+
+.channel-logo {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--border);
+}
+
+.channel-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.channel-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.channel-broker {
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-pending {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.status-active {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.status-inactive {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+.status-suspended {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-approve {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.btn-approve:hover {
+  background: rgba(34, 197, 94, 0.2);
+}
+
+.btn-reject {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.btn-reject:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.btn-verify {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.btn-verify:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.btn-view {
+  background: rgba(13, 148, 136, 0.1);
+  color: var(--primary);
+}
+
+.btn-view:hover {
+  background: rgba(13, 148, 136, 0.2);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-light);
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.stat-number {
+  font-weight: 700;
+  color: var(--text);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-channels-container">
+  <div class="channels-header">
+    <h1>📺 إدارة قنوات الدلالين</h1>
+    <a href="{% url 'dashboard' %}" class="btn" style="background: var(--card-bg); border: 2px solid var(--border);">
+      ← العودة للوحة التحكم
+    </a>
+  </div>
+
+  <form method="get" class="filters-bar">
+    <input 
+      type="text" 
+      name="search" 
+      placeholder="🔍 بحث عن قناة..." 
+      value="{{ search_query }}"
+    >
+    
+    <select name="status">
+      <option value="all" {% if status_filter == 'all' %}selected{% endif %}>كل الحالات</option>
+      <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>بانتظار الموافقة</option>
+      <option value="active" {% if status_filter == 'active' %}selected{% endif %}>نشط</option>
+      <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>غير نشط</option>
+      <option value="suspended" {% if status_filter == 'suspended' %}selected{% endif %}>موقوف</option>
+    </select>
+    
+    <button type="submit">بحث</button>
+  </form>
+
+  {% if channels %}
+  <div class="channels-table">
+    <table>
+      <thead>
+        <tr>
+          <th>القناة</th>
+          <th>الدلال</th>
+          <th>الحالة</th>
+          <th>التوثيق</th>
+          <th>العقارات</th>
+          <th>المتابعين</th>
+          <th>المشاهدات</th>
+          <th>تاريخ الإنشاء</th>
+          <th>الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for channel in channels %}
+        <tr>
+          <td>
+            <div class="channel-info">
+              {% if channel.logo %}
+              <img src="{{ channel.logo.url }}" alt="{{ channel.name }}" class="channel-logo">
+              {% else %}
+              <div class="channel-logo" style="display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">📺</div>
+              {% endif %}
+              <div>
+                <div class="channel-name">{{ channel.name }}</div>
+                <div class="channel-broker">{{ channel.description|truncatechars:30 }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <strong>{{ channel.broker.display_name }}</strong>
+            <br>
+            <small style="color: var(--text-light);">@{{ channel.broker.user.username }}</small>
+          </td>
+          <td>
+            <span class="status-badge status-{{ channel.status }}">
+              {% if channel.status == 'pending' %}بانتظار الموافقة{% endif %}
+              {% if channel.status == 'active' %}نشط{% endif %}
+              {% if channel.status == 'inactive' %}غير نشط{% endif %}
+              {% if channel.status == 'suspended' %}موقوف{% endif %}
+            </span>
+          </td>
+          <td>
+            {% if channel.is_verified %}
+            <span class="verified-badge">✅ موثق</span>
+            {% else %}
+            <span style="color: var(--text-light);">غير موثق</span>
+            {% endif %}
+          </td>
+          <td><span class="stat-number">{{ channel.properties_count }}</span></td>
+          <td><span class="stat-number">{{ channel.followers_count }}</span></td>
+          <td><span class="stat-number">{{ channel.views_count }}</span></td>
+          <td>{{ channel.created_at|date:"Y-m-d" }}</td>
+          <td>
+            <div class="action-buttons">
+              <a href="{% url 'broker_channel_detail' channel.id %}" class="action-btn btn-view" target="_blank">
+                👁️ عرض
+              </a>
+              
+              {% if channel.status == 'pending' %}
+              <a href="{% url 'admin_channel_approve' channel.id %}" class="action-btn btn-approve">
+                ✅ قبول
+              </a>
+              {% endif %}
+              
+              {% if channel.status != 'suspended' %}
+              <a href="{% url 'admin_channel_reject' channel.id %}" class="action-btn btn-reject">
+                ❌ إيقاف
+              </a>
+              {% endif %}
+              
+              {% if not channel.is_verified %}
+              <a href="{% url 'admin_channel_verify' channel.id %}" class="action-btn btn-verify">
+                🏆 توثيق
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📺</div>
+    <h3>لا توجد قنوات</h3>
+    <p>لم يتم العثور على قنوات تطابق البحث</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends "properties/base.html" %}
+{% load static %}
+
+{% block title %}إدارة الحساب{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-info">
+      <h1>إدارة الحساب</h1>
+      <p>تحديث معلومات حسابك الشخصية</p>
+    </div>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم</a>
+    </div>
+  </div>
+
+  <div class="settings-container">
+    <form method="post" class="settings-form" enctype="multipart/form-data">
+      {% csrf_token %}
+      
+      <!-- Profile Information -->
+      <div class="settings-section">
+        <h2>معلومات الملف الشخصي</h2>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>الاسم الأول</label>
+            <input type="text" name="first_name" value="{{ user.first_name }}" required>
+          </div>
+          
+          <div class="form-group">
+            <label>اسم العائلة</label>
+            <input type="text" name="last_name" value="{{ user.last_name }}" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>اسم المستخدم</label>
+          <input type="text" value="{{ user.username }}" disabled>
+          <small>لا يمكن تغيير اسم المستخدم</small>
+        </div>
+      </div>
+      
+      <!-- Contact Information -->
+      <div class="settings-section">
+        <h2>معلومات الاتصال</h2>
+        
+        <div class="form-group">
+          <label>البريد الإلكتروني</label>
+          <input type="email" name="email" value="{{ user.email }}" required>
+        </div>
+        
+        <div class="form-group">
+          <label>رقم الهاتف</label>
+          <input type="tel" name="phone" value="{{ user.phone|default:'' }}">
+        </div>
+      </div>
+      
+      <!-- Account Info -->
+      <div class="settings-section">
+        <h2>معلومات الحساب</h2>
+        
+        <div class="info-item">
+          <span class="info-label">تاريخ إنشاء الحساب:</span>
+          <span class="info-value">{{ user.date_joined|date:"Y-m-d H:i" }}</span>
+        </div>
+        
+        <div class="info-item">
+          <span class="info-label">آخر تسجيل دخول:</span>
+          <span class="info-value">{{ user.last_login|date:"Y-m-d H:i" }}</span>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.settings-container {
+  max-width: 800px;
+  margin: 2rem auto;
+}
+
+.settings-section {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.settings-section h2 {
+  margin: 0 0 1rem 0;
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="tel"] {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.form-group input:disabled {
+  background: var(--bg-alt);
+  cursor: not-allowed;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.info-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-outline:hover {
+  background: var(--bg-alt);
+  border-color: var(--primary);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,191 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}لوحة الدلال الفرعي - {{ broker.display_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>🏠 لوحة الدلال الفرعي</h1>
+                <div class="btn-group">
+                    <a href="{% url 'sub_broker_commissions' %}" class="btn btn-outline-primary">العمولات</a>
+                    <a href="{% url 'sub_broker_properties' %}" class="btn btn-outline-primary">العقارات</a>
+                    <a href="{% url 'sub_broker_settings' %}" class="btn btn-outline-primary">الإعدادات</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Broker Info Card -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">معلومات الدلال الفرعي</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>الاسم:</strong> {{ broker.display_name }}</p>
+                    <p><strong>الدلال الرئيسي:</strong> {{ parent_broker.display_name }}</p>
+                    <p><strong>الهاتف:</strong> {{ broker.phone }}</p>
+                    <p><strong>المحافظة:</strong> {{ broker.governorate }}</p>
+                    {% if broker.office_name %}
+                    <p><strong>المكتب:</strong> {{ broker.office_name }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col=md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">الصلاحيات</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            {% if permissions.can_add %}
+                                <span class="badge bg-success">✓</span> يمكن إضافة عقارات
+                            {% else %}
+                                <span class="badge bg-danger">✗</span> لا يمكن إضافة عقارات
+                            {% endif %}
+                        </li>
+                        <li class="mb-2">
+                            {% if permissions.can_edit %}
+                                <span class="badge bg-success">✓</span> يمكن تعديل عقارات
+                            {% else %}
+                                <span class="badge bg-danger">✗</span> لا يمكن تعديل عقارات
+                            {% endif %}
+                        </li>
+                        <li class="mb-2">
+                            {% if permissions.can_delete %}
+                                <span class="badge bg-success">✓</span> يمكن حذف عقارات
+                            {% else %}
+                                <span class="badge bg-danger">✗</span> لا يمكن حذف عقارات
+                            {% endif %}
+                        </li>
+                        <li class="mb-2">
+                            <strong>الحد الأقصى للعقارات:</strong> {{ permissions.max_properties }}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ total_properties }}</h3>
+                    <p class="text-muted">إجمالي العقارات</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">{{ active_properties }}</h3>
+                    <p class="text-muted">عقارات نشطة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-info">{{ sold_properties }}</h3>
+                    <p class="text-muted">عقارات مباعة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ sales_performance.sales_count }}</h3>
+                    <p class="text-muted">عدد المبيعات</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Commission Summary -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">ملخص العمولات</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <p><strong>إجمالي العمولات:</strong> {{ commission_summary.total }} د.ع</p>
+                            <p><strong>العمولات المدفوعة:</strong> {{ commission_summary.paid }} د.ع</p>
+                        </div>
+                        <div class="col-6">
+                            <p><strong>العمولات المعلقة:</strong> {{ commission_summary.pending }} د.ع</p>
+                            <p><strong>الرصيد المتبقي:</strong> {{ commission_summary.balance }} د.ع</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0">أداء المبيعات</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>عدد المبيعات:</strong> {{ sales_performance.sales_count }}</p>
+                    <p><strong>هدف المبيعات:</strong> {{ sales_performance.target_sales|default:"غير محدد" }}</p>
+                    <p><strong>نسبة الإنجاز:</strong> {{ sales_performance.achievement_percentage|floatformat:2 }}%</p>
+                    {% if sales_performance.performance_rating %}
+                    <p><strong>تقييم الأداء:</strong> {{ sales_performance.performance_rating }}/5</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Properties -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">آخر العقارات</h5>
+                </div>
+                <div class="card-body">
+                    {% if properties %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>العنوان</th>
+                                    <th>النوع</th>
+                                    <th>الحالة</th>
+                                    <th>السعر</th>
+                                    <th>تاريخ الإضافة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for property in properties %}
+                                <tr>
+                                    <td><a href="{% url 'property_detail' property.slug %}">{{ property.display_title }}</a></td>
+                                    <td>{{ property.get_type_display }}</td>
+                                    <td>{{ property.get_status_display }}</td>
+                                    <td>{{ property.price_formatted }}</td>
+                                    <td>{{ property.created_at|date:"Y-m-d" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">لا توجد عقارات بعد</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

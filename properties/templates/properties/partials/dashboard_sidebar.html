@@ -1,0 +1,84 @@
+<aside class="dashboard-sidebar" id="dashboard-sidebar">
+  <div class="dashboard-sidebar-brand">
+    <img src="{% static 'images/logo.jpg' %}" alt="{{ site_settings.site_name|default:'دلال' }}" class="brand-icon logo-mark" style="height: 40px; width: auto;">
+    <div>
+      <h2>{{ site_settings.site_name|default:'دلال' }}</h2>
+      <p>لوحة التحكم الموحدة</p>
+    </div>
+  </div>
+
+  <nav>
+    <ul class="sidebar-nav">
+      <li class="sidebar-section-title">الرئيسية</li>
+      <li><a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <span class="nav-icon">📊</span> نظرة عامة
+      </a></li>
+      <li><a href="{% url 'home' %}">
+        <span class="nav-icon">🌐</span> الموقع العام
+      </a></li>
+
+      <li class="sidebar-section-title">العقارات</li>
+      <li><a href="{% url 'add_property' %}">
+        <span class="nav-icon">➕</span> إضافة عقار
+      </a></li>
+      <li><a href="{% url 'properties_map' %}">
+        <span class="nav-icon">🗺️</span> خريطة العقارات
+      </a></li>
+      <li><a href="{% url 'auctions_list' %}">
+        <span class="nav-icon">🔨</span> المزادات
+      </a></li>
+      <li><a href="{% url 'building_request_list' %}">
+        <span class="nav-icon">🏗️</span> طلبات البناء
+      </a></li>
+
+      <li class="sidebar-section-title">المالية والرسائل</li>
+      <li><a href="{% url 'financial_dashboard' %}">
+        <span class="nav-icon">💰</span> الإدارة المالية
+      </a></li>
+      <li><a href="{% url 'broker_messages' %}">
+        <span class="nav-icon">💬</span> الرسائل
+      </a></li>
+      <li><a href="{% url 'notifications' %}">
+        <span class="nav-icon">🔔</span> الإشعارات
+      </a></li>
+
+      {% if can_manage_brokers or request.user.is_superuser %}
+      <li class="sidebar-section-title">إدارة الدلالين</li>
+      <li><a href="{% url 'broker_list' %}">
+        <span class="nav-icon">👔</span> قائمة الدلالين
+      </a></li>
+      <li><a href="{% url 'join_requests_list' %}">
+        <span class="nav-icon">📋</span> طلبات الانضمام
+      </a></li>
+      {% endif %}
+
+      {% if can_access_admin_panel %}
+      <li class="sidebar-section-title">إدارة النظام</li>
+      <li><a href="{% url 'dashboard' %}?tab=users" class="{% if request.resolver_match.url_name == 'admin_users_list' or request.resolver_match.url_name == 'admin_edit_user' or request.resolver_match.url_name == 'admin_create_user' %}active{% endif %}">
+        <span class="nav-icon">👥</span> المستخدمين
+      </a></li>
+      <li><a href="{% url 'admin_users_list' %}">
+        <span class="nav-icon">⚙️</span> إدارة الحسابات
+      </a></li>
+      <li><a href="{% url 'settings_general' %}">
+        <span class="nav-icon">🎨</span> إعدادات الموقع
+      </a></li>
+      <li><a href="{% url 'report_list' %}">
+        <span class="nav-icon">🚨</span> البلاغات
+      </a></li>
+      <li><a href="/admin/" target="_blank">
+        <span class="nav-icon">🔧</span> Django Admin
+      </a></li>
+      {% endif %}
+
+      <li class="sidebar-section-title">الحساب</li>
+      <li><a href="{% url 'settings_hub' %}">
+        <span class="nav-icon">👤</span> إعداداتي
+      </a></li>
+      <li><a href="{% url 'logout' %}">
+        <span class="nav-icon">🚪</span> تسجيل الخروج
+      </a></li>
+    </ul>
+  </nav>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>

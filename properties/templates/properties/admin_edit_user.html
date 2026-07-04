@@ -1,0 +1,89 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}تعديل المستخدم{% endblock %}
+{% block dashboard_title %}تعديل <span>المستخدم</span>{% endblock %}
+{% block dashboard_subtitle %}
+<p style="margin:0;color:var(--text-muted);font-size:0.9rem;">{{ user.get_full_name|default:user.username }} — @{{ user.username }}</p>
+{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'admin_users_list' %}" class="btn btn-outline">← المستخدمين</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="padding:28px;">
+  <form method="post" class="admin-form">
+    {% csrf_token %}
+
+    <div class="form-section">
+      <h3>معلومات المستخدم الأساسية</h3>
+
+      <div class="form-group">
+        <label for="username">اسم المستخدم</label>
+        <input type="text" id="username" name="username" class="form-control" value="{{ user.username }}" readonly>
+      </div>
+
+      <div class="form-group">
+        <label for="email">البريد الإلكتروني</label>
+        <input type="email" id="email" name="email" class="form-control" value="{{ user.email }}" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="first_name">الاسم الأول</label>
+          <input type="text" id="first_name" name="first_name" class="form-control" value="{{ user.first_name }}">
+        </div>
+        <div class="form-group">
+          <label for="last_name">اسم العائلة</label>
+          <input type="text" id="last_name" name="last_name" class="form-control" value="{{ user.last_name }}">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="phone">رقم الهاتف</label>
+        <input type="tel" id="phone" name="phone" class="form-control" value="{% if user.broker_profile %}{{ user.broker_profile.phone }}{% elif user.user_profile %}{{ user.user_profile.phone }}{% endif %}">
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input type="checkbox" name="is_active" {% if user.is_active %}checked{% endif %}>
+          حساب نشط
+        </label>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>معلومات إضافية</h3>
+
+      <div class="info-box">
+        <h4>نوع الحساب</h4>
+        <p>
+          {% if user.is_superuser %}👑 مدير النظام
+          {% elif user.broker_profile %}👔 دلال
+          {% elif user.user_profile %}👤 مستخدم عادي
+          {% else %}❓ غير معروف{% endif %}
+        </p>
+        <p style="margin-top:10px;">
+          <a href="{% url 'admin_change_user_type' user.id %}" class="btn btn-outline btn-sm">تغيير النوع</a>
+        </p>
+      </div>
+
+      <div class="info-box">
+        <h4>تاريخ الإنشاء</h4>
+        <p>{{ user.date_joined|date:"Y/m/d H:i" }}</p>
+      </div>
+
+      <div class="info-box">
+        <h4>آخر تسجيل دخول</h4>
+        <p>{{ user.last_login|date:"Y/m/d H:i"|default:"لم يسجل الدخول بعد" }}</p>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">✅ حفظ التغييرات</button>
+      <a href="{% url 'admin_reset_password' user.id %}" class="btn btn-outline">🔑 إعادة تعيين كلمة المرور</a>
+      <a href="{% url 'admin_users_list' %}" class="btn btn-outline">إلغاء</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+/**
+ * Django Admin — Dalal black & gold theme
+ */
+:root {
+  --primary: #FFC107;
+  --primary-fg: #121212;
+  --body-fg: #F5F5F5;
+  --body-bg: #121212;
+  --body-quiet-color: #B0B0B0;
+  --body-medium-color: #888;
+  --body-loud-color: #FFC107;
+  --header-color: #121212;
+  --header-bg: #1A1A1A;
+  --header-link-color: #FFC107;
+  --breadcrumbs-bg: #1E1E1E;
+  --breadcrumbs-fg: #F5F5F5;
+  --breadcrumbs-link-fg: #FFC107;
+  --link-fg: #FFD54F;
+  --link-hover-color: #FFC107;
+  --hairline-color: rgba(255, 193, 7, 0.2);
+  --border-color: rgba(255, 193, 7, 0.15);
+  --error-fg: #EF5350;
+  --message-success-bg: rgba(76, 175, 80, 0.2);
+  --message-warning-bg: rgba(255, 193, 7, 0.15);
+  --message-error-bg: rgba(239, 83, 80, 0.15);
+  --darkened-bg: #1E1E1E;
+  --selected-bg: rgba(255, 193, 7, 0.12);
+  --selected-row: rgba(255, 193, 7, 0.08);
+  --button-fg: #121212;
+  --button-bg: #FFC107;
+  --button-hover-bg: #E6AC00;
+  --default-button-bg: #252525;
+  --default-button-hover-bg: #333;
+  --close-button-bg: #333;
+  --close-button-hover-bg: #444;
+  --delete-button-bg: #EF5350;
+  --delete-button-hover-bg: #E53935;
+  --object-tools-bg: #FFC107;
+  --object-tools-fg: #121212;
+  --object-tools-hover-bg: #E6AC00;
+}
+
+#header {
+  background: var(--header-bg);
+  border-bottom: 2px solid var(--primary);
+}
+
+#header a:link, #header a:visited { color: var(--header-link-color); }
+
+div.breadcrumbs {
+  background: var(--breadcrumbs-bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.module h2, .module caption, .inline-group h2 {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+
+.button, input[type=submit], input[type=button], .submit-row input, a.button {
+  background: var(--button-bg);
+  color: var(--button-fg);
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.button:hover, input[type=submit]:hover, input[type=button]:hover,
+.submit-row input:hover, a.button:hover {
+  background: var(--button-hover-bg);
+}
+
+#changelist-filter h2 {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+
+#result_list thead th {
+  background: #252525;
+  color: var(--primary);
+}
+
+#result_list tbody tr:hover {
+  background: var(--selected-row);
+}
+
+.dashboard #content-main .module table th {
+  color: var(--primary);
+}

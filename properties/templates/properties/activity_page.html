@@ -1,0 +1,147 @@
+{% extends "properties/base.html" %}
+{% load static %}
+
+{% block title %}النشاط{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-info">
+      <h1>النشاط</h1>
+      <p>سجل نشاطك الحديث</p>
+    </div>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم</a>
+    </div>
+  </div>
+
+  <div class="activity-container">
+    <!-- Saved Properties -->
+    <div class="activity-section">
+      <h2>العقارات المحفوظة مؤخراً</h2>
+      <div class="activity-list">
+        {% for save in saved_properties %}
+        <div class="activity-item">
+          <div class="activity-icon">⭐</div>
+          <div class="activity-content">
+            <div class="activity-title">حفظ عقار</div>
+            <div class="activity-description">{{ save.property.title }}</div>
+            <div class="activity-time">{{ save.created_at|date:"Y-m-d H:i" }}</div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">لا توجد عقارات محفوظة</div>
+        {% endfor %}
+      </div>
+    </div>
+    
+    <!-- Sent Messages -->
+    <div class="activity-section">
+      <h2>الرسائل المرسلة مؤخراً</h2>
+      <div class="activity-list">
+        {% for message in sent_messages %}
+        <div class="activity-item">
+          <div class="activity-icon">💬</div>
+          <div class="activity-content">
+            <div class="activity-title">رسالة مرسلة</div>
+            <div class="activity-description">{{ message.content|truncatewords:10 }}</div>
+            <div class="activity-time">{{ message.created_at|date:"Y-m-d H:i" }}</div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">لا توجد رسائل مرسلة</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.activity-container {
+  max-width: 800px;
+  margin: 2rem auto;
+}
+
+.activity-section {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.activity-section h2 {
+  margin: 0 0 1.5rem 0;
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.activity-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.activity-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-title {
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.activity-description {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.activity-time {
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-light);
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-outline:hover {
+  background: var(--bg-alt);
+  border-color: var(--primary);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'properties/base.html' %}
+
+{% block body_class %}dashboard-page{% endblock %}
+
+{% block content %}
+<div class="dashboard-shell">
+  {% include 'properties/partials/dashboard_sidebar.html' %}
+  <div class="dashboard-main">
+    <div class="dashboard-header-bar">
+      <div>
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="القائمة">☰</button>
+        <h1>{% block dashboard_title %}لوحة التحكم{% endblock %}</h1>
+        {% block dashboard_subtitle %}{% endblock %}
+      </div>
+      <div class="dashboard-quick-actions">
+        {% block dashboard_actions %}{% endblock %}
+      </div>
+    </div>
+    {% block dashboard_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  const toggle = document.getElementById('sidebar-toggle');
+  const sidebar = document.getElementById('dashboard-sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (!toggle || !sidebar) return;
+  toggle.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    overlay?.classList.toggle('open');
+  });
+  overlay?.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+  });
+})();
+</script>
+{% block dashboard_js %}{% endblock %}
+{% endblock %}

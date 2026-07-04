@@ -1,0 +1,360 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}{{ channel.name }} - منصة العقارات{% endblock %}
+
+{% block extra_css %}
+<style>
+.channel-cover {
+  height: 300px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  margin-bottom: 60px;
+}
+
+.channel-cover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7));
+}
+
+.channel-info {
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  color: white;
+  width: 90%;
+  max-width: 800px;
+}
+
+.channel-logo {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid white;
+  background: var(--card-bg);
+  margin-bottom: 15px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.channel-name {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+.channel-description {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin-bottom: 15px;
+  text-shadow: 0 1px 5px rgba(0,0,0,0.5);
+}
+
+.channel-stats-bar {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 15px;
+}
+
+.channel-stat {
+  text-align: center;
+}
+
+.channel-stat-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.channel-stat-label {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.channel-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(59, 130, 246, 0.9);
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.channel-filters {
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: var(--radius);
+  margin-bottom: 30px;
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.channel-filters select {
+  padding: 10px 15px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+  min-width: 150px;
+}
+
+.channel-filters button {
+  padding: 10px 25px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.channel-filters button:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 0 20px 40px;
+}
+
+.property-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.property-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.property-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.property-info {
+  padding: 15px;
+}
+
+.property-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+
+.property-price {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
+.property-location {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 10px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.badge-broker {
+  background: rgba(13, 148, 136, 0.1);
+  color: var(--primary);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-light);
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.broker-info {
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: var(--radius);
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.broker-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--border);
+}
+
+.broker-details h3 {
+  margin: 0 0 5px 0;
+  color: var(--text);
+}
+
+.broker-details p {
+  margin: 0;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% if channel.cover_image %}
+<div class="channel-cover" style="background-image: url('{{ channel.cover_image.url }}');">
+{% else %}
+<div class="channel-cover" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+{% endif %}
+  <div class="channel-info">
+    {% if channel.logo %}
+    <img src="{{ channel.logo.url }}" alt="{{ channel.name }}" class="channel-logo">
+    {% else %}
+    <div class="channel-logo" style="display: flex; align-items: center; justify-content: center; font-size: 3rem;">
+      📺
+    </div>
+    {% endif %}
+    
+    <h1 class="channel-name">{{ channel.name }}</h1>
+    <p class="channel-description">{{ channel.description|default:"قناة عقارية احترافية" }}</p>
+    
+    {% if channel.is_verified %}
+    <div class="channel-verified">
+      ✅ موثق
+    </div>
+    {% endif %}
+    
+    <div class="channel-stats-bar">
+      <div class="channel-stat">
+        <div class="channel-stat-number">{{ channel.properties_count }}</div>
+        <div class="channel-stat-label">عقار</div>
+      </div>
+      <div class="channel-stat">
+        <div class="channel-stat-number">{{ channel.followers_count }}</div>
+        <div class="channel-stat-label">متابع</div>
+      </div>
+      <div class="channel-stat">
+        <div class="channel-stat-number">{{ channel.views_count }}</div>
+        <div class="channel-stat-label">مشاهدة</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container" style="margin-top: 80px;">
+  <div class="broker-info">
+    {% if channel.broker.user.profile.profile_pic %}
+    <img src="{{ channel.broker.user.profile.profile_pic.url }}" alt="{{ channel.broker.display_name }}" class="broker-avatar">
+    {% else %}
+    <div class="broker-avatar" style="display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+      👤
+    </div>
+    {% endif %}
+    <div class="broker-details">
+      <h3>{{ channel.broker.display_name }}</h3>
+      <p>📞 {{ channel.broker.phone }}</p>
+      {% if channel.broker.office_name %}
+      <p>🏢 {{ channel.broker.office_name }}</p>
+      {% endif %}
+      {% if channel.broker.governorate %}
+      <p>📍 {{ channel.broker.governorate }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <form method="get" class="channel-filters">
+    <select name="district">
+      <option value="">كل المناطق</option>
+      {% for dist in districts %}
+      <option value="{{ dist }}" {% if district == dist %}selected{% endif %}>{{ dist }}</option>
+      {% endfor %}
+    </select>
+    
+    <select name="property_type">
+      <option value="all" {% if property_type == 'all' %}selected{% endif %}>كل أنواع العقارات</option>
+      <option value="villa" {% if property_type == 'villa' %}selected{% endif %}>فيلا</option>
+      <option value="apartment" {% if property_type == 'apartment' %}selected{% endif %}>شقة</option>
+      <option value="land" {% if property_type == 'land' %}selected{% endif %}}>أرض</option>
+      <option value="office" {% if property_type == 'office' %}selected{% endif %}>مكتب</option>
+    </select>
+    
+    <select name="listing_type">
+      <option value="all" {% if listing_type == 'all' %}selected{% endif %}>كل العروض</option>
+      <option value="sale" {% if listing_type == 'sale' %}selected{% endif %}>للبيع</option>
+      <option value="rent" {% if listing_type == 'rent' %}selected{% endif %}>للإيجار</option>
+    </select>
+    
+    <button type="submit">🔍 بحث</button>
+  </form>
+
+  {% if properties %}
+  <div class="properties-grid">
+    {% for property in properties %}
+    <div class="property-card">
+      {% if property.gallery_images.first %}
+      <img src="{{ property.gallery_images.first.image.url }}" alt="{{ property.title }}" class="property-image">
+      {% else %}
+      <div class="property-image" style="background: var(--border); display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 3rem;">🏢</span>
+      </div>
+      {% endif %}
+      
+      <div class="property-info">
+        <h3 class="property-title">{{ property.title|truncatechars:50 }}</h3>
+        <div class="property-price">{{ property.price|floatformat:0 }} د.ع</div>
+        <div class="property-location">📍 {{ property.governorate }} - {{ property.district }}</div>
+        <span class="badge badge-broker">🧑‍💼 {{ channel.broker.display_name }}</span>
+        <a href="{{ property.get_absolute_url }}" class="btn btn-primary" style="display: block; margin-top: 10px; text-align: center;">عرض التفاصيل</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">🏢</div>
+    <h3>لا توجد عقارات</h3>
+    <p>لم يتم العثور على عقارات في هذه القناة</p>
+  </div>
+  {% endif %}
+  
+  <div style="text-align: center; margin-top: 30px;">
+    <a href="{% url 'channels' %}" class="btn" style="background: var(--card-bg); border: 2px solid var(--border);">
+      📺 العودة للقنوات
+    </a>
+  </div>
+</div>
+{% endblock %}

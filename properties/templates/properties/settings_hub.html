@@ -1,0 +1,170 @@
+{% extends "properties/base.html" %}
+{% load static %}
+
+{% block title %}الإعدادات{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-info">
+      <h1>الإعدادات</h1>
+      <p>إدارة إعدادات حسابك وتفضيلاتك</p>
+    </div>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم</a>
+    </div>
+  </div>
+
+  <div class="settings-hub">
+    <!-- Account Section -->
+    <div class="settings-category">
+      <h2>الحساب</h2>
+      <div class="settings-grid">
+        <a href="{% url 'account_management' %}" class="settings-card">
+          <div class="card-icon">👤</div>
+          <div class="card-title">إدارة الحساب</div>
+          <div class="card-description">تحديث معلوماتك الشخصية</div>
+        </a>
+      </div>
+    </div>
+    
+    <!-- Privacy Section -->
+    <div class="settings-category">
+      <h2>الخصوصية</h2>
+      <div class="settings-grid">
+        <a href="{% url 'privacy_settings' %}" class="settings-card">
+          <div class="card-icon">🔐</div>
+          <div class="card-title">الخصوصية</div>
+          <div class="card-description">تحكم في خصوصية حسابك</div>
+        </a>
+      </div>
+    </div>
+    
+    <!-- Notifications Section -->
+    <div class="settings-category">
+      <h2>الإشعارات</h2>
+      <div class="settings-grid">
+        <a href="{% url 'message_notification_settings' %}" class="settings-card">
+          <div class="card-icon">🔔</div>
+          <div class="card-title">إشعارات الرسائل</div>
+          <div class="card-description">تخصيص إشعارات المراسلة</div>
+        </a>
+      </div>
+    </div>
+    
+    <!-- Preferences Section -->
+    <div class="settings-category">
+      <h2>التفضيلات</h2>
+      <div class="settings-grid">
+        <a href="{% url 'preferences_settings' %}" class="settings-card">
+          <div class="card-icon">⚙️</div>
+          <div class="card-title">التفضيلات</div>
+          <div class="card-description">اللغة والمظهر والمنطقة الزمنية</div>
+        </a>
+      </div>
+    </div>
+    
+    <!-- Other Sections -->
+    <div class="settings-category">
+      <h2>أخرى</h2>
+      <div class="settings-grid">
+        <a href="{% url 'broker_messaging' %}" class="settings-card">
+          <div class="card-icon">💬</div>
+          <div class="card-title">الرسائل</div>
+          <div class="card-description">إدارة محادثاتك</div>
+        </a>
+        
+        <a href="{% url 'favorites' %}" class="settings-card">
+          <div class="card-icon">⭐</div>
+          <div class="card-title">المفضلة</div>
+          <div class="card-description">العقارات المفضلة</div>
+        </a>
+        
+        <a href="{% url 'activity_page' %}" class="settings-card">
+          <div class="card-icon">📊</div>
+          <div class="card-title">النشاط</div>
+          <div class="card-description">سجل نشاطك</div>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.settings-hub {
+  max-width: 1200px;
+  margin: 2rem auto;
+}
+
+.settings-category {
+  margin-bottom: 2.5rem;
+}
+
+.settings-category h2 {
+  margin: 0 0 1.5rem 0;
+  color: var(--primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.settings-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow);
+}
+
+.settings-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.card-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.card-title {
+  color: var(--text);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.card-description {
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-outline:hover {
+  background: var(--bg-alt);
+  border-color: var(--primary);
+}
+</style>
+{% endblock %}

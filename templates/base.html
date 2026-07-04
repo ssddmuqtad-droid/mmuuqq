@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="دلال - منصة العقارات العراقية الأولى | أراضي وبيوت وشقق وفنادق ومنتجعات سياحية">
+    <meta name="keywords" content="عقارات، بيع، شراء، إيجار، عراق، بغداد، النجف، الكاظمية">
+    <meta name="theme-color" content="#0B0B0B">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <title>{% block title %}دلال - منصة العقارات العراقية الفاخرة{% endblock %}</title>
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}">
+    <link rel="apple-touch-icon" href="{% static 'images/apple-touch-icon.png' %}">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Almarai:wght@400;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <!-- Core Styles -->
+    <link rel="stylesheet" href="{% static 'css/design-system.css' %}">
+    <link rel="stylesheet" href="{% static 'css/dark-theme.css' %}">
+    <link rel="stylesheet" href="{% static 'css/animations.css' %}">
+    <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
+    
+    {% block extra_css %}{% endblock %}
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" as="image" href="{% static 'images/logo.svg' %}">
+</head>
+
+<body class="dark-theme">
+    <!-- Navigation -->
+    {% include 'components/navbar.html' %}
+    
+    <!-- Main Content -->
+    <main id="main-content" role="main">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    {% include 'components/footer.html' %}
+    
+    <!-- Mobile Bottom Navigation -->
+    {% include 'components/bottom-nav.html' %}
+    
+    <!-- Modals & Dialogs -->
+    <div id="modal-container"></div>
+    
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+    
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    {% load static %}
+    <script src="{% static 'js/core.js' %}" defer></script>
+    <script src="{% static 'js/theme.js' %}" defer></script>
+    <script src="{% static 'js/animations.js' %}" defer></script>
+    
+    {% block extra_js %}{% endblock %}
+    
+    <!-- Inline Critical Styles -->
+    <style>
+        /* Prevent FOUC */
+        body {
+            background-color: #0B0B0B;
+            color: #FFFFFF;
+            opacity: 1;
+        }
+    </style>
+</body>
+</html>

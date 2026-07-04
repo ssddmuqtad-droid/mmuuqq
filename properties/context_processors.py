@@ -1,0 +1,34 @@
+import json
+
+from .constants import GOVERNORATE_CITIES, IRAQ_GOVERNORATES
+from .models import SiteSettings
+from .permissions import can_access_dashboard, can_access_admin_panel, can_manage_brokers, get_broker
+
+
+def site_context(request):
+    try:
+        settings = SiteSettings.get_solo()
+    except Exception:
+        settings = None
+    ctx = {
+        'site_settings': settings,
+        'governorates': IRAQ_GOVERNORATES,
+        'governorate_cities_json': json.dumps(GOVERNORATE_CITIES, ensure_ascii=False),
+    }
+    try:
+        if request.user.is_authenticated:
+            ctx['current_broker'] = get_broker(request.user)
+            ctx['can_access_dashboard'] = can_access_dashboard(request.user)
+            ctx['can_access_admin_panel'] = can_access_admin_panel(request.user)
+            ctx['can_manage_brokers'] = can_manage_brokers(request.user)
+        else:
+            ctx['current_broker'] = None
+            ctx['can_access_dashboard'] = False
+            ctx['can_access_admin_panel'] = False
+            ctx['can_manage_brokers'] = False
+    except Exception:
+        ctx['current_broker'] = None
+        ctx['can_access_dashboard'] = False
+        ctx['can_access_admin_panel'] = False
+        ctx['can_manage_brokers'] = False
+    return ctx

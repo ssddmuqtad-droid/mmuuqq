@@ -1,0 +1,532 @@
+{% extends 'properties/base.html' %}
+{% load price_filters %}
+
+{% block title %}{{ auction.title }} - المزادات{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="auction-detail">
+    <div class="auction-header">
+      <div class="auction-badges">
+        <div class="auction-status status-{{ auction.status }}">
+          {% if auction.status == 'upcoming' %}قادم{% elif auction.status == 'active' %}نشط{% elif auction.status == 'ended' %}منتهي{% else %}ملغي{% endif %}
+        </div>
+        {% if auction.is_featured %}
+        <div class="auction-badge featured">⭐ مميز</div>
+        {% endif %}
+        {% if auction.is_closed %}
+        <div class="auction-badge closed">🔒 مغلق</div>
+        {% endif %}
+      </div>
+      <h1>{{ auction.title }}</h1>
+      <p class="auction-property">{{ auction.property.display_title }}</p>
+      <p class="auction-type">{{ auction.get_auction_type_display }}</p>
+    </div>
+
+    <div class="auction-layout">
+      <div class="auction-main">
+        <div class="auction-image">
+          <img src="{{ auction.property.get_main_image }}" alt="{{ auction.property.display_title }}">
+        </div>
+
+        <div class="auction-description">
+          <h2>وصف المزاد</h2>
+          <p>{{ auction.description }}</p>
+        </div>
+
+        <div class="auction-terms">
+          <h2>شروط المزاد</h2>
+          <p>{{ auction.terms }}</p>
+        </div>
+
+        {% if auction.is_active %}
+        <div class="bidding-section">
+          <h2>المزايدة</h2>
+          
+          <!-- Countdown Timer -->
+          <div class="countdown-timer" id="countdown-timer" data-end-date="{{ auction.end_date|date:'Y-m-d\TH:i:s' }}">
+            <div class="timer-display">
+              <div class="timer-block">
+                <span class="timer-value" id="days">00</span>
+                <span class="timer-label">يوم</span>
+              </div>
+              <div class="timer-block">
+                <span class="timer-value" id="hours">00</span>
+                <span class="timer-label">ساعة</span>
+              </div>
+              <div class="timer-block">
+                <span class="timer-value" id="minutes">00</span>
+                <span class="timer-label">دقيقة</span>
+              </div>
+              <div class="timer-block">
+                <span class="timer-value" id="seconds">00</span>
+                <span class="timer-label">ثانية</span>
+              </div>
+            </div>
+            <div class="auto-extend-info">
+              ⏰ تمديد تلقائي: {{ auction.auto_extend_minutes }} دقائق إذا قدم عرض في آخر دقيقة
+            </div>
+          </div>
+
+          {% if user.is_authenticated %}
+          {% if not is_participant %}
+          <form method="post" action="{% url 'join_auction' auction.id %}" class="join-form">
+            {% csrf_token %}
+            <div class="form-row">
+              <div class="form-group">
+                <label for="id_phone">رقم الهاتف</label>
+                <input type="text" name="phone" id="id_phone" class="form-control" placeholder="07xxxxxxxxx" required>
+              </div>
+              <div class="form-group">
+                <label for="id_email">البريد الإلكتروني</label>
+                <input type="email" name="email" id="id_email" class="form-control" placeholder="email@example.com" required>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg">
+              الانضمام للمزاد
+            </button>
+          </form>
+          {% else %}
+          <form method="post" action="{% url 'place_bid' auction.id %}" class="bid-form">
+            {% csrf_token %}
+            <div class="form-group">
+              <label for="id_amount">مبلغ المزايدة</label>
+              <input type="number" name="amount" id="id_amount" class="form-control" 
+                     min="{{ highest_bid|add:auction.minimum_increment }}" 
+                     placeholder="{{ highest_bid|add:auction.minimum_increment }}" required>
+              <small class="form-text">
+                أقل زيادة: {{ auction.minimum_increment|format_price }}
+              </small>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg">
+              إرسال المزايدة
+            </button>
+          </form>
+          {% endif %}
+          {% else %}
+          <div class="login-prompt">
+            <p>يجب تسجيل الدخول للمشاركة في المزاد</p>
+            <a href="{% url 'login' %}" class="btn btn-primary">تسجيل الدخول</a>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="auction-sidebar">
+        <div class="auction-info-card">
+          <h3>معلومات المزاد</h3>
+          <div class="info-item">
+            <span class="label">سعر البداية:</span>
+            <span class="value">{{ auction.starting_price|format_price }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">أعلى مزايدة:</span>
+            <span class="value highlight">{{ highest_bid|format_price }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">عدد المزايدات:</span>
+            <span class="value">{{ total_bids }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">عدد المشاركين:</span>
+            <span class="value">{{ participant_count }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">أقل زيادة:</span>
+            <span class="value">{{ auction.minimum_increment|format_price }}</span>
+          </div>
+          {% if auction.reserve_price %}
+          <div class="info-item">
+            <span class="label">السعر الاحتياطي:</span>
+            <span class="value">{{ auction.reserve_price|format_price }}</span>
+          </div>
+          {% endif %}
+          <div class="info-item">
+            <span class="label">مبلغ التأمين:</span>
+            <span class="value">{{ auction.deposit_amount|format_price }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">تاريخ البداية:</span>
+            <span class="value">{{ auction.start_date|date:"Y-m-d H:i" }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">تاريخ النهاية:</span>
+            <span class="value">{{ auction.end_date|date:"Y-m-d H:i" }}</span>
+          </div>
+        </div>
+
+        <div class="bids-card">
+          <h3>المزايدات الأخيرة</h3>
+          {% if auction.bids.exists %}
+          <div class="bids-list">
+            {% for bid in auction.bids.all|slice:":10" %}
+            <div class="bid-item">
+              <div class="bid-user">{{ bid.user.username }}</div>
+              <div class="bid-amount">{{ bid.amount|format_price }}</div>
+              <div class="bid-time">{{ bid.created_at|date:"Y-m-d H:i" }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="no-bids">لا توجد مزايدات بعد</p>
+          {% endif %}
+        </div>
+
+        <a href="{{ auction.property.get_absolute_url }}" class="btn btn-outline btn-block">
+          عرض العقار
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.auction-detail {
+  margin: 40px 0;
+}
+
+.auction-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.auction-badges {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.auction-header h1 {
+  font-size: 2.5rem;
+  color: var(--text);
+  margin: 16px 0 8px 0;
+}
+
+.auction-property {
+  color: var(--text-light);
+  font-size: 1.1rem;
+}
+
+.auction-type {
+  color: var(--primary);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.auction-status {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: white;
+}
+
+.auction-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.auction-badge.featured {
+  background: #fbbf24;
+  color: #78350f;
+}
+
+.auction-badge.closed {
+  background: #6b7280;
+  color: white;
+}
+
+.status-upcoming {
+  background: #3b82f6;
+}
+
+.status-active {
+  background: #10b981;
+}
+
+.status-ended {
+  background: #6b7280;
+}
+
+.status-cancelled {
+  background: #ef4444;
+}
+
+.auction-layout {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 32px;
+}
+
+.auction-main {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.auction-image {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.auction-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.auction-description,
+.auction-terms,
+.bidding-section {
+  background: var(--bg);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.auction-description h2,
+.auction-terms h2,
+.bidding-section h2 {
+  margin: 0 0 16px 0;
+  font-size: 1.3rem;
+  color: var(--text);
+}
+
+.auction-description p,
+.auction-terms p {
+  color: var(--text-light);
+  line-height: 1.6;
+}
+
+.bid-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.form-text {
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+.login-prompt {
+  text-align: center;
+  padding: 20px;
+}
+
+.login-prompt p {
+  margin-bottom: 16px;
+  color: var(--text-light);
+}
+
+.auction-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.auction-info-card,
+.bids-card {
+  background: var(--bg);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.auction-info-card h3,
+.bids-card h3 {
+  margin: 0 0 20px 0;
+  font-size: 1.2rem;
+  color: var(--text);
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-item .label {
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.info-item .value {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.info-item .value.highlight {
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.countdown-timer {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.timer-display {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.timer-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 70px;
+}
+
+.timer-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+}
+
+.timer-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 4px;
+}
+
+.auto-extend-info {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+}
+
+.join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.bids-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bid-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  align-items: center;
+}
+
+.bid-user {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bid-amount {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.bid-time {
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.no-bids {
+  text-align: center;
+  color: var(--text-light);
+  padding: 20px 0;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .auction-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .auction-sidebar {
+    order: -1;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+<script>
+// Countdown Timer
+document.addEventListener('DOMContentLoaded', function() {
+  const countdownTimer = document.getElementById('countdown-timer');
+  if (countdownTimer) {
+    const endDate = new Date(countdownTimer.dataset.endDate).getTime();
+    
+    function updateCountdown() {
+      const now = new Date().getTime();
+      const distance = endDate - now;
+      
+      if (distance < 0) {
+        document.getElementById('days').textContent = '00';
+        document.getElementById('hours').textContent = '00';
+        document.getElementById('minutes').textContent = '00';
+        document.getElementById('seconds').textContent = '00';
+        return;
+      }
+      
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      
+      document.getElementById('days').textContent = String(days).padStart(2, '0');
+      document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+      document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+      document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+    }
+    
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+  }
+});
+</script>
+{% endblock %}

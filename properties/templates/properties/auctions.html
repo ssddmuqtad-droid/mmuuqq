@@ -1,0 +1,255 @@
+{% extends 'properties/base.html' %}
+{% load price_filters %}
+
+{% block title %}المزادات العقارية{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>🔨 المزادات العقارية</h1>
+    <p>استكشف المزادات الحالية والمستقبلية</p>
+  </div>
+
+  {% if auctions %}
+  <div class="auctions-grid">
+    {% for auction in auctions %}
+    <div class="auction-card">
+      <div class="auction-image">
+        <img src="{{ auction.property.get_main_image }}" alt="{{ auction.property.display_title }}">
+        <div class="auction-status status-{{ auction.status }}">
+          {% if auction.status == 'upcoming' %}قادم{% elif auction.status == 'active' %}نشط{% elif auction.status == 'ended' %}منتهي{% else %}ملغي{% endif %}
+        </div>
+      </div>
+      <div class="auction-content">
+        <h3>{{ auction.title }}</h3>
+        <p class="auction-property">{{ auction.property.display_title }}</p>
+        <div class="auction-info">
+          <div class="auction-price">
+            <span class="label">سعر البداية:</span>
+            <span class="value">{{ auction.starting_price|format_price }}</span>
+          </div>
+          <div class="auction-bids">
+            <span class="label">المزايدات:</span>
+            <span class="value">{{ auction.get_total_bids }}</span>
+          </div>
+        </div>
+        <div class="auction-dates">
+          <div class="date-item">
+            <span class="label">البداية:</span>
+            <span class="value">{{ auction.start_date|date:"Y-m-d H:i" }}</span>
+          </div>
+          <div class="date-item">
+            <span class="label">النهاية:</span>
+            <span class="value">{{ auction.end_date|date:"Y-m-d H:i" }}</span>
+          </div>
+        </div>
+        <a href="{% url 'auction_detail' auction.id %}" class="btn btn-primary btn-block">
+          عرض التفاصيل
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <div class="pagination">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-outline">السابق</a>
+    {% endif %}
+    
+    <span class="page-info">
+      صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+    </span>
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}" class="btn btn-outline">التالي</a>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="empty-state">
+    <p>لا توجد مزادات حالياً</p>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.page-header {
+  text-align: center;
+  margin: 40px 0;
+}
+
+.page-header h1 {
+  font-size: 2.5rem;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.page-header p {
+  color: var(--text-light);
+  font-size: 1.1rem;
+}
+
+.auctions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.auction-card {
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.auction-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.auction-image {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+}
+
+.auction-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.auction-status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+}
+
+.status-upcoming {
+  background: #3b82f6;
+}
+
+.status-active {
+  background: #10b981;
+}
+
+.status-ended {
+  background: #6b7280;
+}
+
+.status-cancelled {
+  background: #ef4444;
+}
+
+.auction-content {
+  padding: 20px;
+}
+
+.auction-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.2rem;
+  color: var(--text);
+}
+
+.auction-property {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+}
+
+.auction-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.auction-price,
+.auction-bids {
+  display: flex;
+  flex-direction: column;
+}
+
+.auction-price .label,
+.auction-bids .label {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+
+.auction-price .value,
+.auction-bids .value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.auction-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+}
+
+.date-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.date-item .label {
+  color: var(--text-light);
+}
+
+.date-item .value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-light);
+  font-size: 1.2rem;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 40px;
+}
+
+.page-info {
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+  .auctions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .page-header h1 {
+    font-size: 2rem;
+  }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,296 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}سجل النشاطات{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-info">
+      <h1>سجل النشاطات</h1>
+      <p>تتبع جميع العمليات والأنشطة في النظام</p>
+    </div>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'broker_list' %}" class="btn btn-outline">← إدارة الدلالين</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم</a>
+    </div>
+  </div>
+
+  <!-- Filter Section -->
+  <div class="filter-section" style="margin-bottom: 2rem;">
+    <form method="get" class="filter-form">
+      <select name="action" class="filter-select">
+        <option value="">جميع الإجراءات</option>
+        <option value="create" {% if action_filter == 'create' %}selected{% endif %}>إنشاء</option>
+        <option value="update" {% if action_filter == 'update' %}selected{% endif %}>تعديل</option>
+        <option value="delete" {% if action_filter == 'delete' %}selected{% endif %}>حذف</option>
+        <option value="login" {% if action_filter == 'login' %}selected{% endif %}>تسجيل دخول</option>
+        <option value="logout" {% if action_filter == 'logout' %}selected{% endif %}>تسجيل خروج</option>
+        <option value="activate" {% if action_filter == 'activate' %}selected{% endif %}>تفعيل</option>
+        <option value="suspend" {% if action_filter == 'suspend' %}selected{% endif %}>إيقاف</option>
+        <option value="renew" {% if action_filter == 'renew' %}selected{% endif %}>تجديد</option>
+      </select>
+      <select name="model_type" class="filter-select">
+        <option value="">جميع النماذج</option>
+        <option value="broker" {% if model_filter == 'broker' %}selected{% endif %}>دلال</option>
+        <option value="property" {% if model_filter == 'property' %}selected{% endif %}>عقار</option>
+        <option value="user" {% if model_filter == 'user' %}selected{% endif %}>مستخدم</option>
+        <option value="subscription" {% if model_filter == 'subscription' %}selected{% endif %}>اشتراك</option>
+        <option value="office" {% if model_filter == 'office' %}selected{% endif %}>مكتب</option>
+        <option value="system" {% if model_filter == 'system' %}selected{% endif %}>نظام</option>
+      </select>
+      <input type="text" name="user" placeholder="بحث بالمستخدم..." class="filter-input" value="{{ user_filter }}">
+      <input type="date" name="date_from" class="filter-input" value="{{ date_from }}" placeholder="من تاريخ">
+      <input type="date" name="date_to" class="filter-input" value="{{ date_to }}" placeholder="إلى تاريخ">
+      <button type="submit" class="btn btn-primary">تصفية</button>
+      <a href="{% url 'activity_log' %}" class="btn btn-outline">إعادة تعيين</a>
+    </form>
+  </div>
+
+  <!-- Activity Log Table -->
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>التاريخ والوقت</th>
+          <th>المستخدم</th>
+          <th>الإجراء</th>
+          <th>النوع</th>
+          <th>الكائن</th>
+          <th>الوصف</th>
+          <th>عنوان IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for activity in activities %}
+        <tr>
+          <td>
+            <div class="date-time">{{ activity.created_at|date:"Y-m-d" }}</div>
+            <div class="time-only">{{ activity.created_at|date:"H:i:s" }}</div>
+          </td>
+          <td>
+            {% if activity.user %}
+            <div class="user-info">
+              <strong>{{ activity.user.username }}</strong>
+              {% if activity.user.first_name %}
+              <small>({{ activity.user.first_name }})</small>
+              {% endif %}
+            </div>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="action-badge action-{{ activity.action }}">
+              {{ activity.get_action_display }}
+            </span>
+          </td>
+          <td>
+            <span class="model-badge">{{ activity.get_model_type_display }}</span>
+          </td>
+          <td>
+            {% if activity.object_repr %}
+            <div class="object-repr">{{ activity.object_repr }}</div>
+            {% if activity.object_id %}
+            <small class="text-muted">#{{ activity.object_id }}</small>
+            {% endif %}
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if activity.description %}
+            <div class="description">{{ activity.description }}</div>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if activity.ip_address %}
+            <code class="ip-address">{{ activity.ip_address }}</code>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center;padding: 2rem;">لا يوجد نشاطات مسجلة</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+.filter-section {
+  background: var(--card-bg);
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+}
+
+.filter-form {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-select,
+.filter-input {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  min-width: 150px;
+}
+
+.filter-input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.filter-select:focus,
+.filter-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.date-time {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.time-only {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-info small {
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.action-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.action-create {
+  background: rgba(72, 187, 120, 0.1);
+  color: #48bb78;
+  border: 1px solid rgba(72, 187, 120, 0.3);
+}
+
+.action-update {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.action-delete {
+  background: rgba(245, 101, 101, 0.1);
+  color: #f56565;
+  border: 1px solid rgba(245, 101, 101, 0.3);
+}
+
+.action-login,
+.action-activate {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.action-logout,
+.action-suspend {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.action-renew {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.model-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: var(--bg-alt);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.object-repr {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.description {
+  max-width: 300px;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  word-wrap: break-word;
+}
+
+.ip-address {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-alt);
+  border-radius: 4px;
+  color: var(--text-light);
+}
+
+.text-muted {
+  color: var(--text-light);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card-bg);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.data-table thead {
+  background: var(--bg-alt);
+}
+
+.data-table th {
+  padding: 1rem;
+  text-align: right;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 2px solid var(--border);
+}
+
+.data-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.data-table tbody tr:hover {
+  background: var(--bg-alt);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+</style>
+{% endblock %}

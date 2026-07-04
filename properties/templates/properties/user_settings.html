@@ -1,0 +1,527 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}إعدادات الحساب | دلال{% endblock %}
+
+{% block extra_css %}
+<style>
+.settings-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.settings-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 15px;
+}
+
+.settings-nav-item {
+  padding: 10px 20px;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-nav-item:hover {
+  background: #e0e0e0;
+}
+
+.settings-nav-item.active {
+  background: #0d9488;
+  color: white;
+}
+
+.settings-nav-item i {
+  font-size: 16px;
+}
+
+.settings-section {
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+
+.settings-section.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.settings-card {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.settings-card h3 {
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.settings-card h4 {
+  margin: 20px 0 15px;
+  color: #555;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #555;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #0d9488;
+}
+
+.form-check {
+  margin-bottom: 15px;
+}
+
+.form-check-input {
+  width: 18px;
+  height: 18px;
+  margin-left: 10px;
+}
+
+.btn-primary {
+  background: #0d9488;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: #0b7e73;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+.alert {
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.alert-success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.alert-danger {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.alert-info {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-weight: 500;
+  color: #555;
+}
+
+.info-value {
+  color: #333;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+
+.empty-state i {
+  font-size: 48px;
+  margin-bottom: 15px;
+}
+
+@media (max-width: 768px) {
+  .settings-nav {
+    flex-direction: column;
+  }
+  
+  .settings-nav-item {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .settings-card {
+    padding: 20px;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+  <h1 class="mb-4">إعدادات الحساب</h1>
+  
+  <div class="settings-nav">
+    <button class="settings-nav-item active" data-section="profile">
+      <i class="fas fa-user"></i> الملف الشخصي
+    </button>
+    <button class="settings-nav-item" data-section="security">
+      <i class="fas fa-shield-alt"></i> الأمان
+    </button>
+    <button class="settings-nav-item" data-section="notifications">
+      <i class="fas fa-bell"></i> الإشعارات
+    </button>
+    <button class="settings-nav-item" data-section="privacy">
+      <i class="fas fa-lock"></i> الخصوصية
+    </button>
+    <button class="settings-nav-item" data-section="preferences">
+      <i class="fas fa-cog"></i> التفضيلات
+    </button>
+    <button class="settings-nav-item" data-section="favorites">
+      <i class="fas fa-heart"></i> المفضلة
+    </button>
+    <button class="settings-nav-item" data-section="messages">
+      <i class="fas fa-envelope"></i> الرسائل
+    </button>
+    <button class="settings-nav-item" data-section="activity">
+      <i class="fas fa-history"></i> النشاط
+    </button>
+    <button class="settings-nav-item" data-section="account">
+      <i class="fas fa-user-cog"></i> إدارة الحساب
+    </button>
+  </div>
+  
+  <!-- Profile Section -->
+  <div class="settings-section active" id="profile-section">
+    <div class="settings-card">
+      <h3>المعلومات الأساسية</h3>
+      <div class="info-item">
+        <span class="info-label">اسم المستخدم:</span>
+        <span class="info-value">{{ request.user.username }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">البريد الإلكتروني:</span>
+        <span class="info-value">{{ request.user.email }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">رقم الهاتف:</span>
+        <span class="info-value">{{ settings.phone|default:"غير محدد" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">المحافظة:</span>
+        <span class="info-value">{{ settings.get_governorate_display|default:"غير محدد" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">المدينة:</span>
+        <span class="info-value">{{ settings.city|default:"غير محدد" }}</span>
+      </div>
+      <a href="{% url 'user_settings_profile' %}" class="btn-primary mt-3">تعديل الملف الشخصي</a>
+    </div>
+  </div>
+  
+  <!-- Security Section -->
+  <div class="settings-section" id="security-section">
+    <div class="settings-card">
+      <h3>الأمان</h3>
+      <div class="info-item">
+        <span class="info-label">المصادقة الثنائية:</span>
+        <span class="info-value">
+          {% if settings.two_factor_enabled %}
+            <span style="color: green;">مفعلة</span>
+          {% else %}
+            <span style="color: red;">غير مفعلة</span>
+          {% endif %}
+        </span>
+      </div>
+      <a href="{% url 'user_settings_security' %}" class="btn-primary mt-3">تغيير كلمة المرور</a>
+    </div>
+  </div>
+  
+  <!-- Notifications Section -->
+  <div class="settings-section" id="notifications-section">
+    <div class="settings-card">
+      <h3>الإشعارات</h3>
+      <div class="info-item">
+        <span class="info-label">إشعارات العقارات الجديدة:</span>
+        <span class="info-value">
+          {% if settings.notification_new_properties %}
+            <span style="color: green;">مفعلة</span>
+          {% else %}
+            <span style="color: red;">معطلة</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">إشعارات الرسائل:</span>
+        <span class="info-value">
+          {% if settings.notification_messages %}
+            <span style="color: green;">مفعلة</span>
+          {% else %}
+            <span style="color: red;">معطلة</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">إشعارات البريد الإلكتروني:</span>
+        <span class="info-value">
+          {% if settings.email_notifications %}
+            <span style="color: green;">مفعلة</span>
+          {% else %}
+            <span style="color: red;">معطلة</span>
+          {% endif %}
+        </span>
+      </div>
+      <a href="{% url 'user_settings_notifications' %}" class="btn-primary mt-3">تعديل إعدادات الإشعارات</a>
+    </div>
+  </div>
+  
+  <!-- Privacy Section -->
+  <div class="settings-section" id="privacy-section">
+    <div class="settings-card">
+      <h3>الخصوصية</h3>
+      <div class="info-item">
+        <span class="info-label">إظهار رقم الهاتف:</span>
+        <span class="info-value">
+          {% if settings.show_phone %}
+            <span style="color: green;">نعم</span>
+          {% else %}
+            <span style="color: red;">لا</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">إظهار البريد الإلكتروني:</span>
+        <span class="info-value">
+          {% if settings.show_email %}
+            <span style="color: green;">نعم</span>
+          {% else %}
+            <span style="color: red;">لا</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">من يمكنه مراسلتي:</span>
+        <span class="info-value">{{ settings.get_who_can_message_display }}</span>
+      </div>
+      <a href="{% url 'user_settings_privacy' %}" class="btn-primary mt-3">تعديل إعدادات الخصوصية</a>
+    </div>
+  </div>
+  
+  <!-- Preferences Section -->
+  <div class="settings-section" id="preferences-section">
+    <div class="settings-card">
+      <h3>التفضيلات</h3>
+      <div class="info-item">
+        <span class="info-label">الوضع الليلي:</span>
+        <span class="info-value">
+          {% if settings.dark_mode %}
+            <span style="color: green;">مفعلة</span>
+          {% else %}
+            <span style="color: red;">معطلة</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">اللغة:</span>
+        <span class="info-value">{{ settings.get_language_display }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">العملة:</span>
+        <span class="info-value">{{ settings.get_currency_display }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">طريقة عرض العقارات:</span>
+        <span class="info-value">{{ settings.get_property_view_mode_display }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">عدد العقارات في الصفحة:</span>
+        <span class="info-value">{{ settings.properties_per_page }}</span>
+      </div>
+      <a href="{% url 'user_settings_preferences' %}" class="btn-primary mt-3">تعديل التفضيلات</a>
+    </div>
+  </div>
+  
+  <!-- Favorites Section -->
+  <div class="settings-section" id="favorites-section">
+    <div class="settings-card">
+      <h3>العقارات المفضلة</h3>
+      {% if favorite_properties %}
+        <p>لديك {{ favorite_properties|length }} عقار مفضل</p>
+        <a href="{% url 'user_settings_favorites' %}" class="btn-primary">عرض جميع المفضلة</a>
+      {% else %}
+        <div class="empty-state">
+          <i class="fas fa-heart"></i>
+          <p>لا توجد عقارات مفضلة</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Messages Section -->
+  <div class="settings-section" id="messages-section">
+    <div class="settings-card">
+      <h3>الرسائل</h3>
+      <div class="info-item">
+        <span class="info-label">المستخدمون المحظورون:</span>
+        <span class="info-value">{{ blocked_users|length }}</span>
+      </div>
+      <a href="{% url 'user_settings_messages' %}" class="btn-primary mt-3">إدارة الرسائل</a>
+    </div>
+  </div>
+  
+  <!-- Activity Section -->
+  <div class="settings-section" id="activity-section">
+    <div class="settings-card">
+      <h3>النشاط</h3>
+      <div class="info-item">
+        <span class="info-label">عمليات البحث المحفوظة:</span>
+        <span class="info-value">{{ saved_searches|length }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">العقارات المشاهدة مؤخراً:</span>
+        <span class="info-value">{{ viewed_properties|length }}</span>
+      </div>
+      <a href="{% url 'user_settings_activity' %}" class="btn-primary mt-3">عرض النشاط الكامل</a>
+    </div>
+  </div>
+  
+  <!-- Account Section -->
+  <div class="settings-section" id="account-section">
+    <div class="settings-card">
+      <h3>إدارة الحساب</h3>
+      <h4>تنزيل البيانات</h4>
+      <p>يمكنك تنزيل جميع بياناتك بصيغة JSON</p>
+      <form action="{% url 'user_settings_account' %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="download">
+        <button type="submit" class="btn-secondary">تنزيل بياناتي</button>
+      </form>
+      
+      <h4>تعطيل الحساب مؤقتاً</h4>
+      <p>يمكنك تعطيل حسابك مؤقتاً وإعادة تفعيله في أي وقت</p>
+      <form action="{% url 'user_settings_account' %}" method="POST" onsubmit="return confirm('هل أنت متأكد من تعطيل حسابك؟');">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="disable">
+        <input type="text" name="reason" placeholder="سبب التعطيل (اختياري)" class="form-control mb-2">
+        <button type="submit" class="btn-danger">تعطيل الحساب</button>
+      </form>
+      
+      <h4>حذف الحساب نهائياً</h4>
+      <p style="color: red;">تحذير: هذا الإجراء لا يمكن التراجع عنه</p>
+      <form action="{% url 'user_settings_account' %}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف حسابك نهائياً؟ هذا الإجراء لا يمكن التراجع عنه.');">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete">
+        <button type="submit" class="btn-danger">حذف الحساب نهائياً</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const navItems = document.querySelectorAll('.settings-nav-item');
+  const sections = document.querySelectorAll('.settings-section');
+  
+  navItems.forEach(item => {
+    item.addEventListener('click', function() {
+      const section = this.dataset.section;
+      
+      // Update nav items
+      navItems.forEach(nav => nav.classList.remove('active'));
+      this.classList.add('active');
+      
+      // Update sections
+      sections.forEach(sec => sec.classList.remove('active'));
+      document.getElementById(section + '-section').classList.add('active');
+    });
+  });
+});
+</script>
+{% endblock %}
