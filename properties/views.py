@@ -474,7 +474,7 @@ def dashboard(request):
     staff_users = []
     backups = []
     support_tickets = []
-    subscription_requests = []
+    subscription_requests = []  # Fixed UnboundLocalError
     
     if request.user.is_superuser:
         try:
