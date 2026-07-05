@@ -1,5 +1,5 @@
 # Core Django
-Django>=5.0,<7.0  # Force redeploy - 2026-07-04
+Django>=5.0,<7.0  # Force redeploy - 2026-07-05
 python-dotenv>=1.0.0
 Pillow>=10.0.0
 
