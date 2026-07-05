@@ -1,7 +1,10 @@
 from django.urls import path
 
 from . import views, api, broker_views, dallal_views
-from . import api_views_enterprise as api_enterprise
+try:
+    from . import api_views_enterprise as api_enterprise
+except ImportError:
+    api_enterprise = None
 
 urlpatterns = [
     # Existing template-based routes
@@ -259,15 +262,18 @@ urlpatterns = [
     path('api/search/suggestions/', api.api_search_suggestions, name='api_search_suggestions'),
     path('api/statistics/', api.api_statistics, name='api_statistics'),
     path('api/subscription/expire/', views.subscription_expire_notification, name='subscription_expire_notification'),
-    
-    # Enterprise API endpoints
-    path('api/v1/system/status/', api_enterprise.api_system_status, name='api_system_status'),
-    path('api/v1/system/errors/', api_enterprise.api_error_logs, name='api_error_logs'),
-    path('api/v1/export/', api_enterprise.api_export_data, name='api_export_data'),
-    path('api/v1/search/', api_enterprise.api_search, name='api_search'),
-    path('api/v1/notifications/', api_enterprise.api_notifications, name='api_notifications'),
-    path('api/v1/notifications/<int:notification_id>/read/', api_enterprise.api_mark_notification_read, name='api_mark_notification_read'),
-    path('api/v1/sessions/', api_enterprise.api_sessions, name='api_sessions'),
-    path('api/v1/keys/', api_enterprise.api_api_keys, name='api_api_keys'),
-    path('api/v1/performance/', api_enterprise.api_performance_metrics, name='api_performance_metrics'),
 ]
+
+# Enterprise API endpoints (only if available)
+if api_enterprise:
+    urlpatterns += [
+        path('api/v1/system/status/', api_enterprise.api_system_status, name='api_system_status'),
+        path('api/v1/system/errors/', api_enterprise.api_error_logs, name='api_error_logs'),
+        path('api/v1/export/', api_enterprise.api_export_data, name='api_export_data'),
+        path('api/v1/search/', api_enterprise.api_search, name='api_search'),
+        path('api/v1/notifications/', api_enterprise.api_notifications, name='api_notifications'),
+        path('api/v1/notifications/<int:notification_id>/read/', api_enterprise.api_mark_notification_read, name='api_mark_notification_read'),
+        path('api/v1/sessions/', api_enterprise.api_sessions, name='api_sessions'),
+        path('api/v1/keys/', api_enterprise.api_api_keys, name='api_api_keys'),
+        path('api/v1/performance/', api_enterprise.api_performance_metrics, name='api_performance_metrics'),
+    ]
