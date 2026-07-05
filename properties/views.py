@@ -621,6 +621,47 @@ def settings_general(request):
 
 @login_required
 @staff_required
+def settings_maintenance(request):
+    """Maintenance mode settings page."""
+    if not can_manage_site_settings(request.user):
+        messages.error(request, 'ليس لديك صلاحية تعديل إعدادات الموقع')
+        return redirect('dashboard')
+    
+    settings = SiteSettings.get_solo()
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'toggle_maintenance':
+            old_status = settings.maintenance_mode
+            settings.maintenance_mode = not settings.maintenance_mode
+            settings.save()
+            
+            # Log the action
+            from .models import ActivityLog
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f"تغيير وضع الصيانة من {'مفعل' if old_status else 'معطل'} إلى {'مفعل' if settings.maintenance_mode else 'معطل'}",
+                details=f"تم تغيير وضع الصيانة بواسطة {request.user.username}"
+            )
+            
+            status_text = 'تفعيل' if settings.maintenance_mode else 'إلغاء'
+            messages.success(request, f'تم {status_text} وضع الصيانة بنجاح')
+            
+        elif action == 'update_message':
+            settings.maintenance_message = request.POST.get('maintenance_message', settings.maintenance_message)
+            settings.maintenance_end_time = request.POST.get('maintenance_end_time') or None
+            settings.allow_admins_during_maintenance = request.POST.get('allow_admins_during_maintenance') == 'on'
+            settings.save()
+            messages.success(request, 'تم تحديث إعدادات الصيانة بنجاح')
+        
+        return redirect('settings_maintenance')
+    
+    return render(request, 'properties/settings_maintenance.html', {'settings': settings, 'section': 'maintenance'})
+
+
+@login_required
+@staff_required
 def admin_channels_list(request):
     """Admin view to manage all broker channels."""
     from .models import BrokerChannel
@@ -1271,6 +1312,313 @@ def explore_view(request):
         'user_likes': user_likes,
         'user_saves': user_saves,
         'user_only': user_only,
+    })
+
+
+def properties_outside_iraq_view(request):
+    """View for properties outside Iraq."""
+    # Get filters from query parameters
+    content_type = request.GET.get('type', 'all')
+    property_type = request.GET.get('property_type', 'all')
+    listing_type = request.GET.get('listing_type', 'all')
+    user_only = request.GET.get('user_only', 'false') == 'true'
+    
+    # Get properties outside Iraq
+    properties = get_public_properties()
+    properties = [p for p in properties if p.country and p.country.lower() != 'iraq' and p.country.lower() != 'العراق']
+    
+    # Filter by user if requested
+    if user_only and request.user.is_authenticated:
+        properties = [p for p in properties if p.owner == request.user or (p.broker and p.broker.user == request.user)]
+    
+    # Apply filters
+    if content_type == 'video':
+        properties = [p for p in properties if p.videos.exists()]
+    elif content_type == 'photo':
+        properties = [p for p in properties if p.gallery_images.exists()]
+    
+    if property_type != 'all':
+        properties = [p for p in properties if p.type == property_type]
+    
+    if listing_type == 'sale':
+        properties = [p for p in properties if p.status == 'ready']
+    elif listing_type == 'rent':
+        properties = [p for p in properties if p.status == 'rent']
+    
+    # Order by creation date
+    properties = sorted(properties, key=lambda x: x.created_at, reverse=True)[:50]
+    
+    # Get user's likes and saves if authenticated
+    user_likes = set()
+    user_saves = set()
+    if request.user.is_authenticated:
+        user_likes = set(PropertyLike.objects.filter(user=request.user).values_list('property_id', flat=True))
+        user_saves = set(PropertySave.objects.filter(user=request.user).values_list('property_id', flat=True))
+    
+    return render(request, 'properties/explore.html', {
+        'properties': properties,
+        'content_type': content_type,
+        'property_type': property_type,
+        'listing_type': listing_type,
+        'user_likes': user_likes,
+        'user_saves': user_saves,
+        'user_only': user_only,
+        'page_title': 'عقارات خارج العراق',
+        'is_outside_iraq': True,
+    })
+
+
+def unified_search_view(request):
+    """Unified search view for properties, hotels, and resorts."""
+    form = PropertySearchForm(request.GET)
+    category = request.GET.get('category', '')
+    q = request.GET.get('q', '')
+    
+    # Initialize result containers
+    properties = []
+    hotels = []
+    resorts = []
+    
+    # Search in Properties (Iraq and outside Iraq)
+    if category in ['', 'property_iraq', 'property_outside']:
+        property_queryset = get_public_properties()
+        
+        # Filter by category (Iraq vs outside Iraq)
+        if category == 'property_iraq':
+            property_queryset = [p for p in property_queryset if p.country == 'Iraq' or not hasattr(p, 'country')]
+        elif category == 'property_outside':
+            property_queryset = [p for p in property_queryset if hasattr(p, 'country') and p.country != 'Iraq']
+        
+        # Apply text search
+        if q:
+            property_queryset = [
+                p for p in property_queryset
+                if q.lower() in p.title.lower() or 
+                   q.lower() in p.district.lower() or 
+                   q.lower() in p.location.lower() or
+                   (p.broker and q.lower() in p.broker.display_name.lower())
+            ]
+        
+        # Apply filters
+        governorate = request.GET.get('governorate')
+        if governorate:
+            property_queryset = [p for p in property_queryset if p.district and governorate in p.district]
+        
+        district = request.GET.get('district')
+        if district:
+            property_queryset = [p for p in property_queryset if district.lower() in p.district.lower()]
+        
+        city = request.GET.get('city')
+        if city:
+            property_queryset = [p for p in property_queryset if city.lower() in p.location.lower()]
+        
+        country = request.GET.get('country')
+        if country:
+            property_queryset = [p for p in property_queryset if hasattr(p, 'country') and country.lower() in p.country.lower()]
+        
+        property_type = request.GET.get('type')
+        if property_type:
+            property_queryset = [p for p in property_queryset if p.type == property_type]
+        
+        status = request.GET.get('status')
+        if status:
+            property_queryset = [p for p in property_queryset if p.status == status]
+        
+        price_min = request.GET.get('price_min')
+        if price_min:
+            property_queryset = [p for p in property_queryset if p.price >= int(price_min)]
+        
+        price_max = request.GET.get('price_max')
+        if price_max:
+            property_queryset = [p for p in property_queryset if p.price <= int(price_max)]
+        
+        area_min = request.GET.get('area_min')
+        if area_min:
+            property_queryset = [p for p in property_queryset if p.area >= int(area_min)]
+        
+        area_max = request.GET.get('area_max')
+        if area_max:
+            property_queryset = [p for p in property_queryset if p.area <= int(area_max)]
+        
+        bedrooms = request.GET.get('bedrooms')
+        if bedrooms:
+            property_queryset = [p for p in property_queryset if p.bedrooms == int(bedrooms)]
+        
+        bathrooms = request.GET.get('bathrooms')
+        if bathrooms:
+            property_queryset = [p for p in property_queryset if p.bathrooms == int(bathrooms)]
+        
+        floors = request.GET.get('floors')
+        if floors:
+            property_queryset = [p for p in property_queryset if p.floors == int(floors)]
+        
+        year_built = request.GET.get('year_built')
+        if year_built:
+            property_queryset = [p for p in property_queryset if p.year_built == int(year_built)]
+        
+        featured_only = request.GET.get('featured_only')
+        if featured_only:
+            property_queryset = [p for p in property_queryset if p.is_featured]
+        
+        verified_only = request.GET.get('verified_only')
+        if verified_only:
+            property_queryset = [p for p in property_queryset if p.broker and p.broker.is_verified]
+        
+        new_only = request.GET.get('new_only')
+        if new_only:
+            from datetime import timedelta
+            from django.utils import timezone
+            week_ago = timezone.now() - timedelta(days=7)
+            property_queryset = [p for p in property_queryset if p.created_at >= week_ago]
+        
+        broker_name = request.GET.get('broker_name')
+        if broker_name:
+            property_queryset = [p for p in property_queryset if p.broker and broker_name.lower() in p.broker.display_name.lower()]
+        
+        rating_min = request.GET.get('rating_min')
+        if rating_min:
+            property_queryset = [p for p in property_queryset if hasattr(p, 'average_rating') and p.average_rating >= int(rating_min)]
+        
+        # Apply sorting
+        sort = request.GET.get('sort')
+        if sort == 'newest':
+            property_queryset = sorted(property_queryset, key=lambda x: x.created_at, reverse=True)
+        elif sort == 'oldest':
+            property_queryset = sorted(property_queryset, key=lambda x: x.created_at)
+        elif sort == 'price_asc':
+            property_queryset = sorted(property_queryset, key=lambda x: x.price)
+        elif sort == 'price_desc':
+            property_queryset = sorted(property_queryset, key=lambda x: x.price, reverse=True)
+        elif sort == 'views':
+            property_queryset = sorted(property_queryset, key=lambda x: x.views_count, reverse=True)
+        elif sort == 'rating':
+            property_queryset = sorted(property_queryset, key=lambda x: getattr(x, 'average_rating', 0), reverse=True)
+        
+        properties = property_queryset
+    
+    # Search in Hotels
+    if category in ['', 'hotel']:
+        hotel_queryset = Hotel.objects.filter(is_active=True)
+        
+        if q:
+            hotel_queryset = hotel_queryset.filter(
+                Q(name__icontains=q) |
+                Q(description__icontains=q) |
+                Q(city__icontains=q)
+            )
+        
+        city = request.GET.get('city')
+        if city:
+            hotel_queryset = hotel_queryset.filter(city__icontains=city)
+        
+        price_range = request.GET.get('price_range')
+        if price_range:
+            hotel_queryset = hotel_queryset.filter(price_range=price_range)
+        
+        star_rating = request.GET.get('star_rating')
+        if star_rating:
+            hotel_queryset = hotel_queryset.filter(star_rating=int(star_rating))
+        
+        featured_only = request.GET.get('featured_only')
+        if featured_only:
+            hotel_queryset = hotel_queryset.filter(is_featured=True)
+        
+        hotels = list(hotel_queryset)
+    
+    # Search in Resorts
+    if category in ['', 'resort']:
+        resort_queryset = Resort.objects.filter(is_active=True)
+        
+        if q:
+            resort_queryset = resort_queryset.filter(
+                Q(name__icontains=q) |
+                Q(description__icontains=q) |
+                Q(city__icontains=q)
+            )
+        
+        governorate = request.GET.get('governorate')
+        if governorate:
+            resort_queryset = resort_queryset.filter(governorate=governate)
+        
+        city = request.GET.get('city')
+        if city:
+            resort_queryset = resort_queryset.filter(city__icontains=city)
+        
+        resort_type = request.GET.get('resort_type')
+        if resort_type:
+            resort_queryset = resort_queryset.filter(resort_type=resort_type)
+        
+        featured_only = request.GET.get('featured_only')
+        if featured_only:
+            resort_queryset = resort_queryset.filter(is_featured=True)
+        
+        resorts = list(resort_queryset)
+    
+    # Combine all results for pagination
+    all_results = []
+    for p in properties:
+        all_results.append({
+            'type': 'property',
+            'object': p,
+            'title': p.display_title,
+            'price': p.price,
+            'location': p.district,
+            'image': p.get_main_image if hasattr(p, 'get_main_image') else None,
+            'created_at': p.created_at,
+        })
+    
+    for h in hotels:
+        all_results.append({
+            'type': 'hotel',
+            'object': h,
+            'title': h.name,
+            'price': 0,  # Hotels use price_range instead
+            'location': h.city,
+            'image': h.image.url if h.image else None,
+            'created_at': h.created_at if hasattr(h, 'created_at') else None,
+        })
+    
+    for r in resorts:
+        all_results.append({
+            'type': 'resort',
+            'object': r,
+            'title': r.name,
+            'price': 0,  # Resorts use price_range instead
+            'location': r.city,
+            'image': r.image.url if r.image else None,
+            'created_at': r.created_at,
+        })
+    
+    # Sort combined results
+    sort = request.GET.get('sort')
+    if sort == 'newest':
+        all_results = sorted(all_results, key=lambda x: x['created_at'] or timezone.now(), reverse=True)
+    elif sort == 'oldest':
+        all_results = sorted(all_results, key=lambda x: x['created_at'] or timezone.now())
+    
+    # Pagination
+    paginator = Paginator(all_results, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Get user's likes and saves
+    user_likes = set()
+    user_saves = set()
+    if request.user.is_authenticated:
+        user_likes = set(PropertyLike.objects.filter(user=request.user).values_list('property_id', flat=True))
+        user_saves = set(PropertySave.objects.filter(user=request.user).values_list('property_id', flat=True))
+    
+    return render(request, 'properties/unified_search.html', {
+        'form': form,
+        'results': page_obj,
+        'page_obj': page_obj,
+        'properties': properties,
+        'hotels': hotels,
+        'resorts': resorts,
+        'category': category,
+        'q': q,
+        'user_likes': user_likes,
+        'user_saves': user_saves,
     })
 
 
@@ -4196,6 +4544,421 @@ def bulk_message_list(request):
     return render(request, 'properties/bulk_message_list.html', {
         'bulk_messages': bulk_messages,
     })
+
+
+@login_required
+def messaging_dashboard(request):
+    """Professional messaging dashboard with dark theme."""
+    from .models import Conversation, ConversationParticipant, ChatMessage
+    
+    user = request.user
+    folder = request.GET.get('folder', 'all')
+    search = request.GET.get('search', '')
+    
+    # Get user's conversations
+    conversations = Conversation.objects.filter(
+        participants=user,
+        is_active=True
+    ).select_related('created_by').prefetch_related('participants_info')
+    
+    # Filter by folder
+    if folder == 'inbox':
+        conversations = conversations.filter(participants_info__user=user, participants_info__folder='inbox')
+    elif folder == 'sent':
+        conversations = conversations.filter(participants_info__user=user, participants_info__folder='sent')
+    elif folder == 'starred':
+        conversations = conversations.filter(participants_info__user=user, participants_info__is_starred=True)
+    elif folder == 'archived':
+        conversations = conversations.filter(participants_info__user=user, participants_info__is_archived=True)
+    
+    # Search filter
+    if search:
+        conversations = conversations.filter(
+            Q(name__icontains=search) |
+            Q(description__icontains=search)
+        )
+    
+    conversations = conversations.order_by('-last_message_at', '-created_at')
+    
+    # Calculate counts
+    all_count = Conversation.objects.filter(participants=user, is_active=True).count()
+    inbox_count = ConversationParticipant.objects.filter(user=user, folder='inbox').count()
+    
+    return render(request, 'properties/messaging_dashboard.html', {
+        'conversations': conversations,
+        'folder': folder,
+        'search': search,
+        'all_count': all_count,
+        'inbox_count': inbox_count,
+    })
+
+
+@login_required
+def api_conversations_list(request):
+    """API endpoint to list conversations."""
+    from django.http import JsonResponse
+    from .models import Conversation, ConversationParticipant, ChatMessage
+    
+    user = request.user
+    folder = request.GET.get('folder', 'all')
+    search = request.GET.get('search', '')
+    
+    conversations = Conversation.objects.filter(
+        participants=user,
+        is_active=True
+    ).select_related('created_by').prefetch_related('participants_info', 'chat_messages')
+    
+    # Filter by folder
+    if folder == 'inbox':
+        conversations = conversations.filter(participants_info__user=user, participants_info__folder='inbox')
+    elif folder == 'sent':
+        conversations = conversations.filter(participants_info__user=user, participants_info__folder='sent')
+    elif folder == 'starred':
+        conversations = conversations.filter(participants_info__user=user, participants_info__is_starred=True)
+    elif folder == 'archived':
+        conversations = conversations.filter(participants_info__user=user, participants_info__is_archived=True)
+    
+    # Search filter
+    if search:
+        conversations = conversations.filter(
+            Q(name__icontains=search) |
+            Q(description__icontains=search)
+        )
+    
+    conversations = conversations.order_by('-last_message_at', '-created_at')
+    
+    # Serialize conversations
+    conversations_data = []
+    for conv in conversations:
+        participant_info = conv.participants_info.filter(user=user).first()
+        other_participant = conv.get_other_participant(user)
+        last_message = conv.chat_messages.filter(is_deleted=False).first()
+        
+        conversations_data.append({
+            'id': str(conv.conversation_id),
+            'name': other_participant.get_full_name() if other_participant else conv.name,
+            'avatar': (other_participant.get_full_name() if other_participant else conv.name)[0].upper(),
+            'preview': last_message.content[:50] if last_message else 'لا توجد رسائل',
+            'time': conv.last_message_at.strftime('%H:%M') if conv.last_message_at else '',
+            'unread': not participant_info.last_read_at or (conv.last_message_at and conv.last_message_at > participant_info.last_read_at),
+            'starred': participant_info.is_starred if participant_info else False,
+            'type': 'مباشر' if conv.conversation_type == 'direct' else 'مجموعة',
+        })
+    
+    # Calculate counts
+    all_count = Conversation.objects.filter(participants=user, is_active=True).count()
+    inbox_count = ConversationParticipant.objects.filter(user=user, folder='inbox').count()
+    
+    return JsonResponse({
+        'conversations': conversations_data,
+        'counts': {
+            'all': all_count,
+            'inbox': inbox_count,
+        }
+    })
+
+
+@login_required
+def api_conversation_detail(request, conversation_id):
+    """API endpoint to get conversation details with messages."""
+    from django.http import JsonResponse
+    from .models import Conversation, ChatMessage, MessageReadStatus
+    
+    try:
+        conversation = Conversation.objects.get(conversation_id=conversation_id)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'error': 'Conversation not found'}, status=404)
+    
+    # Check if user is participant
+    if not conversation.participants.filter(id=request.user.id).exists():
+        return JsonResponse({'error': 'Not authorized'}, status=403)
+    
+    other_participant = conversation.get_other_participant(request.user)
+    
+    # Get messages
+    messages = ChatMessage.objects.filter(
+        conversation=conversation,
+        is_deleted=False
+    ).select_related('sender', 'property', 'hotel', 'resort').prefetch_related('attachments').order_by('created_at')
+    
+    # Serialize messages
+    messages_data = []
+    for msg in messages:
+        message_data = {
+            'id': str(msg.message_id),
+            'content': msg.content,
+            'sender': msg.sender.get_full_name() if msg.sender else 'Unknown',
+            'sent_by_me': msg.sender == request.user,
+            'time': msg.created_at.strftime('%H:%M'),
+            'status': '✓✓' if msg.is_read_by_user(other_participant) else '✓',
+        }
+        
+        # Add attachment
+        if msg.attachments.exists():
+            attachment = msg.attachments.first()
+            message_data['attachment'] = {
+                'type': attachment.attachment_type,
+                'url': attachment.file.url,
+                'name': attachment.file_name,
+            }
+        
+        # Add property/hotel/resort
+        if msg.property:
+            message_data['property'] = {
+                'name': msg.property.title,
+                'image': msg.property.main_image.url if msg.property.main_image else '',
+                'price': f'{msg.property.price:,} د.ع',
+                'location': msg.property.city or msg.property.governorate,
+                'url': f'/property/{msg.property.slug}/',
+            }
+        elif msg.hotel:
+            message_data['property'] = {
+                'name': msg.hotel.name,
+                'image': msg.hotel.main_image.url if msg.hotel.main_image else '',
+                'price': msg.hotel.price_range,
+                'location': msg.hotel.city or msg.hotel.governorate,
+                'url': f'/hotel/{msg.hotel.slug}/',
+            }
+        elif msg.resort:
+            message_data['property'] = {
+                'name': msg.resort.name,
+                'image': msg.resort.main_image.url if msg.resort.main_image else '',
+                'price': msg.resort.price_range,
+                'location': msg.resort.city or msg.resort.governorate,
+                'url': f'/resort/{msg.resort.slug}/',
+            }
+        
+        messages_data.append(message_data)
+    
+    return JsonResponse({
+        'id': str(conversation.conversation_id),
+        'name': other_participant.get_full_name() if other_participant else conversation.name,
+        'avatar': (other_participant.get_full_name() if other_participant else conversation.name)[0].upper(),
+        'online': False,  # Add online status logic
+        'messages': messages_data,
+    })
+
+
+@login_required
+def api_conversation_star(request, conversation_id):
+    """API endpoint to toggle star on conversation."""
+    from django.http import JsonResponse
+    from .models import Conversation, ConversationParticipant
+    
+    try:
+        conversation = Conversation.objects.get(conversation_id=conversation_id)
+        participant = ConversationParticipant.objects.get(
+            conversation=conversation,
+            user=request.user
+        )
+        participant.is_starred = not participant.is_starred
+        participant.save()
+        
+        return JsonResponse({'success': True, 'starred': participant.is_starred})
+    except (Conversation.DoesNotExist, ConversationParticipant.DoesNotExist):
+        return JsonResponse({'success': False, 'error': 'Not found'}, status=404)
+
+
+@login_required
+def api_conversation_archive(request, conversation_id):
+    """API endpoint to archive conversation."""
+    from django.http import JsonResponse
+    from .models import Conversation, ConversationParticipant
+    
+    try:
+        conversation = Conversation.objects.get(conversation_id=conversation_id)
+        participant = ConversationParticipant.objects.get(
+            conversation=conversation,
+            user=request.user
+        )
+        participant.is_archived = not participant.is_archived
+        participant.save()
+        
+        return JsonResponse({'success': True, 'archived': participant.is_archived})
+    except (Conversation.DoesNotExist, ConversationParticipant.DoesNotExist):
+        return JsonResponse({'success': False, 'error': 'Not found'}, status=404)
+
+
+@login_required
+def api_send_message(request, conversation_id):
+    """API endpoint to send a message."""
+    from django.http import JsonResponse
+    from .models import Conversation, ChatMessage
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+    
+    try:
+        conversation = Conversation.objects.get(conversation_id=conversation_id)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Conversation not found'}, status=404)
+    
+    # Check if user is participant
+    if not conversation.participants.filter(id=request.user.id).exists():
+        return JsonResponse({'success': False, 'error': 'Not authorized'}, status=403)
+    
+    data = json.loads(request.body)
+    content = data.get('content', '').strip()
+    
+    if not content:
+        return JsonResponse({'success': False, 'error': 'Content is required'}, status=400)
+    
+    # Create message
+    message = ChatMessage.objects.create(
+        conversation=conversation,
+        sender=request.user,
+        message_type=ChatMessage.TYPE_TEXT,
+        content=content
+    )
+    
+    # Update conversation timestamp
+    conversation.last_message_at = timezone.now()
+    conversation.save()
+    
+    return JsonResponse({'success': True, 'message_id': str(message.message_id)})
+
+
+@login_required
+def api_upload_attachment(request):
+    """API endpoint to upload file attachments with security validation."""
+    from django.http import JsonResponse
+    from .models import MessageAttachment
+    import magic
+    import os
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+    
+    if 'file' not in request.FILES:
+        return JsonResponse({'success': False, 'error': 'No file provided'}, status=400)
+    
+    file = request.FILES['file']
+    
+    # File size validation (max 10MB)
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+    if file.size > MAX_FILE_SIZE:
+        return JsonResponse({'success': False, 'error': 'File size exceeds 10MB limit'}, status=400)
+    
+    # File type validation using magic numbers
+    ALLOWED_MIME_TYPES = {
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'video/mp4', 'video/webm', 'video/quicktime',
+        'audio/mpeg', 'audio/wav', 'audio/ogg',
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/zip', 'application/x-zip-compressed',
+        'application/x-rar-compressed',
+    }
+    
+    # Read file to detect MIME type
+    file.seek(0)
+    file_content = file.read()
+    file_mime = magic.from_buffer(file_content, mime=True)
+    file.seek(0)
+    
+    if file_mime not in ALLOWED_MIME_TYPES:
+        return JsonResponse({'success': False, 'error': f'File type {file_mime} not allowed'}, status=400)
+    
+    # Additional validation for image dimensions
+    if file_mime.startswith('image/'):
+        try:
+            from PIL import Image
+            img = Image.open(file)
+            width, height = img.size
+            MAX_DIMENSION = 4096
+            if width > MAX_DIMENSION or height > MAX_DIMENSION:
+                return JsonResponse({'success': False, 'error': f'Image dimensions exceed {MAX_DIMENSION}px limit'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': 'Invalid image file'}, status=400)
+    
+    # Determine attachment type
+    attachment_type = 'file'
+    if file_mime.startswith('image/'):
+        attachment_type = 'image'
+    elif file_mime.startswith('video/'):
+        attachment_type = 'video'
+    elif file_mime.startswith('audio/'):
+        attachment_type = 'audio'
+    
+    # Save file
+    try:
+        attachment = MessageAttachment.objects.create(
+            attachment_type=attachment_type,
+            file=file,
+            file_name=file.name,
+            file_size=file.size,
+            mime_type=file_mime
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'attachment_id': attachment.id,
+            'file_url': attachment.file.url,
+            'file_name': attachment.file_name,
+            'file_size': attachment.file_size,
+            'mime_type': attachment.mime_type
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def api_attach_property(request):
+    """API endpoint to attach a property/hotel/resort to a message."""
+    from django.http import JsonResponse
+    from .models import Property, Hotel, Resort
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+    
+    data = json.loads(request.body)
+    property_type = data.get('type')  # 'property', 'hotel', 'resort'
+    property_id = data.get('id')
+    
+    if not property_type or not property_id:
+        return JsonResponse({'success': False, 'error': 'Type and ID are required'}, status=400)
+    
+    try:
+        if property_type == 'property':
+            property = Property.objects.get(id=property_id)
+            return JsonResponse({
+                'success': True,
+                'type': 'property',
+                'name': property.title,
+                'image': property.main_image.url if property.main_image else '',
+                'price': f'{property.price:,} د.ع',
+                'location': property.city or property.governorate,
+                'url': f'/property/{property.slug}/',
+            })
+        elif property_type == 'hotel':
+            hotel = Hotel.objects.get(id=property_id)
+            return JsonResponse({
+                'success': True,
+                'type': 'hotel',
+                'name': hotel.name,
+                'image': hotel.main_image.url if hotel.main_image else '',
+                'price': hotel.price_range,
+                'location': hotel.city or hotel.governorate,
+                'url': f'/hotel/{hotel.slug}/',
+            })
+        elif property_type == 'resort':
+            resort = Resort.objects.get(id=property_id)
+            return JsonResponse({
+                'success': True,
+                'type': 'resort',
+                'name': resort.name,
+                'image': resort.main_image.url if resort.main_image else '',
+                'price': resort.price_range,
+                'location': resort.city or resort.governorate,
+                'url': f'/resort/{resort.slug}/',
+            })
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid property type'}, status=400)
+    except (Property.DoesNotExist, Hotel.DoesNotExist, Resort.DoesNotExist):
+        return JsonResponse({'success': False, 'error': 'Property not found'}, status=404)
 
 
 @login_required

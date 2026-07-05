@@ -887,6 +887,15 @@ class SiteSettings(models.Model):
     twitter_url = models.URLField(blank=True, verbose_name='تويتر')
     linkedin_url = models.URLField(blank=True, verbose_name='لينكد إن')
 
+    # Maintenance Mode Settings
+    maintenance_mode = models.BooleanField(default=False, verbose_name='وضع الصيانة')
+    maintenance_message = models.TextField(
+        default='الموقع تحت الصيانة، سنعود قريبًا. نعمل حاليًا على تحسين خدماتنا لتقديم تجربة أفضل.',
+        verbose_name='رسالة الصيانة'
+    )
+    maintenance_end_time = models.DateTimeField(null=True, blank=True, verbose_name='وقت انتهاء الصيانة')
+    allow_admins_during_maintenance = models.BooleanField(default=True, verbose_name='السماح للمشرفين أثناء الصيانة')
+
     class Meta:
         verbose_name = 'إعدادات الموقع'
         verbose_name_plural = 'إعدادات الموقع'
@@ -4479,6 +4488,26 @@ class ConversationParticipant(models.Model):
         default=False,
         verbose_name='مثبت'
     )
+    is_starred = models.BooleanField(
+        default=False,
+        verbose_name='مميز'
+    )
+    is_archived = models.BooleanField(
+        default=False,
+        verbose_name='مؤرشف'
+    )
+    folder = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name='المجلد',
+        choices=[
+            ('', 'الرئيسي'),
+            ('inbox', 'الوارد'),
+            ('sent', 'الصادر'),
+            ('important', 'مهم'),
+            ('spam', 'غير مرغوب'),
+        ]
+    )
     last_read_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -4562,6 +4591,31 @@ class ChatMessage(models.Model):
         blank=True,
         related_name='replies',
         verbose_name='رد على'
+    )
+    # Property/Hotel/Resort attachment
+    property = models.ForeignKey(
+        Property,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='chat_messages',
+        verbose_name='العقار'
+    )
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='chat_messages',
+        verbose_name='الفندق'
+    )
+    resort = models.ForeignKey(
+        Resort,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='chat_messages',
+        verbose_name='المنتجع'
     )
     is_edited = models.BooleanField(
         default=False,

@@ -1,3 +1,4 @@
+{% load static %}
 <aside class="dashboard-sidebar" id="dashboard-sidebar">
   <div class="dashboard-sidebar-brand">
     <img src="{% static 'images/logo.jpg' %}" alt="{{ site_settings.site_name|default:'دلال' }}" class="brand-icon logo-mark" style="height: 40px; width: auto;">
@@ -35,7 +36,7 @@
       <li><a href="{% url 'financial_dashboard' %}">
         <span class="nav-icon">💰</span> الإدارة المالية
       </a></li>
-      <li><a href="{% url 'broker_messages' %}">
+      <li><a href="{% url 'messaging_dashboard' %}" class="{% if request.resolver_match.url_name == 'messaging_dashboard' %}active{% endif %}">
         <span class="nav-icon">💬</span> الرسائل
       </a></li>
       <li><a href="{% url 'notifications' %}">

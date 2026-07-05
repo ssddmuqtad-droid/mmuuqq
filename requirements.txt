@@ -23,3 +23,6 @@ django-redis>=5.4.0
 # Optional: WebSockets (when USE_WEBSOCKETS=True)
 channels>=4.0.0
 channels-redis>=4.2.0
+
+# File type validation for messaging
+python-magic>=0.4.27

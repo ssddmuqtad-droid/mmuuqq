@@ -244,11 +244,15 @@ COMMON_NASIRIYAH_DISTRICTS = [
 
 SORT_CHOICES = [
     ('newest', 'الأحدث'),
+    ('oldest', 'الأقدم'),
     ('price_asc', 'السعر: من الأقل'),
     ('price_desc', 'السعر: من الأعلى'),
     ('area_asc', 'المساحة: من الأصغر'),
     ('area_desc', 'المساحة: من الأكبر'),
     ('views', 'الأكثر مشاهدة'),
+    ('rating', 'الأعلى تقييماً'),
+    ('popular', 'الأكثر طلباً'),
+    ('nearest', 'الأقرب إليك'),
 ]
 
 # Nasiriyah city center coordinates for map

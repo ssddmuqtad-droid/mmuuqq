@@ -35,7 +35,9 @@
       </button>
       <ul class="nav-links">
         <li><a href="{% url 'home' %}" data-nav="home">الرئيسية</a></li>
-        <li><a href="{% url 'explore' %}" data-nav="explore">تصفح العقارات</a></li>
+        <li><a href="{% url 'unified_search' %}" data-nav="search">بحث متقدم</a></li>
+        <li><a href="{% url 'explore' %}" data-nav="explore">جميع العقارات</a></li>
+        <li><a href="{% url 'properties_outside_iraq' %}" data-nav="outside">عقارات خارج العراق</a></li>
         <li><a href="{% url 'about' %}" data-nav="about">من نحن</a></li>
         <li><a href="{% url 'contact' %}" data-nav="contact">تواصل</a></li>
         {% if request.user.is_authenticated %}
@@ -109,8 +111,12 @@
       <span class="bottom-nav-icon">🔍</span>
       <span class="bottom-nav-label">تصفح</span>
     </a>
+    <a href="{% url 'properties_outside_iraq' %}" class="bottom-nav-item" data-nav="outside">
+      <span class="bottom-nav-icon">🌍</span>
+      <span class="bottom-nav-label">خارج العراق</span>
+    </a>
     {% if request.user.is_authenticated %}
-    <a href="{% url 'broker_messaging' %}" class="bottom-nav-item" data-nav="messaging">
+    <a href="{% url 'messaging_dashboard' %}" class="bottom-nav-item" data-nav="messaging">
       <span class="bottom-nav-icon">💬</span>
       <span class="bottom-nav-label">المحادثات</span>
     </a>
@@ -157,8 +163,19 @@
       localStorage.setItem('theme', 'dark');
     })();
   </script>
-  <script>window.GOVERNORATE_CITIES = {{ governorate_cities_json|safe }};</script>
-  <script>window.SITE_PHONE = "{{ site_settings.broker_phone }}";</script>
+  <script type="application/json" id="site-data">
+    {
+      "governorate_cities": {{ governorate_cities_json|safe|default:"{}" }},
+      "site_phone": "{{ site_settings.broker_phone|default:'' }}"
+    }
+  </script>
+  <script>
+    (function() {
+      const siteData = JSON.parse(document.getElementById('site-data').textContent);
+      window.GOVERNORATE_CITIES = siteData.governorate_cities;
+      window.SITE_PHONE = siteData.site_phone;
+    })();
+  </script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="{% static 'js/app.js' %}" defer></script>
   <script src="{% static 'js/countdown.js' %}" defer></script>

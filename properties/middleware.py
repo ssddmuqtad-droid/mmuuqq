@@ -52,3 +52,52 @@ class SecurityHeadersMiddleware:
         if request.is_secure():
             response['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
         return response
+
+
+class MaintenanceModeMiddleware:
+    """Middleware to handle maintenance mode."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Paths that should always be accessible during maintenance
+        allowed_paths = [
+            '/admin/',
+            '/login/',
+            '/maintenance/',
+            '/health/',
+            '/health',
+            '/static/',
+            '/media/',
+        ]
+
+        # Check if path is allowed
+        for path in allowed_paths:
+            if request.path.startswith(path):
+                return self.get_response(request)
+
+        # Check if user is authenticated and is superuser (after AuthenticationMiddleware)
+        if hasattr(request, 'user') and request.user.is_authenticated and request.user.is_superuser:
+            return self.get_response(request)
+
+        # Check maintenance mode status
+        from .models import SiteSettings
+        settings = SiteSettings.get_solo()
+
+        if settings.maintenance_mode:
+            # Check if admins are allowed during maintenance
+            if settings.allow_admins_during_maintenance:
+                if hasattr(request, 'user') and request.user.is_authenticated and request.user.is_superuser:
+                    return self.get_response(request)
+
+            # Show maintenance page
+            from django.shortcuts import render
+            return render(request, 'properties/maintenance.html', {
+                'maintenance_message': settings.maintenance_message,
+                'maintenance_end_time': settings.maintenance_end_time,
+                'site_settings': settings,
+            }, status=503)
+
+        return self.get_response(request)
+

@@ -77,6 +77,8 @@ CSRF_TRUSTED_ORIGINS = _unique([
     'http://localhost:8080',
     'http://127.0.0.1:8080',
     'http://127.0.0.1:64813',
+    'http://127.0.0.1:62854',
+    'http://localhost:62854',
     'https://muq.up.railway.app',
     'https://muqq.up.railway.app',
     'http://muq.up.railway.app',
@@ -125,6 +127,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'properties.middleware.MaintenanceModeMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

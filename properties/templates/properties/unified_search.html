@@ -1,0 +1,826 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}بحث متقدم - عقارات، فنادق، منتجعات{% endblock %}
+
+{% block extra_css %}
+<style>
+  .unified-search-page {
+    background: #0B0B0B;
+    min-height: 100vh;
+    padding: 2rem 0;
+  }
+
+  .search-hero {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    padding: 3rem 2rem;
+    margin-bottom: 2rem;
+    border-radius: 16px;
+    border: 1px solid #333;
+  }
+
+  .search-hero h1 {
+    color: #fff;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  .search-hero p {
+    color: #888;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+  }
+
+  .search-form {
+    background: #1a1a1a;
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid #333;
+    margin-bottom: 2rem;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    color: #fff;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .form-control {
+    background: #2d2d2d;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    width: 100%;
+    transition: all 0.3s ease;
+  }
+
+  .form-control:focus {
+    outline: none;
+    border-color: #FF6B35;
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+  }
+
+  .btn-search {
+    background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%);
+    color: #fff;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+  }
+
+  .btn-search:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 107, 53, 0.3);
+  }
+
+  .filter-section {
+    background: #1a1a1a;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #333;
+    margin-bottom: 1rem;
+  }
+
+  .filter-section h3 {
+    color: #FF6B35;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+
+  .checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #fff;
+  }
+
+  .checkbox-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #FF6B35;
+  }
+
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #333;
+  }
+
+  .results-count {
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .results-count span {
+    color: #FF6B35;
+  }
+
+  .sort-dropdown {
+    background: #2d2d2d;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+  }
+
+  .result-card {
+    background: #1a1a1a;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid #333;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .result-card:hover {
+    transform: translateY(-8px);
+    border-color: #FF6B35;
+    box-shadow: 0 12px 30px rgba(255, 107, 53, 0.2);
+  }
+
+  .card-image {
+    position: relative;
+    height: 220px;
+    overflow: hidden;
+  }
+
+  .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .result-card:hover .card-image img {
+    transform: scale(1.1);
+  }
+
+  .card-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .card-type-badge {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+  }
+
+  .card-actions {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .result-card:hover .card-actions {
+    opacity: 1;
+  }
+
+  .card-action-btn {
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #333;
+  }
+
+  .card-action-btn:hover {
+    background: #FF6B35;
+    color: #fff;
+    transform: scale(1.1);
+  }
+
+  .card-action-btn.active {
+    background: #FF6B35;
+    color: #fff;
+  }
+
+  .card-content {
+    padding: 1.5rem;
+  }
+
+  .card-title {
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .card-location {
+    color: #888;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .card-location svg {
+    width: 18px;
+    height: 18px;
+    fill: #FF6B35;
+  }
+
+  .card-price {
+    color: #FF6B35;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  .card-price .currency {
+    font-size: 1rem;
+    color: #888;
+    font-weight: 500;
+  }
+
+  .card-specs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #333;
+  }
+
+  .card-spec {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #888;
+    font-size: 0.9rem;
+  }
+
+  .card-spec svg {
+    width: 18px;
+    height: 18px;
+    fill: #FF6B35;
+  }
+
+  .card-broker {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .broker-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #2d2d2d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FF6B35;
+    font-weight: 600;
+  }
+
+  .broker-info {
+    flex: 1;
+  }
+
+  .broker-name {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .broker-status {
+    color: #888;
+    font-size: 0.85rem;
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .card-date {
+    color: #666;
+    font-size: 0.85rem;
+  }
+
+  .card-views {
+    color: #888;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .btn-view-details {
+    background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%);
+    color: #fff;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+  }
+
+  .btn-view-details:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 3rem;
+  }
+
+  .pagination a,
+  .pagination span {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #fff;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+  }
+
+  .pagination a:hover {
+    border-color: #FF6B35;
+    background: #2d2d2d;
+  }
+
+  .pagination .current {
+    background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%);
+    border-color: #FF6B35;
+  }
+
+  .no-results {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #888;
+  }
+
+  .no-results svg {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 1rem;
+    fill: #333;
+  }
+
+  .no-results h3 {
+    color: #fff;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .search-hero h1 {
+      font-size: 1.8rem;
+    }
+
+    .results-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="unified-search-page">
+  <div class="container">
+    <!-- Search Hero -->
+    <div class="search-hero">
+      <h1>بحث متقدم</h1>
+      <p>ابحث في العقارات داخل العراق، خارج العراق، الفنادق، والمنتجعات من مكان واحد</p>
+    </div>
+
+    <!-- Search Form -->
+    <form class="search-form" method="GET" action="{% url 'unified_search' %}">
+      <div class="form-row">
+        <div class="form-group" style="flex: 2;">
+          <label for="q">بحث</label>
+          <input type="text" name="q" id="q" class="form-control" placeholder="ابحث عن عقار، فندق، منتجع، اسم الدلال..." value="{{ q }}">
+        </div>
+        <div class="form-group">
+          <label for="category">القسم</label>
+          <select name="category" id="category" class="form-control">
+            <option value="">كل الأقسام</option>
+            <option value="property_iraq" {% if category == 'property_iraq' %}selected{% endif %}>عقار داخل العراق</option>
+            <option value="property_outside" {% if category == 'property_outside' %}selected{% endif %}>عقار خارج العراق</option>
+            <option value="hotel" {% if category == 'hotel' %}selected{% endif %}>فندق</option>
+            <option value="resort" {% if category == 'resort' %}selected{% endif %}>منتجع</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="governorate">المحافظة</label>
+          <select name="governorate" id="governorate" class="form-control">
+            <option value="">كل المحافظات</option>
+            {% for code, name in IRAQ_GOVERNORATES %}
+            <option value="{{ code }}" {% if form.governorate.value == code %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="city">المدينة</label>
+          <input type="text" name="city" id="city" class="form-control" placeholder="المدينة" value="{{ form.city.value }}">
+        </div>
+        <div class="form-group">
+          <label for="country">الدولة</label>
+          <input type="text" name="country" id="country" class="form-control" placeholder="الدولة" value="{{ form.country.value }}">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="type">نوع العقار</label>
+          <select name="type" id="type" class="form-control">
+            <option value="">كل الأنواع</option>
+            {% for value, label in form.type.field.choices %}
+            <option value="{{ value }}" {% if form.type.value == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="status">الحالة</label>
+          <select name="status" id="status" class="form-control">
+            <option value="">كل الحالات</option>
+            {% for value, label in form.status.field.choices %}
+            <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="price_min">السعر من</label>
+          <input type="number" name="price_min" id="price_min" class="form-control" placeholder="السعر من" value="{{ form.price_min.value }}">
+        </div>
+        <div class="form-group">
+          <label for="price_max">السعر إلى</label>
+          <input type="number" name="price_max" id="price_max" class="form-control" placeholder="السعر إلى" value="{{ form.price_max.value }}">
+        </div>
+        <div class="form-group">
+          <label for="currency">العملة</label>
+          <select name="currency" id="currency" class="form-control">
+            <option value="">كل العملات</option>
+            <option value="IQD" {% if form.currency.value == 'IQD' %}selected{% endif %}>دينار عراقي</option>
+            <option value="USD" {% if form.currency.value == 'USD' %}selected{% endif %}>دولار أمريكي</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="area_min">المساحة من (م²)</label>
+          <input type="number" name="area_min" id="area_min" class="form-control" placeholder="المساحة من" value="{{ form.area_min.value }}">
+        </div>
+        <div class="form-group">
+          <label for="area_max">المساحة إلى (م²)</label>
+          <input type="number" name="area_max" id="area_max" class="form-control" placeholder="المساحة إلى" value="{{ form.area_max.value }}">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="bedrooms">الغرف</label>
+          <input type="number" name="bedrooms" id="bedrooms" class="form-control" placeholder="الغرف" value="{{ form.bedrooms.value }}">
+        </div>
+        <div class="form-group">
+          <label for="bathrooms">الحمامات</label>
+          <input type="number" name="bathrooms" id="bathrooms" class="form-control" placeholder="الحمامات" value="{{ form.bathrooms.value }}">
+        </div>
+        <div class="form-group">
+          <label for="floors">الطوابق</label>
+          <input type="number" name="floors" id="floors" class="form-control" placeholder="الطوابق" value="{{ form.floors.value }}">
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <h3>فلاتر إضافية</h3>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" name="featured_only" {% if form.featured_only.value %}checked{% endif %}>
+            المميزة فقط
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="verified_only" {% if form.verified_only.value %}checked{% endif %}>
+            الموثقة فقط
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="new_only" {% if form.new_only.value %}checked{% endif %}>
+            الجديدة فقط
+          </label>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="broker_name">اسم الدلال</label>
+          <input type="text" name="broker_name" id="broker_name" class="form-control" placeholder="اسم الدلال" value="{{ form.broker_name.value }}">
+        </div>
+        <div class="form-group">
+          <label for="rating_min">التقييم الأدنى</label>
+          <input type="number" name="rating_min" id="rating_min" class="form-control" placeholder="التقييم" min="0" max="5" value="{{ form.rating_min.value }}">
+        </div>
+        <div class="form-group">
+          <label for="sort">الترتيب</label>
+          <select name="sort" id="sort" class="form-control">
+            <option value="">الافتراضي</option>
+            {% for value, label in form.sort.field.choices %}
+            <option value="{{ value }}" {% if form.sort.value == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-search">بحث</button>
+    </form>
+
+    <!-- Results -->
+    {% if results %}
+    <div class="results-header">
+      <div class="results-count">
+        <span>{{ results.paginator.count }}</span> نتيجة
+      </div>
+    </div>
+
+    <div class="results-grid">
+      {% for result in results %}
+      <div class="result-card">
+        <div class="card-image">
+          {% if result.image %}
+          <img src="{{ result.image }}" alt="{{ result.title }}">
+          {% else %}
+          <img src="{% static 'images/placeholder.jpg' %}" alt="{{ result.title }}">
+          {% endif %}
+          
+          <span class="card-type-badge">
+            {% if result.type == 'property' %}عقار{% elif result.type == 'hotel' %}فندق{% elif result.type == 'resort' %}منتجع{% endif %}
+          </span>
+          
+          {% if result.object.is_featured %}
+          <span class="card-badge">مميز</span>
+          {% endif %}
+          
+          <div class="card-actions">
+            {% if result.type == 'property' %}
+            <button class="card-action-btn {% if result.object.id in user_likes %}active{% endif %}" onclick="toggleLike({{ result.object.id }})">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            </button>
+            <button class="card-action-btn {% if result.object.id in user_saves %}active{% endif %}" onclick="toggleSave({{ result.object.id }})">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+            </button>
+            {% endif %}
+            <button class="card-action-btn" onclick="shareItem('{{ result.title }}')">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.54 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 7 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.96 0 1.86-.46 2.44-1.19l7.05 4.11c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+            </button>
+          </div>
+        </div>
+        
+        <div class="card-content">
+          <h3 class="card-title">{{ result.title }}</h3>
+          <div class="card-location">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            {{ result.location }}
+          </div>
+          
+          {% if result.type == 'property' %}
+          <div class="card-price">
+            {{ result.price|floatformat:0 }} <span class="currency">د.ع</span>
+          </div>
+          
+          <div class="card-specs">
+            {% if result.object.area %}
+            <div class="card-spec">
+              <svg viewBox="0 0 24 24"><path d="M21 11v8h-8v-8h8zM3 11v8h8v-8H3zM3 3v8h8V3H3zm13.66-1.31L11 7.34 16.66 13l5.66-5.66-5.66-5.65z"/></svg>
+              {{ result.object.area }} م²
+            </div>
+            {% endif %}
+            {% if result.object.bedrooms %}
+            <div class="card-spec">
+              <svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>
+              {{ result.object.bedrooms }} غرفة
+            </div>
+            {% endif %}
+            {% if result.object.bathrooms %}
+            <div class="card-spec">
+              <svg viewBox="0 0 24 24"><path d="M9 22H5a1 1 0 0 1-1-1V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3h-2V5H6v16h3v1zm9-7h-3v3h-2v-3h-3v-2h3V10h2v3h3v2z"/></svg>
+              {{ result.object.bathrooms }} حمام
+            </div>
+            {% endif %}
+          </div>
+          
+          {% if result.object.broker %}
+          <div class="card-broker">
+            <div class="broker-avatar">
+              {{ result.object.broker.display_name|first|upper }}
+            </div>
+            <div class="broker-info">
+              <div class="broker-name">{{ result.object.broker.display_name }}</div>
+              <div class="broker-status">{% if result.object.broker.is_verified %}موثق{% else %}دلال{% endif %}</div>
+            </div>
+          </div>
+          {% endif %}
+          {% elif result.type == 'hotel' %}
+          <div class="card-price">
+            {% for i in result.object.star_range|default:0 %}⭐{% endfor %}
+          </div>
+          <div class="card-specs">
+            <div class="card-spec">
+              <svg viewBox="0 0 24 24"><path d="M21 11v8h-8v-8h8zM3 11v8h8v-8H3zM3 3v8h8V3H3zm13.66-1.31L11 7.34 16.66 13l5.66-5.66-5.66-5.65z"/></svg>
+              {{ result.object.price_range|default:'-' }}
+            </div>
+          </div>
+          {% elif result.type == 'resort' %}
+          <div class="card-price">
+            {{ result.object.get_resort_type_display }}
+          </div>
+          <div class="card-specs">
+            <div class="card-spec">
+              <svg viewBox="0 0 24 24"><path d="M21 11v8h-8v-8h8zM3 11v8h8v-8H3zM3 3v8h8V3H3zm13.66-1.31L11 7.34 16.66 13l5.66-5.66-5.66-5.65z"/></svg>
+              {{ result.object.price_range|default:'-' }}
+            </div>
+          </div>
+          {% endif %}
+          
+          <div class="card-footer">
+            <div class="card-date">
+              {% if result.created_at %}
+              {{ result.created_at|date:"d M Y" }}
+              {% endif %}
+            </div>
+            {% if result.type == 'property' %}
+            <div class="card-views">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+              {{ result.object.views_count }}
+            </div>
+            {% endif %}
+          </div>
+          
+          {% if result.type == 'property' %}
+          <a href="{% url 'property_detail' result.object.slug %}" class="btn-view-details">عرض التفاصيل</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">السابق</a>
+      {% endif %}
+      
+      <span class="current">{{ page_obj.number }}</span>
+      
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">التالي</a>
+      {% endif %}
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div class="no-results">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <h3>لا توجد نتائج</h3>
+      <p>جرب تغيير معايير البحث أو الفلاتر</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function toggleLike(propertyId) {
+  fetch(`/explore/like/${propertyId}/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    }
+  });
+}
+
+function toggleSave(propertyId) {
+  fetch(`/explore/save/${propertyId}/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    }
+  });
+}
+
+function shareItem(title) {
+  if (navigator.share) {
+    navigator.share({
+      title: title,
+      url: window.location.href,
+    });
+  } else {
+    navigator.clipboard.writeText(window.location.href);
+    alert('تم نسخ الرابط');
+  }
+}
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+</script>
+{% endblock %}

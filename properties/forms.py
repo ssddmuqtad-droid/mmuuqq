@@ -16,18 +16,30 @@ def _fc(placeholder=''):
 
 
 class PropertySearchForm(forms.Form):
-    q = forms.CharField(required=False, label='بحث', widget=forms.TextInput(attrs=_fc('ابحث عن عقار...')))
+    q = forms.CharField(required=False, label='بحث', widget=forms.TextInput(attrs=_fc('ابحث عن عقار، فندق، منتجع...')))
     governorate = forms.ChoiceField(required=False, label='المحافظة', choices=[('', 'كل المحافظات')] + list(IRAQ_GOVERNORATES))
-    district = forms.CharField(required=False, label='الحي', widget=forms.TextInput(attrs=_fc('الحي')))
+    district = forms.CharField(required=False, label='الحي/المنطقة', widget=forms.TextInput(attrs=_fc('الحي/المنطقة')))
+    city = forms.CharField(required=False, label='المدينة', widget=forms.TextInput(attrs=_fc('المدينة')))
+    country = forms.CharField(required=False, label='الدولة', widget=forms.TextInput(attrs=_fc('الدولة')))
     street = forms.CharField(required=False, label='الشارع', widget=forms.TextInput(attrs=_fc('الشارع')))
     type = forms.ChoiceField(required=False, label='نوع العقار', choices=[('', 'كل الأنواع')])
     status = forms.ChoiceField(required=False, label='الحالة', choices=[('', 'كل الحالات')])
     price_min = forms.IntegerField(required=False, label='السعر من', validators=[MinValueValidator(0)])
     price_max = forms.IntegerField(required=False, label='السعر إلى', validators=[MinValueValidator(0)])
+    currency = forms.ChoiceField(required=False, label='العملة', choices=[('', 'كل العملات'), ('IQD', 'دينار عراقي'), ('USD', 'دولار أمريكي')])
     area_min = forms.IntegerField(required=False, label='المساحة من', validators=[MinValueValidator(0)])
     area_max = forms.IntegerField(required=False, label='المساحة إلى', validators=[MinValueValidator(0)])
     bedrooms = forms.IntegerField(required=False, label='الغرف', validators=[MinValueValidator(0)])
-    owner_name = forms.CharField(required=False, label='اسم دلال العقار', widget=forms.TextInput(attrs=_fc('اسم دلال العقار')))
+    bathrooms = forms.IntegerField(required=False, label='الحمامات', validators=[MinValueValidator(0)])
+    floors = forms.IntegerField(required=False, label='الطوابق', validators=[MinValueValidator(0)])
+    year_built = forms.IntegerField(required=False, label='سنة البناء', validators=[MinValueValidator(0)])
+    property_condition = forms.ChoiceField(required=False, label='حالة العقار', choices=[('', 'كل الحالات'), ('new', 'جديد'), ('used', 'مستعمل'), ('under_construction', 'قيد البناء')])
+    category = forms.ChoiceField(required=False, label='القسم', choices=[('', 'كل الأقسام'), ('property_iraq', 'عقار داخل العراق'), ('property_outside', 'عقار خارج العراق'), ('hotel', 'فندق'), ('resort', 'منتجع')])
+    featured_only = forms.BooleanField(required=False, label='المميزة فقط')
+    verified_only = forms.BooleanField(required=False, label='الموثقة فقط')
+    new_only = forms.BooleanField(required=False, label='الجديدة فقط')
+    broker_name = forms.CharField(required=False, label='اسم الدلال', widget=forms.TextInput(attrs=_fc('اسم الدلال')))
+    rating_min = forms.IntegerField(required=False, label='التقييم الأدنى', validators=[MinValueValidator(0)])
     sort = forms.ChoiceField(required=False, label='ترتيب')
 
     def __init__(self, *args, **kwargs):
