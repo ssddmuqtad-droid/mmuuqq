@@ -32,6 +32,78 @@
     margin-bottom: 2rem;
   }
 
+  .quick-access-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .quick-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+
+  .quick-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .outside-iraq-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: #667eea;
+  }
+
+  .outside-iraq-btn:hover {
+    border-color: #764ba2;
+  }
+
+  .iraq-btn {
+    background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%);
+    color: white;
+    border-color: #FF6B35;
+  }
+
+  .iraq-btn:hover {
+    border-color: #FF8C42;
+  }
+
+  .hotel-btn {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+    border-color: #11998e;
+  }
+
+  .hotel-btn:hover {
+    border-color: #38ef7d;
+  }
+
+  .resort-btn {
+    background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+    color: white;
+    border-color: #ee0979;
+  }
+
+  .resort-btn:hover {
+    border-color: #ff6a00;
+  }
+
+  .btn-icon {
+    font-size: 1.5rem;
+  }
+
+  .btn-text {
+    font-size: 1rem;
+  }
+
   .search-form {
     background: #1a1a1a;
     padding: 2rem;
@@ -463,6 +535,26 @@
     <div class="search-hero">
       <h1>بحث متقدم</h1>
       <p>ابحث في العقارات داخل العراق، خارج العراق، الفنادق، والمنتجعات من مكان واحد</p>
+      
+      <!-- Quick Access Buttons -->
+      <div class="quick-access-buttons">
+        <a href="{% url 'unified_search' %}?category=property_outside" class="quick-btn outside-iraq-btn">
+          <span class="btn-icon">🌍</span>
+          <span class="btn-text">عقارات خارج العراق</span>
+        </a>
+        <a href="{% url 'unified_search' %}?category=property_iraq" class="quick-btn iraq-btn">
+          <span class="btn-icon">🏠</span>
+          <span class="btn-text">عقارات داخل العراق</span>
+        </a>
+        <a href="{% url 'unified_search' %}?category=hotel" class="quick-btn hotel-btn">
+          <span class="btn-icon">🏨</span>
+          <span class="btn-text">فنادق</span>
+        </a>
+        <a href="{% url 'unified_search' %}?category=resort" class="quick-btn resort-btn">
+          <span class="btn-icon">🏖️</span>
+          <span class="btn-text">منتجعات</span>
+        </a>
+      </div>
     </div>
 
     <!-- Search Form -->
