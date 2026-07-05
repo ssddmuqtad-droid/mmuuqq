@@ -5,8 +5,8 @@ echo "=== Dalal Platform Startup ==="
 echo "PORT=${PORT:-8080}"
 echo "DEBUG=${DEBUG:-False}"
 
-python manage.py.bak migrate --noinput
-python manage.py.bak collectstatic --noinput
+python manage.py migrate --noinput
+python manage.py collectstatic --noinput
 
 exec gunicorn dalal_project.wsgi:application \
   --bind "0.0.0.0:${PORT:-8080}" \
