@@ -248,23 +248,67 @@
 @media (max-width: 768px) {
   .map-container {
     flex-direction: column;
+    height: calc(100vh - 120px);
   }
   
   .map-sidebar {
     width: 100%;
-    height: 40%;
+    height: 50%;
+    order: 2;
   }
   
   .map-main {
-    height: 60%;
+    height: 50%;
+    order: 1;
   }
   
   .map-filters {
     display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--card-bg);
+    z-index: 1001;
+    padding: 20px;
   }
   
   .map-filters.show {
     display: block;
+  }
+  
+  .map-controls {
+    top: 8px;
+    right: 8px;
+  }
+  
+  .map-control-btn {
+    padding: 8px;
+    font-size: 14px;
+  }
+  
+  .map-layers {
+    top: 8px;
+    left: 8px;
+    padding: 4px;
+  }
+  
+  .map-layers button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .property-card {
+    padding: 12px;
+  }
+  
+  .property-card-image {
+    height: 120px;
+  }
+  
+  .property-card-price {
+    font-size: 1.2rem;
   }
 }
 </style>
@@ -281,7 +325,14 @@
   <div class="map-container">
     <div class="map-sidebar">
       <div class="map-filters">
-        <h4>🔍 الفلاتر</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h4>🔍 الفلاتر</h4>
+          <button class="btn btn-sm btn-ghost" onclick="toggleFilters()" style="display: none;" id="close-filters">✕</button>
+        </div>
+        <div class="filter-group">
+          <label>بحث</label>
+          <input type="text" id="filter-search" placeholder="ابحث عن عقار..." onkeyup="searchProperties()">
+        </div>
         
         <div class="filter-group">
           <label>المحافظة</label>
@@ -365,6 +416,7 @@
         <button class="btn btn-outline btn-block" onclick="resetFilters()">
           إعادة تعيين
         </button>
+        <button class="btn btn-sm btn-primary" onclick="toggleFilters()" style="display: none;" id="mobile-filter-btn">إظهار الفلاتر</button>
       </div>
       
       <div class="map-properties" id="property-list">
@@ -437,7 +489,7 @@
   
   // Initialize map
   function initMap() {
-    var initialData = {{ map_data_json|safe }};
+    var initialData = JSON.parse('{{ map_data_json|safe }}');
     
     if (initialData.length > 0) {
       map = L.map('properties-map').setView([initialData[0].lat, initialData[0].lng], 12);
@@ -564,6 +616,11 @@
     var container = document.getElementById('property-list');
     container.innerHTML = '';
     
+    if (properties.length === 0) {
+      container.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-light);">لا توجد عقارات للعرض</div>';
+      return;
+    }
+    
     properties.forEach(function(p) {
       var card = createPropertyCard(p);
       container.appendChild(card);
@@ -640,13 +697,47 @@
     document.getElementById('filter-bedrooms').value = '';
     document.getElementById('filter-furnished').checked = false;
     document.getElementById('filter-featured').checked = false;
+    document.getElementById('filter-search').value = '';
     
     loadInitialProperties();
+  }
+  
+  function searchProperties() {
+    var searchTerm = document.getElementById('filter-search').value.toLowerCase();
+    var cards = document.querySelectorAll('.property-card');
+    
+    cards.forEach(function(card) {
+      var title = card.querySelector('.property-card-title').textContent.toLowerCase();
+      var district = card.querySelector('.property-card-details span').textContent.toLowerCase();
+      
+      if (title.includes(searchTerm) || district.includes(searchTerm)) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+  
+  function toggleFilters() {
+    var filters = document.querySelector('.map-filters');
+    var closeBtn = document.getElementById('close-filters');
+    
+    if (filters.classList.contains('show')) {
+      filters.classList.remove('show');
+      closeBtn.style.display = 'none';
+    } else {
+      filters.classList.add('show');
+      closeBtn.style.display = 'block';
+    }
   }
   
   function loadFilteredProperties(filters) {
     var params = new URLSearchParams(filters);
     params.set('bounds', JSON.stringify(map.getBounds().toBBoxString()));
+    
+    // Show loading state
+    var container = document.getElementById('property-list');
+    container.innerHTML = '<div style="text-align: center; padding: 20px;">جاري التحميل...</div>';
     
     fetch('{% url "properties_map" %}?' + params.toString(), {
       headers: {
@@ -657,6 +748,14 @@
     .then(data => {
       addMarkers(data.properties);
       loadPropertyList(data.properties);
+      
+      if (data.properties.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-light);">لا توجد عقارات مطابقة للفلاتر</div>';
+      }
+    })
+    .catch(error => {
+      console.error('Error loading properties:', error);
+      container.innerHTML = '<div style="text-align: center; padding: 20px; color: #dc3545;">حدث خطأ في تحميل العقارات</div>';
     });
   }
   
@@ -675,7 +774,7 @@
   }
   
   function loadInitialProperties() {
-    var initialData = {{ map_data_json|safe }};
+    var initialData = JSON.parse('{{ map_data_json|safe }}');
     addMarkers(initialData);
     loadPropertyList(initialData);
   }
@@ -699,7 +798,7 @@
         alert('تعذر الحصول على موقعك');
       });
     } else {
-      alert 'المتصفح لا يدعم تحديد الموقع';
+      alert('المتصفح لا يدعم تحديد الموقع');
     }
   }
   
@@ -1156,9 +1255,20 @@
   
   // Initialize on load
   if (typeof L !== 'undefined') {
+    // Check for mobile and show filter button
+    if (window.innerWidth <= 768) {
+      var mobileFilterBtn = document.getElementById('mobile-filter-btn');
+      if (mobileFilterBtn) {
+        mobileFilterBtn.style.display = 'block';
+      }
+    }
+    
     initMap();
   } else {
     console.error('Leaflet not loaded');
+    document.getElementById('properties-map').innerHTML = 
+      '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #dc3545;">' +
+      '<div>تعذر تحميل الخريطة. يرجى تحديث الصفحة.</div></div>';
   }
 })();
 </script>
