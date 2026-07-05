@@ -273,3 +273,19 @@ SEO_KEYWORDS = [
     'عقارات الناصرية',
     'سوق العقارات الناصرية',
 ]
+
+# Property types for outside Iraq properties
+OUTSIDE_IRAQ_PROPERTY_TYPES = [
+    ('apartment', 'شقة'),
+    ('villa', 'فيلا'),
+    ('palace', 'قصر'),
+    ('farm', 'مزرعة'),
+    ('land', 'أرض'),
+    ('office', 'مكتب'),
+    ('store', 'محل تجاري'),
+    ('building', 'عمارة'),
+    ('warehouse', 'مستودع'),
+    ('residential_project', 'مشروع سكني'),
+    ('chalet', 'شاليه'),
+    ('house', 'بيت'),
+]

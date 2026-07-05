@@ -931,9 +931,18 @@ class Property(models.Model):
     district = models.CharField(max_length=100, verbose_name='الحي', help_text='اسم الحي')
     street = models.CharField(max_length=100, blank=True, verbose_name='الشارع', help_text='اسم الشارع')
     location = models.CharField(max_length=200, verbose_name='العنوان التفصيلي', help_text='العنوان الكامل')
+    
+    # Outside Iraq location fields
+    country = models.ForeignKey('Country', on_delete=models.SET_NULL, null=True, blank=True, related_name='properties', verbose_name='الدولة')
+    city = models.ForeignKey('City', on_delete=models.SET_NULL, null=True, blank=True, related_name='properties', verbose_name='المدينة')
+    area_outside = models.ForeignKey('Area', on_delete=models.SET_NULL, null=True, blank=True, related_name='properties', verbose_name='المنطقة')
 
     area = models.PositiveIntegerField(verbose_name='المساحة (م²)')
     price = models.BigIntegerField(verbose_name='السعر (د.ع)')
+    
+    # Currency for outside Iraq properties
+    currency = models.CharField(max_length=3, blank=True, default='IQD', verbose_name='العملة')
+    original_price = models.BigIntegerField(null=True, blank=True, verbose_name='السعر الأصلي بالعملة الأجنبية')
     description = models.TextField(verbose_name='وصف العقار')
     phone = models.CharField(max_length=20, verbose_name='رقم التواصل')
 
@@ -5114,6 +5123,82 @@ class ChatSettings(models.Model):
     def unmute_conversation(self, conversation):
         """Unmute a conversation"""
         self.muted_conversations.remove(conversation)
+
+
+class Country(models.Model):
+    """Countries for properties outside Iraq"""
+    
+    name_ar = models.CharField(max_length=100, verbose_name='الاسم بالعربية')
+    name_en = models.CharField(max_length=100, verbose_name='الاسم بالإنجليزية')
+    flag_emoji = models.CharField(max_length=10, verbose_name='علم الدولة')
+    code = models.CharField(max_length=3, unique=True, verbose_name='كود الدولة')
+    currency_code = models.CharField(max_length=3, verbose_name='كود العملة')
+    currency_name_ar = models.CharField(max_length=50, verbose_name='اسم العملة بالعربية')
+    currency_name_en = models.CharField(max_length=50, verbose_name='اسم العملة بالإنجليزية')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    order = models.PositiveIntegerField(default=0, verbose_name='الترتيب')
+    
+    class Meta:
+        verbose_name = 'دولة'
+        verbose_name_plural = 'الدول'
+        ordering = ['order', 'name_ar']
+    
+    def __str__(self):
+        return f'{self.flag_emoji} {self.name_ar}'
+
+
+class City(models.Model):
+    """Cities for properties outside Iraq"""
+    
+    country = models.ForeignKey(Country, on_delete=models.CASCADE, related_name='cities', verbose_name='الدولة')
+    name_ar = models.CharField(max_length=100, verbose_name='الاسم بالعربية')
+    name_en = models.CharField(max_length=100, verbose_name='الاسم بالإنجليزية')
+    governorate_state = models.CharField(max_length=100, blank=True, verbose_name='المحافظة/الولاية')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    
+    class Meta:
+        verbose_name = 'مدينة'
+        verbose_name_plural = 'المدن'
+        ordering = ['name_ar']
+        unique_together = ['country', 'name_ar']
+    
+    def __str__(self):
+        return f'{self.name_ar} - {self.country.name_ar}'
+
+
+class Area(models.Model):
+    """Areas/Districts for properties outside Iraq"""
+    
+    city = models.ForeignKey(City, on_delete=models.CASCADE, related_name='areas', verbose_name='المدينة')
+    name_ar = models.CharField(max_length=100, verbose_name='الاسم بالعربية')
+    name_en = models.CharField(max_length=100, blank=True, verbose_name='الاسم بالإنجليزية')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    
+    class Meta:
+        verbose_name = 'منطقة'
+        verbose_name_plural = 'المناطق'
+        ordering = ['name_ar']
+        unique_together = ['city', 'name_ar']
+    
+    def __str__(self):
+        return f'{self.name_ar} - {self.city.name_ar}'
+
+
+# Property types for outside Iraq properties
+OUTSIDE_IRAQ_PROPERTY_TYPES = [
+    ('apartment', 'شقة'),
+    ('villa', 'فيلا'),
+    ('palace', 'قصر'),
+    ('farm', 'مزرعة'),
+    ('land', 'أرض'),
+    ('office', 'مكتب'),
+    ('store', 'محل تجاري'),
+    ('building', 'عمارة'),
+    ('warehouse', 'مستودع'),
+    ('residential_project', 'مشروع سكني'),
+    ('chalet', 'شاليه'),
+    ('house', 'بيت'),
+]
 
 
 # Signals for automatic stats updates

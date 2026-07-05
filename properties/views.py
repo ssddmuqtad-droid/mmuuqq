@@ -1316,8 +1316,9 @@ def explore_view(request):
 
 
 def properties_outside_iraq_view(request):
-    """View for properties, resorts, and hotels outside Iraq."""
-    from properties.models import Resort, Hotel
+    """View for properties, resorts, and hotels outside Iraq with advanced filters."""
+    from properties.models import Resort, Hotel, Country, City, Area
+    from properties.constants import OUTSIDE_IRAQ_PROPERTY_TYPES
     
     # Get filters from query parameters
     category = request.GET.get('category', 'all')  # all, properties, resorts, hotels
@@ -1326,28 +1327,108 @@ def properties_outside_iraq_view(request):
     listing_type = request.GET.get('listing_type', 'all')
     user_only = request.GET.get('user_only', 'false') == 'true'
     
+    # Advanced filters
+    country_id = request.GET.get('country', '')
+    city_id = request.GET.get('city', '')
+    area_id = request.GET.get('area', '')
+    price_min = request.GET.get('price_min', '')
+    price_max = request.GET.get('price_max', '')
+    currency = request.GET.get('currency', '')
+    area_min = request.GET.get('area_min', '')
+    area_max = request.GET.get('area_max', '')
+    bedrooms = request.GET.get('bedrooms', '')
+    bathrooms = request.GET.get('bathrooms', '')
+    year_built = request.GET.get('year_built', '')
+    broker_name = request.GET.get('broker_name', '')
+    featured_only = request.GET.get('featured_only', 'false') == 'true'
+    min_rating = request.GET.get('min_rating', '')
+    
     properties_list = []
     resorts_list = []
     hotels_list = []
     
+    # Get all countries for the filter dropdown
+    countries = Country.objects.filter(is_active=True).order_by('order', 'name_ar')
+    cities = []
+    areas = []
+    
+    if country_id:
+        cities = City.objects.filter(country_id=country_id, is_active=True).order_by('name_ar')
+    if city_id:
+        areas = Area.objects.filter(city_id=city_id, is_active=True).order_by('name_ar')
+    
     # Get properties outside Iraq
     if category in ['all', 'properties']:
         properties = get_public_properties()
-        properties = [p for p in properties if p.country and p.country.lower() != 'iraq' and p.country.lower() != 'العراق']
+        properties = [p for p in properties if p.country and p.country.code != 'IQ']
+        
+        # Filter by country
+        if country_id:
+            properties = [p for p in properties if p.country_id == int(country_id)]
+        
+        # Filter by city
+        if city_id:
+            properties = [p for p in properties if p.city_id == int(city_id)]
+        
+        # Filter by area
+        if area_id:
+            properties = [p for p in properties if p.area_outside_id == int(area_id)]
+        
+        # Filter by currency
+        if currency:
+            properties = [p for p in properties if p.currency == currency]
+        
+        # Filter by price range
+        if price_min:
+            properties = [p for p in properties if p.price >= int(price_min)]
+        if price_max:
+            properties = [p for p in properties if p.price <= int(price_max)]
+        
+        # Filter by area range
+        if area_min:
+            properties = [p for p in properties if p.area >= int(area_min)]
+        if area_max:
+            properties = [p for p in properties if p.area <= int(area_max)]
+        
+        # Filter by bedrooms
+        if bedrooms:
+            properties = [p for p in properties if p.bedrooms == int(bedrooms)]
+        
+        # Filter by bathrooms
+        if bathrooms:
+            properties = [p for p in properties if p.bathrooms == int(bathrooms)]
+        
+        # Filter by year built
+        if year_built:
+            properties = [p for p in properties if p.year_built == int(year_built)]
+        
+        # Filter by broker name
+        if broker_name:
+            properties = [p for p in properties if p.broker and broker_name.lower() in p.broker.display_name.lower()]
+        
+        # Filter by featured only
+        if featured_only:
+            properties = [p for p in properties if p.is_featured]
+        
+        # Filter by minimum rating
+        if min_rating:
+            properties = [p for p in properties if hasattr(p, 'average_rating') and p.average_rating >= float(min_rating)]
         
         # Filter by user if requested
         if user_only and request.user.is_authenticated:
             properties = [p for p in properties if p.owner == request.user or (p.broker and p.broker.user == request.user)]
         
-        # Apply filters
+        # Apply content type filters
         if content_type == 'video':
             properties = [p for p in properties if p.videos.exists()]
         elif content_type == 'photo':
             properties = [p for p in properties if p.gallery_images.exists()]
         
+        # Apply property type filter
         if property_type != 'all':
             properties = [p for p in properties if p.type == property_type]
         
+        # Apply listing type filter
         if listing_type == 'sale':
             properties = [p for p in properties if p.status == 'ready']
         elif listing_type == 'rent':
@@ -1359,7 +1440,15 @@ def properties_outside_iraq_view(request):
     # Get resorts outside Iraq
     if category in ['all', 'resorts']:
         resorts = Resort.objects.filter(is_active=True)
-        resorts = [r for r in resorts if r.country and r.country.lower() != 'iraq' and r.country.lower() != 'العراق']
+        resorts = [r for r in resorts if r.country and r.country.code != 'IQ']
+        
+        # Filter by country
+        if country_id:
+            resorts = [r for r in resorts if r.country_id == int(country_id)]
+        
+        # Filter by city
+        if city_id:
+            resorts = [r for r in resorts if r.city_id == int(city_id)]
         
         if user_only and request.user.is_authenticated:
             resorts = [r for r in resorts if r.owner == request.user]
@@ -1369,7 +1458,15 @@ def properties_outside_iraq_view(request):
     # Get hotels outside Iraq
     if category in ['all', 'hotels']:
         hotels = Hotel.objects.filter(is_active=True)
-        hotels = [h for h in hotels if h.country and h.country.lower() != 'iraq' and h.country.lower() != 'العراق']
+        hotels = [h for h in hotels if h.country and h.country.code != 'IQ']
+        
+        # Filter by country
+        if country_id:
+            hotels = [h for h in hotels if h.country_id == int(country_id)]
+        
+        # Filter by city
+        if city_id:
+            hotels = [h for h in hotels if h.city_id == int(city_id)]
         
         if user_only and request.user.is_authenticated:
             hotels = [h for h in hotels if h.owner == request.user]
@@ -1395,6 +1492,24 @@ def properties_outside_iraq_view(request):
         'user_saves': user_saves,
         'user_only': user_only,
         'page_title': 'تصفح',
+        'countries': countries,
+        'cities': cities,
+        'areas': areas,
+        'selected_country': country_id,
+        'selected_city': city_id,
+        'selected_area': area_id,
+        'price_min': price_min,
+        'price_max': price_max,
+        'currency': currency,
+        'area_min': area_min,
+        'area_max': area_max,
+        'bedrooms': bedrooms,
+        'bathrooms': bathrooms,
+        'year_built': year_built,
+        'broker_name': broker_name,
+        'featured_only': featured_only,
+        'min_rating': min_rating,
+        'OUTSIDE_IRAQ_PROPERTY_TYPES': OUTSIDE_IRAQ_PROPERTY_TYPES,
         'is_outside_iraq': True,
     })
 
