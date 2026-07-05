@@ -279,9 +279,9 @@ if not DEBUG:
     # Railway handles SSL termination at the edge proxy level.
     # NEVER set SECURE_SSL_REDIRECT=True on Railway — it causes infinite redirect loops.
     SECURE_SSL_REDIRECT = False
-    # Allow both HTTP and HTTPS for Railway development/testing
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
+    # Enable secure cookies in production
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
     # Disable HSTS to prevent redirect loops on Railway
     SECURE_HSTS_SECONDS = 0
     SECURE_HSTS_INCLUDE_SUBDOMAINS = False
