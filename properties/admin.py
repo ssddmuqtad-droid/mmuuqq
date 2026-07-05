@@ -243,20 +243,26 @@ class PropertyDallalAssignmentAdmin(admin.ModelAdmin):
 
 @admin.register(BrokerChannel)
 class BrokerChannelAdmin(admin.ModelAdmin):
-    list_display = ('name', 'broker', 'status', 'is_verified', 'followers_count', 'views_count', 'created_at')
-    list_filter = ('status', 'is_verified', 'created_at')
+    list_display = ('name', 'broker', 'is_active', 'is_verified', 'followers_count', 'views_count', 'created_at')
+    list_filter = ('is_active', 'is_verified', 'is_archived', 'created_at')
     search_fields = ('name', 'description', 'broker__display_name', 'broker__user__username')
-    readonly_fields = ('properties_count', 'ads_count', 'views_count', 'followers_count', 'created_at', 'updated_at')
-    list_editable = ('status', 'is_verified')
+    readonly_fields = ('properties_count', 'views_count', 'followers_count', 'created_at', 'updated_at')
+    list_editable = ('is_active', 'is_verified')
     fieldsets = (
         ('معلومات القناة', {
-            'fields': ('broker', 'name', 'description', 'status', 'is_verified')
+            'fields': ('broker', 'name', 'slug', 'description', 'is_active', 'is_verified', 'is_archived')
         }),
         ('الصور', {
             'fields': ('logo', 'cover_image')
         }),
+        ('معلومات التواصل', {
+            'fields': ('phone', 'whatsapp', 'email', 'website')
+        }),
+        ('الموقع', {
+            'fields': ('city', 'country')
+        }),
         ('الإحصائيات', {
-            'fields': ('followers_count', 'views_count', 'properties_count', 'ads_count', 'created_at', 'updated_at'),
+            'fields': ('followers_count', 'views_count', 'properties_count', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )

@@ -1,189 +1,267 @@
 {% extends 'properties/base.html' %}
 {% load static %}
 
-{% block title %}القنوات العقارية - منصة العقارات{% endblock %}
+{% block title %}قنوات الدلالين - منصة العقارات{% endblock %}
 
 {% block extra_css %}
 <style>
+.channels-page {
+  background: #0a0a0a;
+  min-height: 100vh;
+  padding: 20px;
+}
+
 .channels-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 60px 20px;
   text-align: center;
-  color: white;
+  padding: 60px 20px 40px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+  border-bottom: 1px solid #2a2a2a;
   margin-bottom: 40px;
 }
 
 .channels-header h1 {
-  font-size: 2.5rem;
-  margin-bottom: 10px;
+  font-size: 3rem;
+  color: white;
+  margin-bottom: 15px;
+  font-weight: 700;
 }
 
 .channels-header p {
-  font-size: 1.1rem;
-  opacity: 0.9;
-}
-
-.search-container {
-  max-width: 600px;
-  margin: 0 auto 40px;
-}
-
-.search-box {
-  display: flex;
-  gap: 10px;
-}
-
-.search-input {
-  flex: 1;
-  padding: 15px 20px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card-bg);
-  color: var(--text);
-  font-size: 1rem;
-  transition: all 0.3s ease;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
-}
-
-.search-button {
-  padding: 15px 30px;
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.search-button:hover {
-  background: var(--primary-dark);
-  transform: translateY(-2px);
+  font-size: 1.2rem;
+  color: #888;
+  margin-bottom: 30px;
 }
 
 .channels-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 30px;
-  padding: 0 20px 60px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+  padding: 0 20px 60px;
 }
 
 .channel-card {
-  background: var(--card-bg);
-  border-radius: var(--radius);
+  background: #1a1a1a;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: var(--shadow);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+  border: 1px solid #2a2a2a;
   position: relative;
 }
 
 .channel-card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  transform: translateY(-8px);
+  box-shadow: 0 12px 40px rgba(255, 107, 53, 0.2);
+  border-color: #FF6B35;
 }
 
-.channel-header {
-  padding: 30px;
-  color: white;
-  text-align: center;
+.channel-cover {
+  height: 180px;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  position: relative;
+  overflow: hidden;
 }
 
-.channel-icon {
+.channel-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.channel-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%);
+}
+
+.channel-cover-placeholder span {
   font-size: 4rem;
-  margin-bottom: 15px;
+}
+
+.channel-logo {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 4px solid #1a1a1a;
+  position: absolute;
+  bottom: -50px;
+  right: 20px;
+  background: #2a2a2a;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.channel-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.channel-logo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #3a3a3a;
+  color: #FF6B35;
+  font-size: 2.5rem;
+}
+
+.verified-badge {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: #00C853;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 2px 10px rgba(0, 200, 83, 0.3);
+}
+
+.channel-content {
+  padding: 60px 25px 25px;
+}
+
+.channel-broker {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.broker-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #2a2a2a;
+  border: 2px solid #FF6B35;
+}
+
+.broker-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.broker-info h3 {
+  color: white;
+  font-size: 1.1rem;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.broker-info p {
+  color: #888;
+  font-size: 0.9rem;
 }
 
 .channel-name {
-  font-size: 1.8rem;
+  color: white;
+  font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 10px;
 }
 
-.channel-description {
-  font-size: 0.95rem;
-  opacity: 0.9;
-  line-height: 1.5;
+.channel-location {
+  color: #888;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .channel-stats {
   display: flex;
-  justify-content: space-around;
-  padding: 20px;
-  background: var(--bg);
-  border-top: 1px solid var(--border);
+  gap: 20px;
+  padding: 15px 0;
+  border-top: 1px solid #2a2a2a;
+  border-bottom: 1px solid #2a2a2a;
+  margin-bottom: 20px;
 }
 
 .stat-item {
+  flex: 1;
   text-align: center;
 }
 
-.stat-number {
+.stat-value {
+  color: #FF6B35;
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--primary);
+  margin-bottom: 5px;
 }
 
 .stat-label {
+  color: #888;
   font-size: 0.85rem;
-  color: var(--text-light);
-  margin-top: 5px;
 }
 
 .channel-actions {
-  padding: 20px;
   display: flex;
   gap: 10px;
-  justify-content: center;
 }
 
-.enter-button {
+.action-btn {
   flex: 1;
-  padding: 12px 24px;
-  background: var(--primary);
-  color: white;
+  padding: 12px 20px;
   border: none;
-  border-radius: var(--radius);
-  font-size: 1rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s ease;
   text-decoration: none;
   text-align: center;
-  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.enter-button:hover {
-  background: var(--primary-dark);
+.primary-btn {
+  background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%);
+  color: white;
+}
+
+.primary-btn:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
 }
 
-.share-button {
-  padding: 12px 20px;
-  background: var(--card-bg);
-  color: var(--text);
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
+.secondary-btn {
+  background: #2a2a2a;
+  color: white;
+  border: 1px solid #3a3a3a;
 }
 
-.share-button:hover {
-  background: var(--bg);
-  border-color: var(--primary);
-  color: var(--primary);
+.secondary-btn:hover {
+  background: #3a3a3a;
+  border-color: #FF6B35;
+}
+
+.follow-btn.following {
+  background: #2a2a2a;
+  border: 1px solid #FF6B35;
+  color: #FF6B35;
 }
 
 .empty-state {
   text-align: center;
-  padding: 80px 20px;
-  color: var(--text-light);
+  padding: 100px 20px;
+  color: #888;
 }
 
 .empty-state-icon {
@@ -191,157 +269,226 @@
   margin-bottom: 20px;
 }
 
-.copy-notification {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--primary);
-  color: white;
-  padding: 15px 30px;
-  border-radius: var(--radius);
-  font-weight: 600;
-  z-index: 2000;
-  animation: slideUp 0.3s ease;
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 40px;
+  padding: 20px;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(20px);
+.pagination a,
+.pagination span {
+  padding: 10px 20px;
+  background: #1a1a1a;
+  color: white;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.pagination a:hover {
+  background: #FF6B35;
+  border-color: #FF6B35;
+}
+
+.pagination .current {
+  background: #FF6B35;
+  border-color: #FF6B35;
+}
+
+@media (max-width: 768px) {
+  .channels-grid {
+    grid-template-columns: 1fr;
+    padding: 0 15px 40px;
   }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
+  
+  .channels-header h1 {
+    font-size: 2rem;
+  }
+  
+  .channel-card {
+    border-radius: 12px;
   }
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="channels-header">
-  <h1>📺 القنوات العقارية</h1>
-  <p>تصفح العقارات حسب القناة - الدلالين</p>
-</div>
-
-<div class="container">
-  <form method="get" class="search-container">
-    <div class="search-box">
-      <input 
-        type="text" 
-        name="search" 
-        class="search-input" 
-        placeholder="🔍 ابحث عن قناة..." 
-        value="{{ search_query }}"
-      >
-      <button type="submit" class="search-button">بحث</button>
-    </div>
-  </form>
+<div class="channels-page">
+  <div class="channels-header">
+    <h1>📺 قنوات الدلالين</h1>
+    <p>استكشف قنوات الدلالين المحترفين وتصفح عقاراتهم</p>
+  </div>
 
   {% if channels %}
   <div class="channels-grid">
     {% for channel in channels %}
     <div class="channel-card">
-      <div class="channel-header" style="background: {{ channel.color }};">
-        <div class="channel-icon">{{ channel.icon }}</div>
-        <h2 class="channel-name">{{ channel.name }}</h2>
-        <p class="channel-description">{{ channel.description }}</p>
-      </div>
-      
-      <div class="channel-stats">
-        <div class="stat-item">
-          <div class="stat-number">{{ channel.properties_count }}</div>
-          <div class="stat-label">عقار</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-number">{{ channel.members_count }}</div>
-          <div class="stat-label">عضو</div>
-        </div>
-      </div>
-      
-      <div class="channel-actions">
-        {% if channel.url_args %}
-          <a href="{% url channel.url channel.url_args.0 %}" class="enter-button">
-            🚀 دخول
-          </a>
-          <button 
-            class="share-button" 
-            onclick="shareChannel('{{ channel.name }}', '{% url channel.url channel.url_args.0 %}')"
-            title="مشاركة القناة"
-          >
-            📤
-          </button>
+      <div class="channel-cover">
+        {% if channel.cover_image %}
+        <img src="{{ channel.cover_image.url }}" alt="{{ channel.name }}">
         {% else %}
-          <a href="{% url channel.url %}" class="enter-button">
-            🚀 دخول
-          </a>
-          <button 
-            class="share-button" 
-            onclick="shareChannel('{{ channel.name }}', '{% url channel.url %}')"
-            title="مشاركة القناة"
-          >
-            📤
-          </button>
+        <div class="channel-cover-placeholder">
+          <span>🏠</span>
+        </div>
         {% endif %}
+        
+        {% if channel.is_verified %}
+        <div class="verified-badge">
+          <span>✓</span> موثقة
+        </div>
+        {% endif %}
+        
+        <div class="channel-logo">
+          {% if channel.logo %}
+          <img src="{{ channel.logo.url }}" alt="{{ channel.name }}">
+          {% else %}
+          <div class="channel-logo-placeholder">
+            <span>👤</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="channel-content">
+        <div class="channel-broker">
+          <div class="broker-avatar">
+            {% if channel.broker.profile_image %}
+            <img src="{{ channel.broker.profile_image.url }}" alt="{{ channel.broker.display_name }}">
+            {% else %}
+            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#3a3a3a;">
+              <span style="font-size:1.5rem;">👤</span>
+            </div>
+            {% endif %}
+          </div>
+          <div class="broker-info">
+            <h3>{{ channel.broker.display_name }}</h3>
+            <p>دلال معتمد</p>
+          </div>
+        </div>
+        
+        <h2 class="channel-name">{{ channel.name }}</h2>
+        
+        <div class="channel-location">
+          <span>📍</span>
+          {% if channel.city %}{{ channel.city }}{% endif %}
+          {% if channel.country %}، {{ channel.country }}{% endif %}
+        </div>
+        
+        <div class="channel-stats">
+          <div class="stat-item">
+            <div class="stat-value">{{ channel.followers_count }}</div>
+            <div class="stat-label">متابع</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">{{ channel.properties_count }}</div>
+            <div class="stat-label">إعلان</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">{{ channel.views_count }}</div>
+            <div class="stat-label">مشاهدة</div>
+          </div>
+        </div>
+        
+        <div class="channel-actions">
+          <a href="{% url 'channel_detail' channel.slug %}" class="action-btn primary-btn">
+            <span>👁️</span> عرض القناة
+          </a>
+          {% if request.user.is_authenticated %}
+          <button 
+            class="action-btn secondary-btn follow-btn {% if channel.id in user_follows %}following{% endif %}"
+            onclick="toggleFollow({{ channel.id }})"
+            data-channel-id="{{ channel.id }}"
+          >
+            <span>{% if channel.id in user_follows %}✓ متابعة{% else %}+ متابعة{% endif %}</span>
+          </button>
+          <button 
+            class="action-btn secondary-btn"
+            onclick="toggleSave({{ channel.id }})"
+            data-channel-id="{{ channel.id }}"
+          >
+            <span>{% if channel.id in user_saves %}★ محفوظ{% else %}☆ حفظ{% endif %}</span>
+          </button>
+          {% else %}
+          <a href="{% url 'login' %}" class="action-btn secondary-btn">
+            <span>+ متابعة</span>
+          </a>
+          {% endif %}
+        </div>
       </div>
     </div>
     {% endfor %}
   </div>
-  {% else %}
-  <div class="empty-state">
-    <div class="empty-state-icon">🔍</div>
-    <h3>لم يتم العثور على قنوات</h3>
-    <p>جرب البحث بكلمات مختلفة</p>
+  
+  {% if page_obj.has_other_pages %}
+  <div class="pagination">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}">← السابق</a>
+    {% endif %}
+    
+    <span class="current">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}">التالي →</a>
+    {% endif %}
   </div>
   {% endif %}
-</div>
-
-<div id="copy-notification" class="copy-notification" style="display: none;">
-  ✅ تم نسخ رابط القناة
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📺</div>
+    <h3>لا توجد قنوات حالياً</h3>
+    <p>سيتم إضافة قنوات الدلالين قريباً</p>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function shareChannel(channelName, channelUrl) {
-  const fullUrl = window.location.origin + channelUrl;
-  
-  // Try to use the Web Share API if available
-  if (navigator.share) {
-    navigator.share({
-      title: channelName + ' - منصة العقارات',
-      url: fullUrl
-    }).catch(err => {
-      // Fallback to copying to clipboard
-      copyToClipboard(fullUrl);
-    });
-  } else {
-    // Fallback to copying to clipboard
-    copyToClipboard(fullUrl);
-  }
-}
-
-function copyToClipboard(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    showNotification();
-  }).catch(err => {
-    // Fallback for older browsers
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    showNotification();
+function toggleFollow(channelId) {
+  fetch(`/broker-channel/${channelId}/follow/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      const btn = document.querySelector(`[data-channel-id="${channelId}"].follow-btn`);
+      if (data.action === 'followed') {
+        btn.classList.add('following');
+        btn.innerHTML = '<span>✓ متابعة</span>';
+      } else {
+        btn.classList.remove('following');
+        btn.innerHTML = '<span>+ متابعة</span>';
+      }
+    }
   });
 }
 
-function showNotification() {
-  const notification = document.getElementById('copy-notification');
-  notification.style.display = 'block';
-  setTimeout(() => {
-    notification.style.display = 'none';
-  }, 2000);
+function toggleSave(channelId) {
+  fetch(`/broker-channel/${channelId}/save/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      const btn = document.querySelector(`[data-channel-id="${channelId}"]:not(.follow-btn)`);
+      if (data.action === 'saved') {
+        btn.innerHTML = '<span>★ محفوظ</span>';
+      } else {
+        btn.innerHTML = '<span>☆ حفظ</span>';
+      }
+    }
+  });
 }
 </script>
 {% endblock %}

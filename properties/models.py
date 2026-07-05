@@ -5201,7 +5201,199 @@ OUTSIDE_IRAQ_PROPERTY_TYPES = [
 ]
 
 
+class BrokerChannel(models.Model):
+    """Broker's personal channel for their listings"""
+    
+    broker = models.OneToOneField('Broker', on_delete=models.CASCADE, related_name='channel', verbose_name='الدلال')
+    name = models.CharField(max_length=200, verbose_name='اسم القناة')
+    slug = models.SlugField(max_length=220, unique=True, allow_unicode=True, null=True, blank=True, verbose_name='الرابط')
+    description = models.TextField(blank=True, verbose_name='نبذة تعريفية')
+    
+    # Images
+    logo = models.ImageField(upload_to='channels/logos/', null=True, blank=True, verbose_name='شعار القناة')
+    cover_image = models.ImageField(upload_to='channels/covers/', null=True, blank=True, verbose_name='صورة الغلاف')
+    
+    # Contact info
+    phone = models.CharField(max_length=20, blank=True, verbose_name='رقم الهاتف')
+    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
+    email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    
+    # Location
+    city = models.CharField(max_length=100, blank=True, verbose_name='المدينة')
+    country = models.CharField(max_length=100, blank=True, verbose_name='الدولة')
+    
+    # Status
+    is_verified = models.BooleanField(default=False, verbose_name='موثقة')
+    is_active = models.BooleanField(default=True, verbose_name='نشطة')
+    is_archived = models.BooleanField(default=False, verbose_name='مؤرشفة')
+    
+    # Statistics
+    followers_count = models.PositiveIntegerField(default=0, verbose_name='عدد المتابعين')
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'قناة دلال'
+        verbose_name_plural = 'قنوات الدلالين'
+        ordering = ['-is_verified', '-followers_count', '-created_at']
+    
+    def __str__(self):
+        return f'{self.name} - {self.broker.display_name}'
+    
+    @property
+    def properties_count(self):
+        """Count of all properties by this broker"""
+        return Property.objects.filter(broker=self.broker).count()
+    
+    @property
+    def properties_iraq_count(self):
+        """Count of properties inside Iraq"""
+        return Property.objects.filter(
+            broker=self.broker,
+            country__code='IQ'
+        ).count()
+    
+    @property
+    def properties_outside_count(self):
+        """Count of properties outside Iraq"""
+        return Property.objects.filter(
+            broker=self.broker
+        ).exclude(country__code='IQ').count()
+    
+    @property
+    def hotels_count(self):
+        """Count of hotels by this broker"""
+        from properties.models import Hotel
+        return Hotel.objects.filter(broker=self.broker).count()
+    
+    @property
+    def resorts_count(self):
+        """Count of resorts by this broker"""
+        from properties.models import Resort
+        return Resort.objects.filter(broker=self.broker).count()
+    
+    def get_all_listings(self):
+        """Get all listings (properties, hotels, resorts) for this channel"""
+        from properties.models import Hotel, Resort
+        
+        listings = []
+        listings.extend(list(Property.objects.filter(broker=self.broker)))
+        listings.extend(list(Hotel.objects.filter(broker=self.broker)))
+        listings.extend(list(Resort.objects.filter(broker=self.broker)))
+        
+        return sorted(listings, key=lambda x: x.created_at, reverse=True)
+    
+    def get_properties_iraq(self):
+        """Get properties inside Iraq"""
+        return Property.objects.filter(
+            broker=self.broker,
+            country__code='IQ'
+        ).order_by('-created_at')
+    
+    def get_properties_outside(self):
+        """Get properties outside Iraq"""
+        return Property.objects.filter(
+            broker=self.broker
+        ).exclude(country__code='IQ').order_by('-created_at')
+    
+    def get_hotels(self):
+        """Get hotels"""
+        from properties.models import Hotel
+        return Hotel.objects.filter(broker=self.broker).order_by('-created_at')
+    
+    def get_resorts(self):
+        """Get resorts"""
+        from properties.models import Resort
+        return Resort.objects.filter(broker=self.broker).order_by('-created_at')
+    
+    def get_featured_listings(self):
+        """Get featured listings"""
+        from properties.models import Hotel, Resort
+        
+        featured = []
+        featured.extend(list(Property.objects.filter(broker=self.broker, is_featured=True)))
+        featured.extend(list(Hotel.objects.filter(broker=self.broker, is_featured=True)))
+        featured.extend(list(Resort.objects.filter(broker=self.broker, is_featured=True)))
+        
+        return sorted(featured, key=lambda x: x.created_at, reverse=True)
+    
+    def get_most_viewed(self):
+        """Get most viewed listings"""
+        from properties.models import Hotel, Resort
+        
+        listings = []
+        listings.extend(list(Property.objects.filter(broker=self.broker).order_by('-views_count')[:10]))
+        listings.extend(list(Hotel.objects.filter(broker=self.broker).order_by('-views_count')[:10]))
+        listings.extend(list(Resort.objects.filter(broker=self.broker).order_by('-views_count')[:10]))
+        
+        return sorted(listings, key=lambda x: x.views_count, reverse=True)[:10]
+
+
+class ChannelFollow(models.Model):
+    """Channel followers"""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='channel_follows', verbose_name='المستخدم')
+    channel = models.ForeignKey(BrokerChannel, on_delete=models.CASCADE, related_name='followers', verbose_name='القناة')
+    followed_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ المتابعة')
+    
+    class Meta:
+        verbose_name = 'متابعة قناة'
+        verbose_name_plural = 'متابعات القنوات'
+        unique_together = ['user', 'channel']
+        ordering = ['-followed_at']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.channel.name}'
+
+
+class ChannelSave(models.Model):
+    """Saved channels by users"""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_channels', verbose_name='المستخدم')
+    channel = models.ForeignKey(BrokerChannel, on_delete=models.CASCADE, related_name='saved_by', verbose_name='القناة')
+    saved_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الحفظ')
+    
+    class Meta:
+        verbose_name = 'قناة محفوظة'
+        verbose_name_plural = 'القنوات المحفوظة'
+        unique_together = ['user', 'channel']
+        ordering = ['-saved_at']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.channel.name}'
+
+
 # Signals for automatic stats updates
+@receiver(post_save, sender=Broker)
+def create_broker_channel(sender, instance, created, **kwargs):
+    """Create channel automatically when broker is created"""
+    if created:
+        from django.utils.text import slugify
+        channel_name = f'قناة {instance.display_name}'
+        slug = slugify(channel_name, allow_unicode=True)
+        
+        # Ensure unique slug
+        counter = 1
+        original_slug = slug
+        while BrokerChannel.objects.filter(slug=slug).exists():
+            slug = f'{original_slug}-{counter}'
+            counter += 1
+        
+        BrokerChannel.objects.create(
+            broker=instance,
+            name=channel_name,
+            slug=slug,
+            description=f'قناة {instance.display_name} للعقارات',
+            phone=instance.phone,
+            city=instance.city,
+            country='العراق'
+        )
+
+
 @receiver(post_save, sender=Broker)
 def create_broker_stats(sender, instance, created, **kwargs):
     """Create individual stats when a broker is created"""

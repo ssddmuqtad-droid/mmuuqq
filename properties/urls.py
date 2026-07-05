@@ -22,6 +22,11 @@ urlpatterns = [
     path('channel/users/', views.channel_users_view, name='channel_users'),
     path('channel/admin/', views.channel_admin_view, name='channel_admin'),
     path('channel/broker/<int:channel_id>/', views.broker_channel_detail, name='broker_channel_detail'),
+    # Broker Channels
+    path('broker-channels/', views.channels_list_view, name='channels_list'),
+    path('broker-channel/<slug:slug>/', views.channel_detail_view, name='channel_detail'),
+    path('broker-channel/<int:channel_id>/follow/', views.follow_channel_view, name='follow_channel'),
+    path('broker-channel/<int:channel_id>/save/', views.save_channel_view, name='save_channel'),
     path('explore/like/<int:property_id>/', views.like_property, name='like_property'),
     path('explore/save/<int:property_id>/', views.save_property, name='save_property'),
     path('explore/comment/<int:property_id>/', views.add_comment, name='add_comment'),

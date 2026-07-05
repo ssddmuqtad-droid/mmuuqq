@@ -21,7 +21,7 @@ from rest_framework.response import Response
 
 from .decorators import broker_required, rate_limit
 from .forms import MessageForm, PropertyForm, PropertySearchForm, SiteSettingsForm, PropertyNoteForm, VirtualTour360Form, AuctionForm, BidForm, BuildingRequestForm, LandInfoForm, BuildingDetailsForm, BudgetForm, QuoteForm, ContractorBidForm, ContractorRatingForm, ReportForm, FinancialTransactionForm, ExpenseForm, ProfitForm, SubscriptionPlanForm, UserProfileForm, UserBasicInfoForm, UserSecurityForm, UserNotificationForm, UserPrivacyForm, UserPreferencesForm, BlockUserForm, SavedSearchForm, AutoBidForm, AuctionRatingForm, AuctionLiveStreamForm, AuctionAdvertisementForm, HotelSearchForm, ResortSearchForm
-from .models import Message, Property, PropertyImage, SiteSettings, PropertyNote, Notification, VirtualTour360, Auction, Bid, BuildingRequest, LandInfo, BuildingDetails, Budget, Blueprint, Quote, ProjectTracking, DeliveryMilestone, ContractorRating, ContractorBid, FinancialTransaction, Expense, Payment, OfficeWallet, WalletTransaction, Broker, Report, ReportAction, PropertyLike, PropertySave, PropertyComment, VirtualTourPoint, VirtualTourConnection, Profit, SubscriptionPlan, ActivityLog, UserSettings, BlockedUser, SavedSearch, AutoBid, AuctionNotification, AuctionRating, AuctionStats, AuctionLiveStream, AuctionAdvertisement, Hotel, Resort
+from .models import Message, Property, PropertyImage, SiteSettings, PropertyNote, Notification, VirtualTour360, Auction, Bid, BuildingRequest, LandInfo, BuildingDetails, Budget, Blueprint, Quote, ProjectTracking, DeliveryMilestone, ContractorRating, ContractorBid, FinancialTransaction, Expense, Payment, OfficeWallet, WalletTransaction, Broker, Report, ReportAction, PropertyLike, PropertySave, PropertyComment, VirtualTourPoint, VirtualTourConnection, Profit, SubscriptionPlan, ActivityLog, UserSettings, BlockedUser, SavedSearch, AutoBid, AuctionNotification, AuctionRating, AuctionStats, AuctionLiveStream, AuctionAdvertisement, Hotel, Resort, BrokerChannel, ChannelFollow, ChannelSave
 from .permissions import (
     can_access_dashboard,
     can_add_property,
@@ -5733,4 +5733,154 @@ def admin_change_user_type(request, user_id):
 def chat_view(request):
     """Main chat view - real-time messaging interface"""
     return render(request, 'properties/chat.html')
+
+
+def channels_list_view(request):
+    """View for displaying all broker channels"""
+    channels = BrokerChannel.objects.filter(
+        is_active=True,
+        is_archived=False
+    ).select_related('broker').prefetch_related('followers')
+    
+    # Get user's follows and saves
+    user_follows = set()
+    user_saves = set()
+    if request.user.is_authenticated:
+        user_follows = set(ChannelFollow.objects.filter(
+            user=request.user
+        ).values_list('channel_id', flat=True))
+        user_saves = set(ChannelSave.objects.filter(
+            user=request.user
+        ).values_list('channel_id', flat=True))
+    
+    # Pagination
+    paginator = Paginator(channels, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'channels': page_obj,
+        'user_follows': user_follows,
+        'user_saves': user_saves,
+        'page_title': 'قنوات الدلالين',
+    }
+    
+    return render(request, 'properties/channels.html', context)
+
+
+def channel_detail_view(request, slug):
+    """View for displaying a single broker channel"""
+    channel = get_object_or_404(BrokerChannel, slug=slug, is_active=True, is_archived=False)
+    
+    # Get tab filter
+    tab = request.GET.get('tab', 'all')
+    
+    # Get listings based on tab
+    listings = []
+    if tab == 'all':
+        listings = channel.get_all_listings()
+    elif tab == 'iraq':
+        listings = list(channel.get_properties_iraq())
+    elif tab == 'outside':
+        listings = list(channel.get_properties_outside())
+    elif tab == 'hotels':
+        listings = list(channel.get_hotels())
+    elif tab == 'resorts':
+        listings = list(channel.get_resorts())
+    elif tab == 'featured':
+        listings = channel.get_featured_listings()
+    elif tab == 'most_viewed':
+        listings = channel.get_most_viewed()
+    elif tab == 'latest':
+        listings = channel.get_all_listings()
+    
+    # Increment views
+    channel.views_count += 1
+    channel.save(update_fields=['views_count'])
+    
+    # Get user's follows and saves
+    is_following = False
+    is_saved = False
+    if request.user.is_authenticated:
+        is_following = ChannelFollow.objects.filter(
+            user=request.user,
+            channel=channel
+        ).exists()
+        is_saved = ChannelSave.objects.filter(
+            user=request.user,
+            channel=channel
+        ).exists()
+    
+    # Pagination
+    paginator = Paginator(listings, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'channel': channel,
+        'listings': page_obj,
+        'page_obj': page_obj,
+        'tab': tab,
+        'is_following': is_following,
+        'is_saved': is_saved,
+        'page_title': channel.name,
+    }
+    
+    return render(request, 'properties/channel_detail.html', context)
+
+
+@login_required
+@require_POST
+def follow_channel_view(request, channel_id):
+    """Follow or unfollow a channel"""
+    channel = get_object_or_404(BrokerChannel, id=channel_id, is_active=True)
+    
+    follow, created = ChannelFollow.objects.get_or_create(
+        user=request.user,
+        channel=channel
+    )
+    
+    if not created:
+        # Unfollow
+        follow.delete()
+        channel.followers_count = max(0, channel.followers_count - 1)
+        action = 'unfollowed'
+    else:
+        # Follow
+        channel.followers_count += 1
+        action = 'followed'
+    
+    channel.save(update_fields=['followers_count'])
+    
+    return JsonResponse({
+        'success': True,
+        'action': action,
+        'followers_count': channel.followers_count
+    })
+
+
+@login_required
+@require_POST
+def save_channel_view(request, channel_id):
+    """Save or unsave a channel"""
+    channel = get_object_or_404(BrokerChannel, id=channel_id, is_active=True)
+    
+    save, created = ChannelSave.objects.get_or_create(
+        user=request.user,
+        channel=channel
+    )
+    
+    if not created:
+        # Unsave
+        save.delete()
+        action = 'unsaved'
+    else:
+        # Save
+        action = 'saved'
+    
+    return JsonResponse({
+        'success': True,
+        'action': action
+    })
 
