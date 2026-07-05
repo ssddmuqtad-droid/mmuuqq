@@ -2,6 +2,8 @@
 builder = "NIXPACKS"
 watchPatterns = ["**"]
 
+# Force rebuild - 2026-07-05
+
 [deploy]
 startCommand = "python run_server.py"
 healthcheckPath = "/health/"
