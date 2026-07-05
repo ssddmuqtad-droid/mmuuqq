@@ -1719,7 +1719,7 @@ def channel_users_view(request):
         user_likes = set(PropertyLike.objects.filter(user=request.user).values_list('property_id', flat=True))
         user_saves = set(PropertySave.objects.filter(user=request.user).values_list('property_id', flat=True))
     
-    return render(request, 'properties/channel_brokers.html', {
+    return render(request, 'properties/channel_users.html', {
         'properties': properties,
         'district': district,
         'property_type': property_type,
