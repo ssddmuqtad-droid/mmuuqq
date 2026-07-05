@@ -1363,7 +1363,7 @@ def properties_outside_iraq_view(request):
         'user_likes': user_likes,
         'user_saves': user_saves,
         'user_only': user_only,
-        'page_title': 'عقارات خارج العراق',
+        'page_title': 'تصفح',
         'is_outside_iraq': True,
     })
 
