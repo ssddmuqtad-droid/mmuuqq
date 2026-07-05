@@ -1,13 +1,27 @@
 {% extends 'properties/base.html' %}
 
-{% block title %}تصفح العقارات{% endblock %}
+{% block title %}تصفح{% endblock %}
 
 {% block content %}
 <div class="explore-page">
   <!-- Search Bar -->
   <div class="explore-search">
-    <form class="explore-search-box" method="get" action="{% url 'explore' %}">
+    <form class="explore-search-box" method="get" action="{% if is_outside_iraq %}{% url 'properties_outside_iraq' %}{% else %}{% url 'explore' %}{% endif %}">
       <div class="search-inputs">
+        {% if is_outside_iraq %}
+        <div class="form-group">
+          <label>
+            <span class="label-icon">📂</span>
+            النوع
+          </label>
+          <select name="category" class="form-control">
+            <option value="all" {% if category == 'all' %}selected{% endif %}>الكل</option>
+            <option value="properties" {% if category == 'properties' %}selected{% endif %}>عقارات</option>
+            <option value="resorts" {% if category == 'resorts' %}selected{% endif %}>منتجعات</option>
+            <option value="hotels" {% if category == 'hotels' %}selected{% endif %}>فنادق</option>
+          </select>
+        </div>
+        {% endif %}
         <div class="form-group">
           <label>
             <span class="label-icon">💰</span>
@@ -82,6 +96,12 @@
   <!-- Filters Bar -->
   <div class="explore-filters">
     <div class="filter-scroll">
+      {% if is_outside_iraq %}
+      <a href="?category=all" class="filter-chip {% if category == 'all' %}active{% endif %}">الكل</a>
+      <a href="?category=properties" class="filter-chip {% if category == 'properties' %}active{% endif %}">عقارات</a>
+      <a href="?category=resorts" class="filter-chip {% if category == 'resorts' %}active{% endif %}">منتجعات</a>
+      <a href="?category=hotels" class="filter-chip {% if category == 'hotels' %}active{% endif %}">فنادق</a>
+      {% endif %}
       <a href="?type=all" class="filter-chip {% if content_type == 'all' %}active{% endif %}">الكل</a>
       <a href="?type=video" class="filter-chip {% if content_type == 'video' %}active{% endif %}">فيديوهات</a>
       <a href="?type=photo" class="filter-chip {% if content_type == 'photo' %}active{% endif %}">صور</a>
@@ -96,6 +116,8 @@
 
   <!-- Property Cards Container -->
   <div class="explore-container" id="exploreContainer">
+    {% if category == 'all' or category == 'properties' %}
+    <h3 class="section-title">عقارات</h3>
     {% for property in properties %}
     <div class="property-card" data-property-id="{{ property.id }}">
       <!-- Media Content -->
@@ -178,6 +200,63 @@
       <p>لا توجد عقارات حالياً</p>
     </div>
     {% endfor %}
+    {% endif %}
+    
+    {% if category == 'all' or category == 'resorts' %}
+    <h3 class="section-title">منتجعات</h3>
+   {% for resort in resorts %}
+    <div class="property-card" data-resort-id="{{ resort.id }}">
+      <div class="media-container">
+        {% if resort.images.first %}
+          <img src="{{ resort.images.first.image.url }}" alt="{{ resort.name }}" class="property-image">
+        {% else %}
+          <div class="no-media">
+            <span>🏖️</span>
+            <p>لا توجد صور</p>
+          </div>
+        {% endif %}
+      </div>
+      <div class="property-info">
+        <h4>{{ resort.name }}</h4>
+        <p class="location">📍 {{ resort.country }}</p>
+        <p class="price">{{ resort.get_resort_type_display }}</p>
+      </div>
+    </div>
+    {% empty %}
+    <div class="no-properties">
+      <span>🏖️</span>
+      <p>لا توجد منتجعات حالياً</p>
+    </div>
+    {% endfor %}
+    {% endif %}
+    
+    {% if category == 'all' or category == 'hotels' %}
+    <h3 class="section-title">فنادق</h3>
+    {% for hotel in hotels %}
+    <div class="property-card" data-hotel-id="{{ hotel.id }}">
+      <div class="media-container">
+        {% if hotel.images.first %}
+          <img src="{{ hotel.images.first.image.url }}" alt="{{ hotel.name }}" class="property-image">
+        {% else %}
+          <div class="no-media">
+            <span>🏨</span>
+            <p>لا توجد صور</p>
+          </div>
+        {% endif %}
+      </div>
+      <div class="property-info">
+        <h4>{{ hotel.name }}</h4>
+        <p class="location">📍 {{ hotel.country }}</p>
+        <p class="price">{{ hotel.get_star_rating_display }} ⭐</p>
+      </div>
+    </div>
+    {% empty %}
+    <div class="no-properties">
+      <span>🏨</span>
+      <p>لا توجد فنادق حالياً</p>
+    </div>
+    {% endfor %}
+    {% endif %}
   </div>
 
   <!-- Swipe Indicator -->
@@ -236,6 +315,16 @@
   font-size: 0.85rem;
   font-weight: 600;
   margin-bottom: 6px;
+}
+
+.section-title {
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 20px 0 15px;
+  padding: 0 15px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
 }
 
 .explore-search .label-icon {

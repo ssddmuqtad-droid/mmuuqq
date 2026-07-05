@@ -1316,37 +1316,65 @@ def explore_view(request):
 
 
 def properties_outside_iraq_view(request):
-    """View for properties outside Iraq."""
+    """View for properties, resorts, and hotels outside Iraq."""
+    from properties.models import Resort, Hotel
+    
     # Get filters from query parameters
+    category = request.GET.get('category', 'all')  # all, properties, resorts, hotels
     content_type = request.GET.get('type', 'all')
     property_type = request.GET.get('property_type', 'all')
     listing_type = request.GET.get('listing_type', 'all')
     user_only = request.GET.get('user_only', 'false') == 'true'
     
+    properties_list = []
+    resorts_list = []
+    hotels_list = []
+    
     # Get properties outside Iraq
-    properties = get_public_properties()
-    properties = [p for p in properties if p.country and p.country.lower() != 'iraq' and p.country.lower() != 'العراق']
+    if category in ['all', 'properties']:
+        properties = get_public_properties()
+        properties = [p for p in properties if p.country and p.country.lower() != 'iraq' and p.country.lower() != 'العراق']
+        
+        # Filter by user if requested
+        if user_only and request.user.is_authenticated:
+            properties = [p for p in properties if p.owner == request.user or (p.broker and p.broker.user == request.user)]
+        
+        # Apply filters
+        if content_type == 'video':
+            properties = [p for p in properties if p.videos.exists()]
+        elif content_type == 'photo':
+            properties = [p for p in properties if p.gallery_images.exists()]
+        
+        if property_type != 'all':
+            properties = [p for p in properties if p.type == property_type]
+        
+        if listing_type == 'sale':
+            properties = [p for p in properties if p.status == 'ready']
+        elif listing_type == 'rent':
+            properties = [p for p in properties if p.status == 'rent']
+        
+        # Order by creation date
+        properties_list = sorted(properties, key=lambda x: x.created_at, reverse=True)[:50]
     
-    # Filter by user if requested
-    if user_only and request.user.is_authenticated:
-        properties = [p for p in properties if p.owner == request.user or (p.broker and p.broker.user == request.user)]
+    # Get resorts outside Iraq
+    if category in ['all', 'resorts']:
+        resorts = Resort.objects.filter(is_active=True)
+        resorts = [r for r in resorts if r.country and r.country.lower() != 'iraq' and r.country.lower() != 'العراق']
+        
+        if user_only and request.user.is_authenticated:
+            resorts = [r for r in resorts if r.owner == request.user]
+        
+        resorts_list = sorted(resorts, key=lambda x: x.created_at, reverse=True)[:50]
     
-    # Apply filters
-    if content_type == 'video':
-        properties = [p for p in properties if p.videos.exists()]
-    elif content_type == 'photo':
-        properties = [p for p in properties if p.gallery_images.exists()]
-    
-    if property_type != 'all':
-        properties = [p for p in properties if p.type == property_type]
-    
-    if listing_type == 'sale':
-        properties = [p for p in properties if p.status == 'ready']
-    elif listing_type == 'rent':
-        properties = [p for p in properties if p.status == 'rent']
-    
-    # Order by creation date
-    properties = sorted(properties, key=lambda x: x.created_at, reverse=True)[:50]
+    # Get hotels outside Iraq
+    if category in ['all', 'hotels']:
+        hotels = Hotel.objects.filter(is_active=True)
+        hotels = [h for h in hotels if h.country and h.country.lower() != 'iraq' and h.country.lower() != 'العراق']
+        
+        if user_only and request.user.is_authenticated:
+            hotels = [h for h in hotels if h.owner == request.user]
+        
+        hotels_list = sorted(hotels, key=lambda x: x.created_at, reverse=True)[:50]
     
     # Get user's likes and saves if authenticated
     user_likes = set()
@@ -1356,10 +1384,13 @@ def properties_outside_iraq_view(request):
         user_saves = set(PropertySave.objects.filter(user=request.user).values_list('property_id', flat=True))
     
     return render(request, 'properties/explore.html', {
-        'properties': properties,
+        'properties': properties_list,
+        'resorts': resorts_list,
+        'hotels': hotels_list,
         'content_type': content_type,
         'property_type': property_type,
         'listing_type': listing_type,
+        'category': category,
         'user_likes': user_likes,
         'user_saves': user_saves,
         'user_only': user_only,
