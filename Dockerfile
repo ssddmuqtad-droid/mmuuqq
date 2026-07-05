@@ -1,5 +1,5 @@
-FROM python:3.12-slim
-# Force rebuild - 2026-07-05-13-30 - channel_users fix
+FROM python:3.12-slim-bullseye
+# Force rebuild - 2026-07-05-13-38 - channel_users fix
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
