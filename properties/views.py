@@ -1846,15 +1846,6 @@ def channels_view(request):
             'properties_count': broker_properties_count,
             'members_count': brokers_count,
         },
-        {
-            'name': 'المستخدمين',
-            'icon': '👤',
-            'description': 'تصفح جميع العقارات المعروضة من قبل المستخدمين',
-            'url': 'channel_users',
-            'color': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            'properties_count': user_properties_count,
-            'members_count': user_properties_count,
-        },
     ]
     
     # Add individual broker channels
