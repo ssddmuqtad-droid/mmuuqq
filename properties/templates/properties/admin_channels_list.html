@@ -329,11 +329,25 @@
               </a>
               {% endif %}
               
+              {% if channel.status == 'suspended' %}
+              <a href="{% url 'admin_channel_activate' channel.id %}" class="action-btn btn-approve">
+                ✅ تفعيل
+              </a>
+              {% endif %}
+              
               {% if not channel.is_verified %}
               <a href="{% url 'admin_channel_verify' channel.id %}" class="action-btn btn-verify">
                 🏆 توثيق
               </a>
               {% endif %}
+              
+              <a href="{% url 'admin_channel_delete' channel.id %}" class="action-btn btn-reject" onclick="return confirm('هل أنت متأكد من حذف هذه القناة؟ هذا الإجراء لا يمكن التراجع عنه.')">
+                🗑️ حذف
+              </a>
+              
+              <a href="{% url 'admin_channel_properties' channel.id %}" class="action-btn btn-view">
+                📄 المنشورات
+              </a>
             </div>
           </td>
         </tr>

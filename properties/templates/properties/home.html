@@ -114,10 +114,15 @@
         <h3>المزادات</h3>
         <p>مزادات عقارية حية مع نظام مزايدة متقدم</p>
       </a>
-      <a href="{% url 'building_request_list' %}" class="platform-card card">
+      <a href="{% url 'public_building_requests' %}" class="platform-card card">
         <div class="platform-icon">🏗️</div>
         <h3>طلبات البناء</h3>
         <p>اطلب بناء منزلك واحصل على عروض المقاولين</p>
+      </a>
+      <a href="{% url 'public_service_advertisements' %}" class="platform-card card">
+        <div class="platform-icon">🔧</div>
+        <h3>الخدمات</h3>
+        <p>ابحث عن مقدمي الخدمات المحترفين</p>
       </a>
       <a href="{% url 'channels_list' %}" class="platform-card card">
         <div class="platform-icon">📺</div>
@@ -426,13 +431,14 @@
 .building-buttons .btn {
   flex: 1;
   max-width: 200px;
-  background: white;
-  color: var(--accent);
+  background: var(--primary);
+  color: white;
   border: none;
+  font-weight: 600;
 }
 
 .building-buttons .btn:hover {
-  background: var(--bg-alt);
+  background: var(--primary-dark);
   transform: translateY(-2px);
 }
 </style>

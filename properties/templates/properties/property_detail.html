@@ -64,7 +64,8 @@
       
       <div class="detail-price">
         <span class="price-value">{{ property.price_formatted }}</span>
-        <span class="price-currency">دينار عراقي</span>
+        <span class="price-currency">{% if property.currency == 'USD' %}دولار أمريكي{% else %}دينار عراقي{% endif %}</span>
+        {% if property.negotiable %}<span class="price-negotiable">قابل للتفاوض</span>{% endif %}
       </div>
 
       <div class="share-row">
@@ -113,7 +114,7 @@
         <div class="meta-item">
           <span class="meta-icon">📐</span>
           <div class="meta-content">
-            <strong>{{ property.area }}</strong>
+            <strong>{{ property.total_area|default:property.area }}</strong>
             <span>م² مساحة</span>
           </div>
         </div>
@@ -126,6 +127,15 @@
           </div>
         </div>
         {% endif %}
+        {% if property.living_rooms %}
+        <div class="meta-item">
+          <span class="meta-icon">🛋</span>
+          <div class="meta-content">
+            <strong>{{ property.living_rooms }}</strong>
+            <span>صالات</span>
+          </div>
+        </div>
+        {% endif %}
         {% if property.bathrooms %}
         <div class="meta-item">
           <span class="meta-icon">🚿</span>
@@ -135,12 +145,57 @@
           </div>
         </div>
         {% endif %}
-        {% if property.floors %}
+        {% if property.kitchens %}
+        <div class="meta-item">
+          <span class="meta-icon">🍳</span>
+          <div class="meta-content">
+            <strong>{{ property.kitchens }}</strong>
+            <span>مطابخ</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if property.balconies %}
+        <div class="meta-item">
+          <span class="meta-icon">🌅</span>
+          <div class="meta-content">
+            <strong>{{ property.balconies }}</strong>
+            <span>شرفات</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if property.total_floors %}
         <div class="meta-item">
           <span class="meta-icon">🏢</span>
           <div class="meta-content">
-            <strong>{{ property.floors }}</strong>
+            <strong>{{ property.total_floors }}</strong>
             <span>طوابق</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if property.floor_number %}
+        <div class="meta-item">
+          <span class="meta-icon">🏠</span>
+          <div class="meta-content">
+            <strong>{{ property.floor_number }}</strong>
+            <span>الطابق</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if property.parking_spaces %}
+        <div class="meta-item">
+          <span class="meta-icon">🅿</span>
+          <div class="meta-content">
+            <strong>{{ property.parking_spaces }}</strong>
+            <span>موقف</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if property.year_built %}
+        <div class="meta-item">
+          <span class="meta-icon">📅</span>
+          <div class="meta-content">
+            <strong>{{ property.year_built }}</strong>
+            <span>سنة البناء</span>
           </div>
         </div>
         {% endif %}
@@ -152,6 +207,538 @@
           </div>
         </div>
       </div>
+
+      <!-- Additional Details Section -->
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">📋</span>
+          <h2>تفاصيل إضافية</h2>
+        </div>
+        <div class="details-grid">
+          {% if property.property_number %}
+          <div class="detail-item">
+            <span class="detail-label">رقم الإعلان:</span>
+            <span class="detail-value">{{ property.property_number }}</span>
+          </div>
+          {% endif %}
+          {% if property.owner_name %}
+          <div class="detail-item">
+            <span class="detail-label">اسم المالك:</span>
+            <span class="detail-value">{{ property.owner_name }}</span>
+          </div>
+          {% endif %}
+          {% if property.year_built %}
+          <div class="detail-item">
+            <span class="detail-label">سنة البناء:</span>
+            <span class="detail-value">{{ property.year_built }}</span>
+          </div>
+          {% endif %}
+          {% if property.building_condition %}
+          <div class="detail-item">
+            <span class="detail-label">حالة البناء:</span>
+            <span class="detail-value">{{ property.building_condition }}</span>
+          </div>
+          {% endif %}
+          {% if property.facade %}
+          <div class="detail-item">
+            <span class="detail-label">الواجهة:</span>
+            <span class="detail-value">{{ property.facade }}</span>
+          </div>
+          {% endif %}
+          {% if property.direction %}
+          <div class="detail-item">
+            <span class="detail-label">الاتجاه:</span>
+            <span class="detail-value">{{ property.direction }}</span>
+          </div>
+          {% endif %}
+          {% if property.building_area %}
+          <div class="detail-item">
+            <span class="detail-label">مساحة البناء:</span>
+            <span class="detail-value">{{ property.building_area }} م²</span>
+          </div>
+          {% endif %}
+          {% if property.negotiable %}
+          <div class="detail-item">
+            <span class="detail-label">السعر:</span>
+            <span class="detail-value">قابل للتفاوض</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Location Details -->
+      <div class="location-details-section">
+        <div class="section-header">
+          <span class="section-icon">📍</span>
+          <h2>تفاصيل الموقع</h2>
+        </div>
+        <div class="location-details-grid">
+          {% if property.governorate %}
+          <div class="detail-item">
+            <span class="detail-label">المحافظة:</span>
+            <span class="detail-value">{{ property.governorate }}</span>
+          </div>
+          {% endif %}
+          {% if property.city %}
+          <div class="detail-item">
+            <span class="detail-label">المدينة:</span>
+            <span class="detail-value">{{ property.city }}</span>
+          </div>
+          {% endif %}
+          {% if property.subdistrict %}
+          <div class="detail-item">
+            <span class="detail-label">القضاء:</span>
+            <span class="detail-value">{{ property.subdistrict }}</span>
+          </div>
+          {% endif %}
+          {% if property.nahiyah %}
+          <div class="detail-item">
+            <span class="detail-label">الناحية:</span>
+            <span class="detail-value">{{ property.nahiyah }}</span>
+          </div>
+          {% endif %}
+          {% if property.landmark %}
+          <div class="detail-item">
+            <span class="detail-label">أقرب نقطة دالة:</span>
+            <span class="detail-value">{{ property.landmark }}</span>
+          </div>
+          {% endif %}
+          {% if property.nearest_landmark %}
+          <div class="detail-item">
+            <span class="detail-label">أقرب معلم:</span>
+            <span class="detail-value">{{ property.nearest_landmark }}</span>
+          </div>
+          {% endif %}
+          {% if property.distance_to_city_center %}
+          <div class="detail-item">
+            <span class="detail-label">المسافة لمركز المدينة:</span>
+            <span class="detail-value">{{ property.distance_to_city_center }} كم</span>
+          </div>
+          {% endif %}
+          {% if property.distance_to_airport %}
+          <div class="detail-item">
+            <span class="detail-label">المسافة للمطار:</span>
+            <span class="detail-value">{{ property.distance_to_airport }} كم</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Outside Iraq Location -->
+      {% if property.country %}
+      <div class="location-details-section">
+        <div class="section-header">
+          <span class="section-icon">🌍</span>
+          <h2>الموقع خارج العراق</h2>
+        </div>
+        <div class="location-details-grid">
+          <div class="detail-item">
+            <span class="detail-label">الدولة:</span>
+            <span class="detail-value">{{ property.country.name_ar }}</span>
+          </div>
+          {% if property.city_outside %}
+          <div class="detail-item">
+            <span class="detail-label">المدينة:</span>
+            <span class="detail-value">{{ property.city_outside.name_ar }}</span>
+          </div>
+          {% endif %}
+          {% if property.area_outside %}
+          <div class="detail-item">
+            <span class="detail-label">المنطقة:</span>
+            <span class="detail-value">{{ property.area_outside.name_ar }}</span>
+          </div>
+          {% endif %}
+          {% if property.postal_code %}
+          <div class="detail-item">
+            <span class="detail-label">الرمز البريدي:</span>
+            <span class="detail-value">{{ property.postal_code }}</span>
+          </div>
+          {% endif %}
+          {% if property.taxes %}
+          <div class="detail-item">
+            <span class="detail-label">الضرائب:</span>
+            <span class="detail-value">{{ property.taxes }}%</span>
+          </div>
+          {% endif %}
+          {% if property.registration_fees %}
+          <div class="detail-item">
+            <span class="detail-label">رسوم التسجيل:</span>
+            <span class="detail-value">{{ property.registration_fees }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Hotel/Resort Features -->
+      {% if property.hotel_stars or property.hotel_rooms or property.resort_capacity %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">🏨</span>
+          <h2>معلومات الفندق/المنتجع</h2>
+        </div>
+        <div class="details-grid">
+          {% if property.hotel_stars %}
+          <div class="detail-item">
+            <span class="detail-label">عدد النجوم:</span>
+            <span class="detail-value">{% for i in property.hotel_stars %}⭐{% endfor %}</span>
+          </div>
+          {% endif %}
+          {% if property.hotel_rating %}
+          <div class="detail-item">
+            <span class="detail-label">التقييم:</span>
+            <span class="detail-value">{{ property.hotel_rating }}/5</span>
+          </div>
+          {% endif %}
+          {% if property.hotel_rooms %}
+          <div class="detail-item">
+            <span class="detail-label">عدد الغرف:</span>
+            <span class="detail-value">{{ property.hotel_rooms }}</span>
+          </div>
+          {% endif %}
+          {% if property.hotel_suites %}
+          <div class="detail-item">
+            <span class="detail-label">عدد الأجنحة:</span>
+            <span class="detail-value">{{ property.hotel_suites }}</span>
+          </div>
+          {% endif %}
+          {% if property.hotel_family_rooms %}
+          <div class="detail-item">
+            <span class="detail-label">الغرف العائلية:</span>
+            <span class="detail-value">{{ property.hotel_family_rooms }}</span>
+          </div>
+          {% endif %}
+          {% if property.resort_capacity %}
+          <div class="detail-item">
+            <span class="detail-label">سعة الاستيعاب:</span>
+            <span class="detail-value">{{ property.resort_capacity }} شخص</span>
+          </div>
+          {% endif %}
+          {% if property.booking_available %}
+          <div class="detail-item">
+            <span class="detail-label">الحجز:</span>
+            <span class="detail-value">متاح</span>
+          </div>
+          {% endif %}
+          {% if property.booking_url %}
+          <div class="detail-item">
+            <span class="detail-label">رابط الحجز:</span>
+            <span class="detail-value"><a href="{{ property.booking_url }}" target="_blank">احجز الآن</a></span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Hotel Services -->
+      {% if property.has_restaurant or property.has_cafe or property.has_swimming_pool or property.has_gym %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">🛎</span>
+          <h2>الخدمات المتاحة</h2>
+        </div>
+        <div class="services-grid">
+          {% if property.has_restaurant %}<span class="service-badge">🍽️ مطعم</span>{% endif %}
+          {% if property.has_cafe %}<span class="service-badge">☕ مقهى</span>{% endif %}
+          {% if property.has_swimming_pool %}<span class="service-badge">🏊 مسبح</span>{% endif %}
+          {% if property.has_gym %}<span class="service-badge">💪 نادي رياضي</span>{% endif %}
+          {% if property.has_spa %}<span class="service-badge">💆 سبا</span>{% endif %}
+          {% if property.has_conference_hall %}<span class="service-badge">🎤 قاعة مؤتمرات</span>{% endif %}
+          {% if property.has_wifi %}<span class="service-badge">📶 واي فاي</span>{% endif %}
+          {% if property.has_parking %}<span class="service-badge">🅿️ موقف سيارات</span>{% endif %}
+          {% if property.has_room_service %}<span class="service-badge">🛎️ خدمة الغرف</span>{% endif %}
+          {% if property.has_laundry %}<span class="service-badge">🧺 خدمة الغسيل</span>{% endif %}
+          {% if property.has_airport_shuttle %}<span class="service-badge">✈️ نقل من المطار</span>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Virtual Tour & Media -->
+      {% if property.virtual_tour_url or property.vr_tour_url or property.ar_available %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">🌐</span>
+          <h2>الجولات الافتراضية والوسائط</h2>
+        </div>
+        <div class="media-links">
+          {% if property.virtual_tour_url %}
+          <a href="{{ property.virtual_tour_url }}" target="_blank" class="media-link">
+            <span class="media-icon">🎥</span>
+            <span>جولة افتراضية 360°</span>
+          </a>
+          {% endif %}
+          {% if property.vr_tour_url %}
+          <a href="{{ property.vr_tour_url }}" target="_blank" class="media-link">
+            <span class="media-icon">🥽</span>
+            <span>جولة VR</span>
+          </a>
+          {% endif %}
+          {% if property.ar_available %}
+          <span class="media-badge">دعم الواقع المعزز AR</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Live Stream -->
+      {% if property.live_stream_enabled %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">📺</span>
+          <h2>البث المباشر</h2>
+        </div>
+        <div class="live-stream-info">
+          {% if property.live_stream_url %}
+          <a href="{{ property.live_stream_url }}" target="_blank" class="btn btn-primary">
+            <span class="btn-icon">🔴</span>
+            <span>مشاهدة البث المباشر</span>
+          </a>
+          {% endif %}
+          {% if property.live_stream_scheduled %}
+          <p class="stream-scheduled">مجدول: {{ property.live_stream_scheduled|date:"Y-m-d H:i" }}</p>
+          {% endif %}
+          <span class="stream-status stream-status-{{ property.live_stream_status }}">
+            {{ property.get_live_stream_status_display }}
+          </span>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Amenities -->
+      <div class="amenities-section">
+        <div class="section-header">
+          <span class="section-icon">✨</span>
+          <h2>المرافق</h2>
+        </div>
+        <div class="amenities-grid">
+          {% if property.furnished %}<span class="amenity-badge">مفروش</span>{% endif %}
+          {% if property.has_pool %}<span class="amenity-badge">مسبح</span>{% endif %}
+          {% if property.has_garden %}<span class="amenity-badge">حديقة</span>{% endif %}
+          {% if property.has_elevator %}<span class="amenity-badge">مصعد</span>{% endif %}
+          {% if property.has_generator %}<span class="amenity-badge">مولد</span>{% endif %}
+          {% if property.has_national_electricity %}<span class="amenity-badge">كهرباء وطنية</span>{% endif %}
+          {% if property.has_water %}<span class="amenity-badge">ماء</span>{% endif %}
+          {% if property.has_internet %}<span class="amenity-badge">إنترنت</span>{% endif %}
+          {% if property.has_sewerage %}<span class="amenity-badge">مجاري</span>{% endif %}
+          {% if property.has_heating %}<span class="amenity-badge">تدفئة</span>{% endif %}
+          {% if property.has_cooling %}<span class="amenity-badge">تبريد</span>{% endif %}
+          {% if property.has_solar_power %}<span class="amenity-badge">طاقة شمسية</span>{% endif %}
+          {% if property.has_security_system %}<span class="amenity-badge">نظام أمان</span>{% endif %}
+          {% if property.has_cctv %}<span class="amenity-badge">كاميرات مراقبة</span>{% endif %}
+          {% if property.has_alarm %}<span class="amenity-badge">نظام إنذار</span>{% endif %}
+          {% if property.wheelchair_accessible %}<span class="amenity-badge">مخصص للكراسي المتحركة</span>{% endif %}
+          {% if property.has_ramp %}<span class="amenity-badge">منحدر</span>{% endif %}
+          {% if property.energy_efficient %}<span class="amenity-badge">موفر للطاقة</span>{% endif %}
+          {% if property.has_smart_home %}<span class="amenity-badge">منزل ذكي</span>{% endif %}
+          {% if property.has_double_glazing %}<span class="amenity-badge">زجاج مزدوج</span>{% endif %}
+          {% if property.has_insulation %}<span class="amenity-badge">عزل حراري</span>{% endif %}
+        </div>
+      </div>
+
+      <!-- View Type -->
+      {% if property.view_type %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">🌄</span>
+          <h2>الإطلالة</h2>
+        </div>
+        <div class="detail-item">
+          <span class="detail-value">{{ property.get_view_type_display }}</span>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Parking Type -->
+      {% if property.parking_type %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">🅿️</span>
+          <h2>نوع الموقف</h2>
+        </div>
+        <div class="detail-item">
+          <span class="detail-value">{{ property.get_parking_type_display }}</span>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Additional Fees -->
+      {% if property.maintenance_fee or property.hoa_fee %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">💰</span>
+          <h2>الرسوم الإضافية</h2>
+        </div>
+        <div class="details-grid">
+          {% if property.maintenance_fee %}
+          <div class="detail-item">
+            <span class="detail-label">رسوم الصيانة الشهرية:</span>
+            <span class="detail-value">{{ property.maintenance_fee }}</span>
+          </div>
+          {% endif %}
+          {% if property.hoa_fee %}
+          <div class="detail-item">
+            <span class="detail-label">رسوم الجمعية:</span>
+            <span class="detail-value">{{ property.hoa_fee }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Documents -->
+      {% if documents %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">📄</span>
+          <h2>المستندات</h2>
+        </div>
+        <div class="documents-list">
+          {% for doc in documents %}
+          <div class="document-item">
+            <span class="doc-icon">📎</span>
+            <a href="{{ doc.file.url }}" target="_blank" class="doc-link">{{ doc.title }}</a>
+            <span class="doc-type">{{ doc.get_document_type_display }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Description -->
+      <div class="description-section">
+        <div class="section-header">
+          <span class="section-icon">📝</span>
+          <h2>الوصف</h2>
+        </div>
+        <div class="description-content">
+          {{ property.description|linebreaks }}
+        </div>
+      </div>
+
+      <!-- AI Generated Description (if available) -->
+      {% if property.ai_generated_description %}
+      <div class="details-section ai-section">
+        <div class="section-header">
+          <span class="section-icon">🤖</span>
+          <h2>وصف مولد بالذكاء الاصطناعي</h2>
+        </div>
+        <div class="description-content">
+          {{ property.ai_generated_description|linebreaks }}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Amenities Section -->
+      <div class="amenities-section">
+        <div class="section-header">
+          <span class="section-icon">✨</span>
+          <h2>المميزات والخدمات</h2>
+        </div>
+        <div class="amenities-grid">
+          {% if property.furnished %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🪑</span>
+            <span>مفروش</span>
+          </div>
+          {% endif %}
+          {% if property.has_pool %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🏊</span>
+            <span>مسبح</span>
+          </div>
+          {% endif %}
+          {% if property.has_garden %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🌳</span>
+            <span>حديقة</span>
+          </div>
+          {% endif %}
+          {% if property.has_elevator %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🛗</span>
+            <span>مصعد</span>
+          </div>
+          {% endif %}
+          {% if property.has_generator %}
+          <div class="amenity-item">
+            <span class="amenity-icon">⚡</span>
+            <span>مولد</span>
+          </div>
+          {% endif %}
+          {% if property.has_national_electricity %}
+          <div class="amenity-item">
+            <span class="amenity-icon">💡</span>
+            <span>الكهرباء الوطنية</span>
+          </div>
+          {% endif %}
+          {% if property.has_water %}
+          <div class="amenity-item">
+            <span class="amenity-icon">💧</span>
+            <span>الماء</span>
+          </div>
+          {% endif %}
+          {% if property.has_internet %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🌐</span>
+            <span>الإنترنت</span>
+          </div>
+          {% endif %}
+          {% if property.has_sewerage %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🚰</span>
+            <span>المجاري</span>
+          </div>
+          {% endif %}
+          {% if property.has_heating %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🔥</span>
+            <span>التدفئة</span>
+          </div>
+          {% endif %}
+          {% if property.has_cooling %}
+          <div class="amenity-item">
+            <span class="amenity-icon">❄️</span>
+            <span>التبريد</span>
+          </div>
+          {% endif %}
+          {% if property.has_solar_power %}
+          <div class="amenity-item">
+            <span class="amenity-icon">☀️</span>
+            <span>الطاقة الشمسية</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Security Section -->
+      {% if property.has_security_system or property.has_cctv or property.has_alarm %}
+      <div class="security-section">
+        <div class="section-header">
+          <span class="section-icon">🔒</span>
+          <h2>الأمان والحماية</h2>
+        </div>
+        <div class="amenities-grid">
+          {% if property.has_security_system %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🛡️</span>
+            <span>نظام الأمان</span>
+          </div>
+          {% endif %}
+          {% if property.has_cctv %}
+          <div class="amenity-item">
+            <span class="amenity-icon">📹</span>
+            <span>كاميرات المراقبة</span>
+          </div>
+          {% endif %}
+          {% if property.has_alarm %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🚨</span>
+            <span>نظام الإنذار</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
 
       <div class="description-section">
         <div class="section-header">
@@ -371,6 +958,350 @@
 .gallery-thumbs video.active {
   border-color: var(--primary);
   transform: scale(1.05);
+}
+
+/* ===== Virtual Tours ===== */
+.virtual-tours-section {
+  margin-bottom: 32px;
+}
+
+.virtual-tours-section h2 {
+  font-size: 1.5rem;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.virtual-tours-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.virtual-tour-card {
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 2px solid var(--border);
+}
+
+.virtual-tour-viewer {
+  width: 100%;
+  height: 250px;
+  background: var(--bg-primary);
+}
+
+.virtual-tour-info {
+  padding: 16px;
+}
+
+.virtual-tour-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.virtual-tour-info p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ===== Detail Info ===== */
+.detail-info {
+  margin-bottom: 32px;
+}
+
+.detail-badges {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.badge-type {
+  background: var(--primary);
+  color: #fff;
+}
+
+.badge-status {
+  background: var(--accent);
+  color: #fff;
+}
+
+.badge-featured {
+  background: #ffd700;
+  color: #000;
+}
+
+.detail-info h1 {
+  font-size: 2rem;
+  margin: 0 0 8px 0;
+  color: var(--text);
+}
+
+.detail-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.location-icon {
+  font-size: 1.2rem;
+}
+
+.detail-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.price-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.price-currency {
+  color: var(--text-muted);
+}
+
+/* ===== Share Row ===== */
+.share-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+/* ===== Calc Widget ===== */
+.calc-widget {
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-bottom: 24px;
+  border: 2px solid var(--border);
+}
+
+.calc-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.calc-icon {
+  font-size: 1.5rem;
+}
+
+.calc-header h3 {
+  margin: 0;
+  color: var(--text);
+}
+
+.calc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.calc-result {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-align: center;
+  padding: 12px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+}
+
+.calc-note {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.calc-years-val {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ===== Detail Meta Grid ===== */
+.detail-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border);
+}
+
+.meta-icon {
+  font-size: 1.5rem;
+}
+
+.meta-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-content strong {
+  font-size: 1.25rem;
+  color: var(--text);
+}
+
+.meta-content span {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ===== Details Section ===== */
+.details-section,
+.location-details-section,
+.amenities-section,
+.security-section {
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-icon {
+  font-size: 1.5rem;
+}
+
+.section-header h2 {
+  margin: 0;
+  color: var(--text);
+}
+
+.details-grid,
+.location-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+}
+
+.detail-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.detail-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ===== Amenities Grid ===== */
+.amenities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.amenity-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.amenity-item:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.amenity-icon {
+  font-size: 1.25rem;
+}
+
+.amenity-item span {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+/* ===== Description Section ===== */
+.description-section {
+  margin-bottom: 32px;
+}
+
+.description-text {
+  line-height: 1.8;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+/* ===== Map Section ===== */
+.map-section {
+  margin-bottom: 32px;
+}
+
+#property-map,
+#property-detail-map {
+  width: 100%;
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+}
+
+/* ===== Related Section ===== */
+.related-section {
+  margin-top: 48px;
+}
+
+.section-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  width: fit-content;
+}
+
+.badge-icon {
+  font-size: 1.25rem;
+}
+
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
 }
 
 /* ===== Detail Info ===== */

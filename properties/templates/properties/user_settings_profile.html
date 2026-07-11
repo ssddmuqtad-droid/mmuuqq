@@ -188,6 +188,28 @@
           {{ profile_form.bio }}
         </div>
       </div>
+
+      <div class="form-section">
+        <h4>الصور</h4>
+        <div class="form-group">
+          <label for="{{ image_form.profile_image.id_for_label }}">الصورة الشخصية</label>
+          {{ image_form.profile_image }}
+          {% if user.user_profile.profile_image %}
+          <div style="margin-top: 10px;">
+            <img src="{{ user.user_profile.profile_image.url }}" alt="الصورة الشخصية" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%;">
+          </div>
+          {% endif %}
+        </div>
+        <div class="form-group">
+          <label for="{{ image_form.cover_image.id_for_label }}">غلاف الصفحة</label>
+          {{ image_form.cover_image }}
+          {% if user.user_profile.cover_image %}
+          <div style="margin-top: 10px;">
+            <img src="{{ user.user_profile.cover_image.url }}" alt="غلاف الصفحة" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
+          </div>
+          {% endif %}
+        </div>
+      </div>
       
       <button type="submit" class="btn-primary">حفظ التغييرات</button>
     </div>

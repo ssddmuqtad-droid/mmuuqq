@@ -1,8 +1,9 @@
 """نظام صلاحيات الدلالين."""
 
 from django.db.models import Q
+from django.utils import timezone
 
-from .models import Broker, Property, UserProfile
+from .models import Broker, Property, UserProfile, Role, UserRole
 
 
 SUBSCRIPTION_LIMITS = {
@@ -49,12 +50,43 @@ def get_user_type(user):
             return 'admin'
         return 'broker'
 
-    # Check if regular user
-    user_profile = get_user_profile(user)
-    if user_profile and user_profile.is_active:
+    # Regular users (those without broker profile)
+    # If user is authenticated and doesn't have a broker profile, they're a regular user
+    if user.is_active and not broker:
         return 'user'
 
     return None
+
+
+def get_user_roles(user):
+    """Get all active roles for a user."""
+    if not user or not user.is_authenticated:
+        return []
+    
+    return UserRole.objects.filter(
+        user=user, 
+        is_active=True
+    ).select_related('role').filter(
+        Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
+    )
+
+
+def has_permission(user, permission_name):
+    """Check if user has specific permission through roles."""
+    if not user or not user.is_authenticated:
+        return False
+    
+    # Superusers have all permissions
+    if user.is_superuser:
+        return True
+    
+    # Check through roles
+    user_roles = get_user_roles(user)
+    for user_role in user_roles:
+        if user_role.role.has_permission(permission_name):
+            return True
+    
+    return False
 
 
 def is_platform_admin(user):
@@ -80,6 +112,11 @@ def can_access_dashboard(user):
     # Superusers can always access
     if user.is_superuser:
         return True
+    
+    # Check through roles
+    if has_permission(user, 'can_access_admin_panel'):
+        return True
+    
     broker = get_broker(user)
     if not broker or not broker.is_active:
         return False
@@ -90,7 +127,13 @@ def can_access_admin_panel(user):
     """Check if user can access admin panel."""
     if not user or not user.is_authenticated:
         return False
-    return get_user_type(user) == 'admin'
+    
+    # Check through roles
+    if has_permission(user, 'can_access_admin_panel'):
+        return True
+    
+    user_type = get_user_type(user)
+    return user_type in ['admin', 'broker']
 
 
 def can_access_broker_panel(user):
@@ -113,18 +156,24 @@ def get_redirect_after_login(user):
     user_type = get_user_type(user)
     if user_type in ('admin', 'broker'):
         return 'dashboard'
-    return 'home'
+    return 'user_dashboard'
 
 
 def can_manage_brokers(user):
+    if has_permission(user, 'can_manage_brokers'):
+        return True
     return is_platform_admin(user) or is_main_broker(user)
 
 
 def can_manage_site_settings(user):
+    if has_permission(user, 'can_manage_settings'):
+        return True
     return is_platform_admin(user)
 
 
 def can_manage_join_requests(user):
+    if has_permission(user, 'can_manage_users'):
+        return True
     return is_platform_admin(user)
 
 
@@ -157,6 +206,8 @@ def get_accessible_properties(user):
 
 
 def can_edit_property(user, prop):
+    if has_permission(user, 'can_edit_all_properties'):
+        return True
     if is_platform_admin(user):
         return True
     if not prop:
@@ -176,6 +227,8 @@ def can_edit_property(user, prop):
 
 
 def can_delete_property(user, prop):
+    if has_permission(user, 'can_delete_all_properties'):
+        return True
     if is_platform_admin(user):
         return True
     if is_main_broker(user):
@@ -185,6 +238,8 @@ def can_delete_property(user, prop):
 
 
 def can_add_property(user):
+    if has_permission(user, 'can_add_properties'):
+        return True
     broker = get_broker(user)
     if not broker or not broker.is_active:
         return is_platform_admin(user)
@@ -207,16 +262,22 @@ def can_replace_property(user):
 
 def can_view_activity_log(user):
     """Check if user can view activity log."""
+    if has_permission(user, 'can_view_statistics'):
+        return True
     return is_platform_admin(user) or is_main_broker(user)
 
 
 def can_view_statistics(user):
     """Check if user can view statistics."""
+    if has_permission(user, 'can_view_statistics'):
+        return True
     return is_platform_admin(user) or is_main_broker(user)
 
 
 def can_send_messages(user):
     """Check if user can send messages."""
+    if has_permission(user, 'can_send_messages'):
+        return True
     broker = get_broker(user)
     return broker and broker.is_active
 
@@ -228,19 +289,21 @@ def can_manage_notifications(user):
 
 def can_export_data(user):
     """Check if user can export data."""
+    if has_permission(user, 'can_export_data'):
+        return True
     return is_platform_admin(user) or is_main_broker(user)
 
 
 def get_accessible_messages(user):
-    from .models import Message
+    from .models import Message, Conversation
 
-    if is_platform_admin(user):
+    if has_permission(user, 'can_view_all_messages'):
         return Message.objects.all()
-    broker = get_broker(user)
-    if not broker:
-        return Message.objects.none()
-    props = get_accessible_properties(user)
-    return Message.objects.filter(property__in=props)
+    
+    # Get messages where user is sender or recipient
+    return Message.objects.filter(
+        Q(sender=user) | Q(recipient=user)
+    ).distinct()
 
 
 def get_broker_stats(user):
@@ -258,7 +321,7 @@ def get_broker_stats(user):
         'featured_properties': props.filter(is_featured=True).count(),
         'total_brokers': brokers.count(),
         'total_views': total_views,
-        'unread_messages': messages.filter(is_read=False, is_archived=False).count(),
+        'unread_messages': messages.filter(is_read=False).count(),
         'sold_properties': sold,
         'rent_properties': rent,
         'investment_properties': investment,
@@ -307,4 +370,92 @@ def get_broker_stats(user):
         stats['total_expenses'] = sum(e.amount or 0 for e in expenses)
         stats['total_expenses_count'] = expenses.count()
 
+    # Notification stats
+    from .models import NotificationRecipient
+    stats['unread_notifications'] = NotificationRecipient.objects.filter(
+        user=user, is_read=False
+    ).count()
+
     return stats
+
+
+# ==================== NOTIFICATION PERMISSIONS ====================
+
+def can_send_notifications(user):
+    """Check if user can send notifications (admin only)"""
+    if not user or not user.is_authenticated:
+        return False
+    return user.is_superuser or is_platform_admin(user)
+
+
+def can_manage_notifications(user):
+    """Check if user can manage notifications (admin only)"""
+    if not user or not user.is_authenticated:
+        return False
+    return user.is_superuser or is_platform_admin(user)
+
+
+def can_view_notifications(user):
+    """Check if user can view notifications (all authenticated users)"""
+    if not user or not user.is_authenticated:
+        return False
+    return True
+
+
+def can_send_bulk_notifications(user):
+    """Check if user can send bulk notifications (admin only)"""
+    if not user or not user.is_authenticated:
+        return False
+    return user.is_superuser or is_platform_admin(user)
+
+
+# ==================== MESSAGING PERMISSIONS ====================
+
+def can_send_message_to_user(sender, recipient):
+    """التحقق مما إذا كان المرسل يمكنه إرسال رسالة للمستلم"""
+    if not sender or not recipient or sender == recipient:
+        return False
+    
+    sender_type = get_user_type(sender)
+    recipient_type = get_user_type(recipient)
+    
+    # الإدارة يمكنها مراسلة الجميع
+    if sender_type == 'admin':
+        return True
+    
+    # الدلال يمكنه مراسلة المستخدمين
+    if sender_type == 'broker' and recipient_type == 'user':
+        return True
+    
+    # المستخدم يمكنه مراسلة الدلال
+    if sender_type == 'user' and recipient_type == 'broker':
+        return True
+    
+    # الدلال يمكنه مراسلة الدلال
+    if sender_type == 'broker' and recipient_type == 'broker':
+        return True
+    
+    # منع المستخدم من مراسلة المستخدم
+    if sender_type == 'user' and recipient_type == 'user':
+        return False
+    
+    return False
+
+
+def can_send_bulk_messages(user):
+    """التحقق مما إذا كان المستخدم يمكنه إرسال رسائل جماعية"""
+    user_type = get_user_type(user)
+    return user_type in ['admin', 'broker']
+
+
+def can_send_to_all_brokers(user):
+    """التحقق مما إذا كان المستخدم يمكنه إرسال رسائل لجميع الدلالين"""
+    user_type = get_user_type(user)
+    return user_type == 'admin'
+
+
+def can_send_to_all_users(user):
+    """التحقق مما إذا كان المستخدم يمكنه إرسال رسائل لجميع المستخدمين"""
+    user_type = get_user_type(user)
+    return user_type == 'broker'
+

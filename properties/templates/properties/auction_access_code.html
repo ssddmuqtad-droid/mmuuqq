@@ -1,0 +1,66 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}الدخول للمزاد - {{ auction.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="access-wrapper" style="max-width: 500px; margin: 60px auto;">
+    <div class="access-header" style="text-align: center; margin-bottom: 30px;">
+      <h1 style="font-size: 2rem; color: var(--text); margin: 0 0 10px 0;">🔐 الدخول للمزاد</h1>
+      <p style="color: var(--text-light); margin: 0;">{{ auction.title }}</p>
+    </div>
+
+    <div class="access-info" style="background: var(--bg-alt); padding: 20px; border-radius: var(--radius); margin-bottom: 30px; border: 1px solid var(--border);">
+      <h3 style="color: var(--text); margin: 0 0 15px 0;">معلومات المزاد</h3>
+      <p style="color: var(--text-light); margin: 5px 0;">📍 {{ auction.property.location }}</p>
+      <p style="color: var(--text-light); margin: 5px 0;">💰 سعر البداية: {{ auction.starting_price }} د.ع</p>
+      <p style="color: var(--text-light); margin: 5px 0;">📅 يبدأ: {{ auction.start_date|date:"Y-m-d H:i" }}</p>
+    </div>
+
+    <form method="post" class="access-form" style="background: var(--card-bg); padding: 30px; border-radius: var(--radius); border: 1px solid var(--border);">
+      {% csrf_token %}
+      
+      {% if auction.access_type == 'private' %}
+      <div class="form-section" style="margin-bottom: 20px;">
+        <h4 style="color: var(--text); margin: 0 0 15px 0;">الدخول برقم سري</h4>
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 8px; color: var(--text); font-weight: 600;">رقم الدخول</label>
+          <input type="text" name="access_code" class="form-control" placeholder="أدخل رقم الدخول" 
+                 style="width: 100%; padding: 12px 15px; border: 2px solid var(--border); border-radius: var(--radius); background: white; color: var(--text); font-size: 1rem;">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; background: var(--gradient-primary); color: white; border: none; padding: 12px 24px; border-radius: var(--radius); font-size: 1rem; font-weight: 600; cursor: pointer;">دخول</button>
+      </div>
+      
+      <div style="text-align: center; margin: 20px 0; color: var(--text-light);">أو</div>
+      {% endif %}
+      
+      <div class="form-section">
+        <h4 style="color: var(--text); margin: 0 0 15px 0;">الدخول بكود دعوة</h4>
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 8px; color: var(--text); font-weight: 600;">كود الدعوة</label>
+          <input type="text" name="invitation_code" class="form-control" placeholder="أدخل كود الدعوة" 
+                 style="width: 100%; padding: 12px 15px; border: 2px solid var(--border); border-radius: var(--radius); background: white; color: var(--text); font-size: 1rem;">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; background: var(--gradient-primary); color: white; border: none; padding: 12px 24px; border-radius: var(--radius); font-size: 1rem; font-weight: 600; cursor: pointer;">دخول</button>
+      </div>
+    </form>
+
+    <div style="text-align: center; margin-top: 20px;">
+      <a href="{% url 'auctions_list' %}" style="color: var(--text-light); text-decoration: none;">العودة لقائمة المزادات</a>
+    </div>
+  </div>
+</div>
+
+<style>
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+}
+</style>
+{% endblock %}

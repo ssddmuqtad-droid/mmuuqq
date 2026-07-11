@@ -1,0 +1,390 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}الموافقة على المحتوى{% endblock %}
+{% block dashboard_title %}الموافقة على <span>المحتوى</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'admin_panel' %}" class="btn btn-outline">لوحة الإدارة</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="padding: 28px;">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Tabs -->
+  <div class="moderation-tabs">
+    <button class="tab-btn active" data-tab="pending">⏳ بانتظار الموافقة</button>
+    <button class="tab-btn" data-tab="suspended">🚫 المحجوبة</button>
+  </div>
+
+  <!-- Pending Content -->
+  <div id="pending-content" class="tab-content active">
+    <!-- Channels -->
+    <div class="content-section">
+      <h3>📺 القنوات المعلقة ({{ pending_channels.count }})</h3>
+      {% if pending_channels %}
+        <div class="items-grid">
+          {% for channel in pending_channels %}
+          <div class="item-card">
+            <div class="item-header">
+              <div class="item-avatar">
+                {% if channel.logo %}
+                <img src="{{ channel.logo.url }}" alt="{{ channel.name }}">
+                {% else %}
+                <span>📺</span>
+                {% endif %}
+              </div>
+              <div class="item-info">
+                <h4>{{ channel.name }}</h4>
+                <p>{{ channel.broker.display_name }}</p>
+              </div>
+            </div>
+            <div class="item-actions">
+              <a href="{% url 'approve_channel' channel.id %}" class="btn btn-success btn-sm">✓ موافقة</a>
+              <a href="{% url 'reject_channel' channel.id %}" class="btn btn-danger btn-sm">✕ رفض</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">لا توجد قنوات معلقة</div>
+      {% endif %}
+    </div>
+
+    <!-- Posts -->
+    <div class="content-section">
+      <h3>📝 المنشورات المعلقة ({{ pending_posts.count }})</h3>
+      {% if pending_posts %}
+        <div class="items-grid">
+          {% for post in pending_posts %}
+          <div class="item-card">
+            <div class="item-header">
+              <div class="item-avatar">
+                {% if post.image %}
+                <img src="{{ post.image.url }}" alt="{{ post.post_type }}">
+                {% else %}
+                <span>📝</span>
+                {% endif %}
+              </div>
+              <div class="item-info">
+                <h4>{{ post.post_type }}</h4>
+                <p>{{ post.channel.name }}</p>
+                <small>{{ post.content|truncatewords:10 }}</small>
+              </div>
+            </div>
+            <div class="item-actions">
+              <a href="{% url 'approve_post' post.id %}" class="btn btn-success btn-sm">✓ موافقة</a>
+              <a href="{% url 'reject_post' post.id %}" class="btn btn-danger btn-sm">✕ حذف</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">لا توجد منشورات معلقة</div>
+      {% endif %}
+    </div>
+
+    <!-- Videos -->
+    <div class="content-section">
+      <h3>🎥 الفيديوهات المعلقة ({{ pending_videos.count }})</h3>
+      {% if pending_videos %}
+        <div class="items-grid">
+          {% for video in pending_videos %}
+          <div class="item-card">
+            <div class="item-header">
+              <div class="item-avatar">
+                {% if video.thumbnail %}
+                <img src="{{ video.thumbnail.url }}" alt="{{ video.title }}">
+                {% else %}
+                <span>🎥</span>
+                {% endif %}
+              </div>
+              <div class="item-info">
+                <h4>{{ video.title }}</h4>
+                <p>{{ video.channel.name }}</p>
+              </div>
+            </div>
+            <div class="item-actions">
+              <a href="{% url 'approve_video' video.id %}" class="btn btn-success btn-sm">✓ موافقة</a>
+              <a href="{% url 'reject_video' video.id %}" class="btn btn-danger btn-sm">✕ حذف</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">لا توجد فيديوهات معلقة</div>
+      {% endif %}
+    </div>
+
+    <!-- Properties -->
+    <div class="content-section">
+      <h3>🏠 العقارات المعلقة ({{ pending_properties.count }})</h3>
+      {% if pending_properties %}
+        <div class="items-grid">
+          {% for property in pending_properties %}
+          <div class="item-card">
+            <div class="item-header">
+              <div class="item-avatar">
+                {% if property.main_image %}
+                <img src="{{ property.main_image.url }}" alt="{{ property.display_title }}">
+                {% else %}
+                <span>🏠</span>
+                {% endif %}
+              </div>
+              <div class="item-info">
+                <h4>{{ property.display_title }}</h4>
+                <p>{{ property.broker.display_name|default:property.owner.username }}</p>
+              </div>
+            </div>
+            <div class="item-actions">
+              <a href="{% url 'approve_property' property.id %}" class="btn btn-success btn-sm">✓ موافقة</a>
+              <a href="{% url 'reject_property' property.id %}" class="btn btn-danger btn-sm">✕ رفض</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">لا توجد عقارات معلقة</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Suspended Content -->
+  <div id="suspended-content" class="tab-content">
+    <!-- Suspended Channels -->
+    <div class="content-section">
+      <h3>📺 القنوات المحجوبة ({{ suspended_channels.count }})</h3>
+      {% if suspended_channels %}
+        <div class="items-grid">
+          {% for channel in suspended_channels %}
+          <div class="item-card suspended">
+            <div class="item-header">
+              <div class="item-avatar">
+                {% if channel.logo %}
+                <img src="{{ channel.logo.url }}" alt="{{ channel.name }}">
+                {% else %}
+                <span>📺</span>
+                {% endif %}
+              </div>
+              <div class="item-info">
+                <h4>{{ channel.name }}</h4>
+                <p>{{ channel.broker.display_name }}</p>
+                <span class="badge badge-danger">محجوبة</span>
+              </div>
+            </div>
+            <div class="item-actions">
+              <a href="{% url 'unsuspend_channel' channel.id %}" class="btn btn-success btn-sm">🔓 فك الحجب</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">لا توجد قنوات محجوبة</div>
+      {% endif %}
+    </div>
+
+    <!-- Suspended Brokers -->
+    <div class="content-section">
+      <h3>👔 الدلالين المحجوبين ({{ suspended_brokers.count }})</h3>
+      {% if suspended_brokers %}
+        <div class="items-grid">
+          {% for broker in suspended_brokers %}
+          <div class="item-card suspended">
+            <div class="item-header">
+              <div class="item-avatar">
+                {% if broker.profile_image %}
+                <img src="{{ broker.profile_image.url }}" alt="{{ broker.display_name }}">
+                {% else %}
+                <span>👔</span>
+                {% endif %}
+              </div>
+              <div class="item-info">
+                <h4>{{ broker.display_name }}</h4>
+                <p>{{ broker.user.email }}</p>
+                <span class="badge badge-danger">محجوب</span>
+              </div>
+            </div>
+            <div class="item-actions">
+              <a href="{% url 'unsuspend_broker' broker.id %}" class="btn btn-success btn-sm">🔓 فك الحجب</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">لا يوجد دلالين محجوبين</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+.moderation-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 15px;
+}
+
+.tab-btn {
+  padding: 12px 24px;
+  background: var(--bg-alt);
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text-light);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.tab-btn:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.tab-btn.active {
+  background: var(--primary);
+  color: white;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.content-section {
+  margin-bottom: 40px;
+}
+
+.content-section h3 {
+  margin-bottom: 20px;
+  color: var(--text);
+  font-size: 1.3rem;
+}
+
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.item-card {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.item-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.item-card.suspended {
+  border-color: #dc3545;
+  background: #fff5f5;
+}
+
+.item-header {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.item-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.item-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-info {
+  flex: 1;
+}
+
+.item-info h4 {
+  margin: 0 0 5px 0;
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.item-info p {
+  margin: 0 0 5px 0;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.item-info small {
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+.item-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-light);
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  border: 1px dashed var(--border);
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.badge-danger {
+  background: #dc3545;
+  color: white;
+}
+</style>
+
+<script>
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    this.classList.add('active');
+    const tabId = this.dataset.tab;
+    document.getElementById(tabId + '-content').classList.add('active');
+  });
+});
+</script>
+{% endblock %}

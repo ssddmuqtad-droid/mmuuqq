@@ -1,5 +1,5 @@
 # Core Django
-Django>=5.0,<7.0  # Force redeploy - 2026-07-05
+Django>=5.0,<7.0
 python-dotenv>=1.0.0
 Pillow>=10.0.0
 
@@ -26,3 +26,12 @@ channels-redis>=4.2.0
 
 # File type validation for messaging
 python-magic>=0.4.27
+
+# Social Authentication
+python-social-auth[django]>=0.3.6
+social-auth-core>=5.0.0
+social-auth-app-django>=6.0.0
+
+# Additional dependencies
+django-solo>=2.0.0
+django-leaflet>=0.28.0

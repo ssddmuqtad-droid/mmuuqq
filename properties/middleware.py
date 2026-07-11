@@ -101,3 +101,54 @@ class MaintenanceModeMiddleware:
 
         return self.get_response(request)
 
+
+class SubscriptionCheckMiddleware:
+    """Middleware to check subscription status for broker operations."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Paths that require subscription check
+        protected_paths = [
+            '/dashboard/add-property/',
+            '/dashboard/edit-property/',
+            '/dashboard/delete-property/',
+            '/dashboard/feature-property/',
+            '/dashboard/promote-property/',
+        ]
+
+        # Skip subscription check for non-protected paths
+        if not any(request.path.startswith(path) for path in protected_paths):
+            return self.get_response(request)
+
+        # Skip if user is not authenticated
+        if not hasattr(request, 'user') or not request.user.is_authenticated:
+            return self.get_response(request)
+
+        # Skip for superuser/admin
+        if request.user.is_superuser:
+            return self.get_response(request)
+
+        # Check subscription for brokers
+        from .permissions import get_broker
+        broker = get_broker(request.user)
+        
+        if broker:
+            # Auto-check subscription status
+            broker.check_subscription_status()
+            
+            # If subscription is expired or suspended, block access
+            if not broker.is_subscription_active():
+                from django.shortcuts import redirect
+                from django.contrib import messages
+                
+                if broker.is_suspended:
+                    messages.error(request, 'تم تعطيل حسابك مؤقتاً بسبب انتهاء الاشتراك. يرجى تجديد الاشتراك للاستمرار.')
+                else:
+                    messages.error(request, 'انتهى اشتراكك. يرجى تجديد الاشتراك للاستمرار.')
+                
+                return redirect('dashboard')
+
+        return self.get_response(request)
+

@@ -1,0 +1,278 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}{{ category_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.category-header {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  padding: 60px 20px;
+  text-align: center;
+  color: white;
+  border-radius: 0 0 30px 30px;
+  margin-bottom: 30px;
+}
+
+.category-icon {
+  font-size: 4rem;
+  margin-bottom: 15px;
+}
+
+.category-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.category-subtitle {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.filter-section {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 25px;
+  margin-bottom: 30px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+}
+
+.form-control option {
+  background: #1a1a1a;
+  color: white;
+}
+
+.btn-filter {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-filter:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(240, 147, 251, 0.4);
+}
+
+.hotels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 25px;
+  padding: 0 20px;
+}
+
+.hotel-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.hotel-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.hotel-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.hotel-image-placeholder {
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.hotel-details {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+}
+
+.hotel-content {
+  padding: 20px;
+}
+
+.hotel-name {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: white;
+}
+
+.hotel-rating {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.star {
+  color: #ffd700;
+  font-size: 1.2rem;
+}
+
+.hotel-price {
+  font-size: 1.1rem;
+  color: #f093fb;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.hotel-location {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+}
+
+.btn-book {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+.btn-book:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(240, 147, 251, 0.4);
+}
+
+.no-results {
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="category-header">
+  <div class="category-icon">{{ category_icon }}</div>
+  <h1 class="category-title">{{ category_title }}</h1>
+  <p class="category-subtitle">تصفح الفنادق مع خيارات فلترة متقدمة</p>
+</div>
+
+<div class="container">
+  <!-- Filter Section -->
+  <div class="filter-section">
+    <form method="get" class="filter-grid">
+      <div class="form-group">
+        <label>تصنيف النجوم</label>
+        <select name="star_rating" class="form-control">
+          <option value="" {% if not star_rating %}selected{% endif %}>الكل</option>
+          <option value="5" {% if star_rating == '5' %}selected{% endif %}>5 نجوم</option>
+          <option value="4" {% if star_rating == '4' %}selected{% endif %}>4 نجوم</option>
+          <option value="3" {% if star_rating == '3' %}selected{% endif %}>3 نجوم</option>
+          <option value="2" {% if star_rating == '2' %}selected{% endif %}>2 نجوم</option>
+          <option value="1" {% if star_rating == '1' %}selected{% endif %}>نجمة واحدة</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>السعر لليلة من</label>
+        <input type="number" name="price_min" class="form-control" placeholder="السعر الأدنى" value="{{ price_min }}">
+      </div>
+
+      <div class="form-group">
+        <label>السعر لليلة إلى</label>
+        <input type="number" name="price_max" class="form-control" placeholder="السعر الأعلى" value="{{ price_max }}">
+      </div>
+
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <button type="submit" class="btn-filter">تصفية النتائج</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Hotels Grid -->
+  {% if hotels %}
+  <div class="hotels-grid">
+    {% for hotel in hotels %}
+    <div class="hotel-card">
+      <div class="hotel-image-placeholder">🏨</div>
+      <div class="hotel-content">
+        <h3 class="hotel-name">{{ hotel.hotel_name }}</h3>
+        <div class="hotel-rating">
+          {% for i in hotel.star_rating|range %}
+          <span class="star">★</span>
+          {% endfor %}
+        </div>
+        <p class="hotel-price">{{ hotel.price_per_night }} {{ hotel.currency }}/ليلة</p>
+        <p class="hotel-details">{{ hotel.total_rooms }} غرفة {% if hotel.suites %}• {{ hotel.suites }} جناح{% endif %}</p>
+        <div class="hotel-features">
+          {% if hotel.has_restaurant %}
+          <span class="feature-tag">🍽️ مطعم</span>
+          {% endif %}
+          {% if hotel.has_cafe %}
+          <span class="feature-tag">☕ مقهى</span>
+          {% endif %}
+          {% if hotel.has_pool %}
+          <span class="feature-tag">🏊 مسبح</span>
+          {% endif %}
+          {% if hotel.has_gym %}
+          <span class="feature-tag">🏋️ نادي رياضي</span>
+          {% endif %}
+          {% if hotel.has_spa %}
+          <span class="feature-tag">💆 سبا</span>
+          {% endif %}
+          {% if hotel.has_conference_hall %}
+          <span class="feature-tag">🏢 قاعة مؤتمرات</span>
+          {% endif %}
+        </div>
+        {% if hotel.direct_booking and hotel.booking_url %}
+        <a href="{{ hotel.booking_url }}" class="btn-book" target="_blank">احجز الآن</a>
+        {% else %}
+        <button class="btn-book" disabled>تواصل معنا</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="no-results">
+    <p>لا توجد فنادق مطابقة لمعايير البحث</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

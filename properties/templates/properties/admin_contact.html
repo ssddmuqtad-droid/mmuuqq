@@ -1,0 +1,1032 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}مركز الدعم الفني{% endblock %}
+{% block dashboard_title %}مركز <span>الدعم الفني</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'admin_panel' %}" class="btn btn-outline">لوحة الإدارة</a>
+<button class="btn btn-primary" onclick="openNewChat()">➕ محادثة جديدة</button>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.support-center {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 20px;
+  height: calc(100vh - 200px);
+  padding: 0;
+}
+
+/* Conversations List */
+.conversations-sidebar {
+  background: var(--card-bg);
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+}
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-header h2 {
+  font-size: 1.3rem;
+  color: var(--text);
+  margin: 0 0 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-stats {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.sidebar-stat {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 8px 15px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.search-box {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 40px 12px 15px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.search-box::after {
+  content: '🔍';
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+}
+
+.filters-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 8px 12px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-light);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.filter-btn:hover,
+.filter-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
+  color: white;
+}
+
+.conversations-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.conversation-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 5px;
+}
+
+.conversation-item:hover {
+  background: var(--bg-alt);
+}
+
+.conversation-item.active {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border: 2px solid var(--primary);
+}
+
+.conversation-avatar {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.online-status {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--card-bg);
+}
+
+.online-status.online {
+  background: #22c55e;
+}
+
+.online-status.away {
+  background: #f59e0b;
+}
+
+.online-status.offline {
+  background: #6b7280;
+}
+
+.conversation-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.conversation-name {
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.conversation-type {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: white;
+}
+
+.conversation-preview {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 5px;
+}
+
+.conversation-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.unread-badge {
+  background: var(--primary);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.ticket-badge {
+  background: #f59e0b;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Chat Window */
+.chat-window {
+  background: var(--card-bg);
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+}
+
+.chat-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-header-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.chat-header-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+}
+
+.chat-header-details h3 {
+  font-size: 1.1rem;
+  color: var(--text);
+  margin: 0 0 5px 0;
+}
+
+.chat-header-details p {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin: 0;
+}
+
+.chat-header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.chat-action-btn {
+  padding: 8px 15px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+}
+
+.chat-action-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: var(--bg-alt);
+}
+
+.message {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.message.sent {
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.message-content {
+  max-width: 70%;
+}
+
+.message-bubble {
+  padding: 15px;
+  border-radius: 15px;
+  position: relative;
+}
+
+.message.sent .message-bubble {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 15px 15px 0 15px;
+}
+
+.message.received .message-bubble {
+  background: var(--card-bg);
+  color: var(--text);
+  border-radius: 15px 15px 15px 0;
+}
+
+.message-text {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.message-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.message-actions {
+  display: none;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  gap: 5px;
+}
+
+.message:hover .message-actions {
+  display: flex;
+}
+
+.message-action-btn {
+  padding: 5px 10px;
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.message-attachment {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.message-attachment-icon {
+  font-size: 1.5rem;
+}
+
+.chat-input-area {
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  background: var(--card-bg);
+}
+
+.message-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+}
+
+.form-group {
+  flex: 1;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 15px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.input-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.toolbar-btn {
+  padding: 10px 15px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.toolbar-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.message-input-wrapper {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.message-input-wrapper textarea {
+  flex: 1;
+  min-height: 80px;
+  resize: none;
+}
+
+.send-btn {
+  padding: 10px 25px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.send-btn:hover {
+  opacity: 0.9;
+}
+
+.file-drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  color: var(--text-light);
+  margin-bottom: 15px;
+  display: none;
+}
+
+.file-drop-zone.active {
+  display: block;
+  border-color: var(--primary);
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  background: var(--bg-alt);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.file-item-remove {
+  cursor: pointer;
+  color: #ef4444;
+}
+
+/* Stats Panel */
+.stats-panel {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+
+.stats-panel h3 {
+  font-size: 1.2rem;
+  color: var(--text);
+  margin: 0 0 15px 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.stat-item {
+  background: var(--bg-alt);
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-light);
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .support-center {
+    grid-template-columns: 300px 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .support-center {
+    grid-template-columns: 1fr;
+  }
+  
+  .conversations-sidebar {
+    display: none;
+  }
+  
+  .conversations-sidebar.mobile-visible {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+  }
+  
+  .chat-window {
+    display: none;
+  }
+  
+  .chat-window.mobile-visible {
+    display: flex;
+  }
+}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="support-center">
+  <!-- Conversations Sidebar -->
+  <div class="conversations-sidebar">
+    <div class="sidebar-header">
+      <h2>💬 المحادثات</h2>
+      <div class="sidebar-stats">
+        <div class="sidebar-stat">
+          <span>📨</span>
+          <span>{{ total_messages|default:0 }}</span>
+          <span>رسالة</span>
+        </div>
+        <div class="sidebar-stat">
+          <span>🔔</span>
+          <span>{{ unread_count|default:0 }}</span>
+          <span>جديد</span>
+        </div>
+      </div>
+      <div class="search-box">
+        <input type="text" placeholder="ابحث بالاسم، البريد، الهاتف، القناة..." id="search-conversations">
+      </div>
+      <div class="filters-bar">
+        <button class="filter-btn active" data-filter="all">الكل</button>
+        <button class="filter-btn" data-filter="unread">غير مقروءة</button>
+        <button class="filter-btn" data-filter="read">مقروءة</button>
+        <button class="filter-btn" data-filter="important">مهمة</button>
+        <button class="filter-btn" data-filter="archived">مؤرشفة</button>
+      </div>
+    </div>
+    
+    <div class="conversations-list" id="conversations-list">
+      {% if conversations %}
+        {% for conversation in conversations %}
+        <div class="conversation-item {% if conversation.id == active_conversation_id %}active{% endif %}" data-id="{{ conversation.id }}">
+          <div class="conversation-avatar">
+            {% if conversation.recipient.avatar %}
+              <img src="{{ conversation.recipient.avatar.url }}" alt="{{ conversation.recipient.username }}">
+            {% else %}
+              {{ conversation.recipient.username|slice:":1"|upper }}
+            {% endif %}
+            <div class="online-status {{ conversation.recipient.get_online_status }}"></div>
+          </div>
+          <div class="conversation-info">
+            <div class="conversation-name">
+              {{ conversation.recipient.get_full_name|default:conversation.recipient.username }}
+              {% if conversation.is_important %}
+                <span class="conversation-type">⭐ مهم</span>
+              {% endif %}
+            </div>
+            <div class="conversation-preview">{{ conversation.last_message|truncatechars:30 }}</div>
+            <div class="conversation-meta">
+              <span>{{ conversation.last_message_time|timesince }}</span>
+              {% if conversation.unread_count > 0 %}
+                <span class="unread-badge">{{ conversation.unread_count }}</span>
+              {% endif %}
+              {% if conversation.ticket_number %}
+                <span class="ticket-badge">#{{ conversation.ticket_number }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">💬</div>
+          <h3>لا توجد محادثات</h3>
+          <p>ابدأ محادثة جديدة</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Chat Window -->
+  <div class="chat-window" id="chat-window">
+    {% if active_conversation %}
+      <div class="chat-header">
+        <div class="chat-header-info">
+          <div class="chat-header-avatar">
+            {% if active_conversation.recipient.avatar %}
+              <img src="{{ active_conversation.recipient.avatar.url }}" alt="{{ active_conversation.recipient.username }}">
+            {% else %}
+              {{ active_conversation.recipient.username|slice:":1"|upper }}
+            {% endif %}
+          </div>
+          <div class="chat-header-details">
+            <h3>{{ active_conversation.recipient.get_full_name|default:active_conversation.recipient.username }}</h3>
+            <p>
+              {% if active_conversation.ticket_number %}
+                تذكرة #{{ active_conversation.ticket_number }} - 
+              {% endif %}
+              {{ active_conversation.recipient.get_online_status_display }}
+            </p>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button class="chat-action-btn" onclick="exportChat()">📄 تصدير</button>
+          <button class="chat-action-btn" onclick="printChat()">🖨️ طباعة</button>
+          <button class="chat-action-btn" onclick="toggleImportant()">⭐ تمييز</button>
+          <button class="chat-action-btn" onclick="archiveConversation()">📦 أرشفة</button>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chat-messages">
+        {% for message in messages %}
+          <div class="message {% if message.sender == request.user %}sent{% else %}received{% endif %}">
+            <div class="message-avatar">
+              {% if message.sender.avatar %}
+                <img src="{{ message.sender.avatar.url }}" alt="{{ message.sender.username }}">
+              {% else %}
+                {{ message.sender.username|slice:":1"|upper }}
+              {% endif %}
+            </div>
+            <div class="message-content">
+              <div class="message-bubble" data-message-id="{{ message.id }}">
+                <div class="message-actions">
+                  <button class="message-action-btn" onclick="replyMessage(this)">↩️ رد</button>
+                  <button class="message-action-btn" onclick="forwardMessage(this)">➡️ توجيه</button>
+                  <button class="message-action-btn" onclick="editMessage(this)">✏️ تعديل</button>
+                  <button class="message-action-btn" onclick="deleteMessage(this)">🗑️ حذف</button>
+                  <button class="message-action-btn" onclick="copyMessage(this)">📋 نسخ</button>
+                  <button class="message-action-btn" onclick="pinMessage(this)">📌 تثبيت</button>
+                </div>
+                <div class="message-text">{{ message.content }}</div>
+                {% if message.attachments.exists %}
+                  {% for attachment in message.attachments.all %}
+                    <div class="message-attachment">
+                      <span class="message-attachment-icon">📎</span>
+                      <span>{{ attachment.filename }}</span>
+                      <a href="{{ attachment.file.url }}" download>⬇️</a>
+                    </div>
+                  {% endfor %}
+                {% endif %}
+                <div class="message-meta">
+                  <span>{{ message.created_at|date:"H:i" }}</span>
+                  {% if message.read_at %}
+                    <span>✓✓ مقروءة</span>
+                  {% else %}
+                    <span>✓</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="chat-input-area">
+        <form class="message-form" id="message-form">
+          {% csrf_token %}
+          <div class="form-row">
+            <div class="form-group">
+              <label>العنوان</label>
+              <input type="text" name="subject" placeholder="عنوان الرسالة...">
+            </div>
+            <div class="form-group">
+              <label>النوع</label>
+              <select name="message_type">
+                <option value="support">دعم فني</option>
+                <option value="inquiry">استفسار</option>
+                <option value="complaint">شكوى</option>
+                <option value="suggestion">اقتراح</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>الأولوية</label>
+              <select name="priority">
+                <option value="low">منخفضة</option>
+                <option value="normal">عادية</option>
+                <option value="high">عالية</option>
+                <option value="urgent">عاجلة</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="file-drop-zone" id="file-drop-zone">
+            <p>📂 اسحب وأفلت الملفات هنا</p>
+            <p style="font-size: 0.85rem;">أو انقر للاختيار</p>
+            <input type="file" name="attachments" multiple id="file-input" style="display: none;">
+          </div>
+          
+          <div class="file-list" id="file-list"></div>
+          
+          <div class="input-toolbar">
+            <button type="button" class="toolbar-btn" onclick="toggleFileDrop()">📎 إرفاق</button>
+            <button type="button" class="toolbar-btn" onclick="toggleEmoji()">😊 إيموجي</button>
+            <button type="button" class="toolbar-btn" onclick="startRecording()">🎤 تسجيل</button>
+            <button type="button" class="toolbar-btn" onclick="sendLocation()">📍 موقع</button>
+            <button type="button" class="toolbar-btn" onclick="openCamera()">📷 كاميرا</button>
+          </div>
+          
+          <div class="message-input-wrapper">
+            <textarea name="message" placeholder="اكتب رسالتك هنا..." id="message-input"></textarea>
+            <button type="submit" class="send-btn">📤 إرسال</button>
+          </div>
+          
+          <div style="font-size: 0.85rem; color: var(--text-muted);">
+            حجم الملفات: <span id="file-size">0 MB</span> / 25 MB
+          </div>
+        </form>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">💬</div>
+        <h3>اختر محادثة للبدء</h3>
+        <p>أو ابدأ محادثة جديدة</p>
+        <button class="btn btn-primary" onclick="openNewChat()" style="margin-top: 20px;">➕ محادثة جديدة</button>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+// Filter conversations
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    const filter = this.dataset.filter;
+    filterConversations(filter);
+  });
+});
+
+function filterConversations(filter) {
+  const items = document.querySelectorAll('.conversation-item');
+  items.forEach(item => {
+    if (filter === 'all') {
+      item.style.display = 'flex';
+    } else {
+      // Implement filter logic based on data attributes
+      item.style.display = 'flex';
+    }
+  });
+}
+
+// Search conversations
+document.getElementById('search-conversations').addEventListener('input', function() {
+  const query = this.value.toLowerCase();
+  const items = document.querySelectorAll('.conversation-item');
+  items.forEach(item => {
+    const name = item.querySelector('.conversation-name').textContent.toLowerCase();
+    const preview = item.querySelector('.conversation-preview').textContent.toLowerCase();
+    if (name.includes(query) || preview.includes(query)) {
+      item.style.display = 'flex';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+});
+
+// File drop zone
+const fileDropZone = document.getElementById('file-drop-zone');
+const fileInput = document.getElementById('file-input');
+const fileList = document.getElementById('file-list');
+let totalFileSize = 0;
+
+function toggleFileDrop() {
+  fileDropZone.style.display = fileDropZone.style.display === 'block' ? 'none' : 'block';
+}
+
+fileDropZone.addEventListener('click', () => fileInput.click());
+
+fileDropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  fileDropZone.classList.add('active');
+});
+
+fileDropZone.addEventListener('dragleave', () => {
+  fileDropZone.classList.remove('active');
+});
+
+fileDropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  fileDropZone.classList.remove('active');
+  handleFiles(e.dataTransfer.files);
+});
+
+fileInput.addEventListener('change', (e) => {
+  handleFiles(e.target.files);
+});
+
+function handleFiles(files) {
+  Array.from(files).forEach(file => {
+    if (totalFileSize + file.size > 25 * 1024 * 1024) {
+      alert('حجم الملفات يتجاوز الحد المسموح (25 MB)');
+      return;
+    }
+    
+    totalFileSize += file.size;
+    document.getElementById('file-size').textContent = (totalFileSize / (1024 * 1024)).toFixed(2) + ' MB';
+    
+    const fileItem = document.createElement('div');
+    fileItem.className = 'file-item';
+    fileItem.innerHTML = `
+      <span>📎 ${file.name}</span>
+      <span class="file-item-remove" onclick="this.parentElement.remove()">✕</span>
+    `;
+    fileList.appendChild(fileItem);
+  });
+}
+
+// Message form submission
+document.getElementById('message-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  // Implement AJAX submission
+  console.log('Sending message...');
+});
+
+// Conversation selection
+document.querySelectorAll('.conversation-item').forEach(item => {
+  item.addEventListener('click', function() {
+    document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
+    this.classList.add('active');
+    const conversationId = this.dataset.id;
+    loadConversation(conversationId);
+  });
+});
+
+function loadConversation(conversationId) {
+  // Implement AJAX loading
+  console.log('Loading conversation:', conversationId);
+}
+
+function openNewChat() {
+  // Open new chat modal
+  console.log('Opening new chat');
+}
+
+function exportChat() {
+  window.print();
+}
+
+function printChat() {
+  window.print();
+}
+
+function toggleImportant() {
+  console.log('Toggling important');
+}
+
+function archiveConversation() {
+  console.log('Archiving conversation');
+}
+
+function replyMessage(button) {
+  const messageId = button.closest('.message-bubble').getAttribute('data-message-id');
+  console.log('Replying to message:', messageId);
+}
+
+function forwardMessage(button) {
+  const messageId = button.closest('.message-bubble').getAttribute('data-message-id');
+  console.log('Forwarding message:', messageId);
+}
+
+function editMessage(button) {
+  const messageId = button.closest('.message-bubble').getAttribute('data-message-id');
+  console.log('Editing message:', messageId);
+}
+
+function deleteMessage(button) {
+  const messageId = button.closest('.message-bubble').getAttribute('data-message-id');
+  if (confirm('هل أنت متأكد من حذف هذه الرسالة؟')) {
+    console.log('Deleting message:', messageId);
+  }
+}
+
+function copyMessage(button) {
+  const messageId = button.closest('.message-bubble').getAttribute('data-message-id');
+  console.log('Copying message:', messageId);
+}
+
+function pinMessage(button) {
+  const messageId = button.closest('.message-bubble').getAttribute('data-message-id');
+  console.log('Pinning message:', messageId);
+}
+
+function toggleEmoji() {
+  console.log('Toggling emoji picker');
+}
+
+function startRecording() {
+  console.log('Starting recording');
+}
+
+function sendLocation() {
+  console.log('Sending location');
+}
+
+function openCamera() {
+  console.log('Opening camera');
+}
+
+// Auto-refresh for new messages
+setInterval(() => {
+  // Implement AJAX polling for new messages
+}, 5000);
+</script>
+{% endblock %}

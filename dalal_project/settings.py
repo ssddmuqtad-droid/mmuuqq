@@ -36,7 +36,7 @@ def _unique(items):
     return result
 
 
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 if not SECRET_KEY:
@@ -45,10 +45,10 @@ if not SECRET_KEY:
     else:
         raise ValueError('SECRET_KEY environment variable must be set in production')
 
-# Custom domain — daluailiraq.com on Railway
+# Custom domain
 custom_domain = os.getenv('CUSTOM_DOMAIN', 'daluailiraq.com')
 
-# Configure ALLOWED_HOSTS (Django supports subdomain wildcards via leading dot)
+# Configure ALLOWED_HOSTS
 ALLOWED_HOSTS = _parse_csv_env('ALLOWED_HOSTS')
 if not ALLOWED_HOSTS:
     ALLOWED_HOSTS = ['localhost', '127.0.0.1']
@@ -58,6 +58,7 @@ ALLOWED_HOSTS = _unique(ALLOWED_HOSTS + [
     'muq.up.railway.app',
     'muqq.up.railway.app',
     'healthcheck.railway.app',
+    '.up.railway.app',
 ])
 
 if custom_domain:
@@ -70,22 +71,23 @@ if railway_public_domain:
 if DEBUG:
     ALLOWED_HOSTS = _unique(ALLOWED_HOSTS + ['localhost', '127.0.0.1', '[::1]'])
 
-# Configure CSRF_TRUSTED_ORIGINS (no wildcard support in Django)
-CSRF_TRUSTED_ORIGINS = _unique([
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'http://localhost:8080',
-    'http://127.0.0.1:8080',
-    'http://127.0.0.1:64813',
-    'http://127.0.0.1:62854',
-    'http://127.0.0.1:64580',
-    'http://localhost:62854',
-    'http://localhost:64580',
-    'https://muq.up.railway.app',
-    'https://muqq.up.railway.app',
-    'http://muq.up.railway.app',
-    'http://muqq.up.railway.app',
-] + _parse_csv_env('CSRF_TRUSTED_ORIGINS'))
+# CSRF_TRUSTED_ORIGINS
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS = [
+        'http://localhost:8000',
+        'http://127.0.0.1:8000',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:62950',
+        'http://localhost:62950',
+    ]
+    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_SECURE = False
+else:
+    CSRF_TRUSTED_ORIGINS = _unique([
+        'https://muq.up.railway.app',
+        'https://muqq.up.railway.app',
+    ] + _parse_csv_env('CSRF_TRUSTED_ORIGINS'))
 
 if railway_public_domain:
     CSRF_TRUSTED_ORIGINS = _unique(CSRF_TRUSTED_ORIGINS + [f'https://{railway_public_domain}'])
@@ -112,24 +114,21 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'properties',
+    'social_django',
 ]
 
 MIDDLEWARE = [
     'properties.middleware.HealthCheckMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    # Temporarily disabled enterprise middleware to isolate redirect issue
-    # 'properties.middleware_enterprise.RateLimitMiddleware',
-    # 'properties.middleware_enterprise.SecurityHeadersMiddleware',
-    # 'properties.middleware_enterprise.XSSProtectionMiddleware',
-    # 'properties.middleware_enterprise.SQLInjectionProtectionMiddleware',
-    # 'properties.middleware_enterprise.AdminIPRestrictionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'social_django.middleware.SocialAuthExceptionMiddleware',
     'properties.middleware.MaintenanceModeMiddleware',
+    'properties.middleware.SubscriptionCheckMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -154,14 +153,14 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'dalal_project.wsgi.application'
-ASGI_APPLICATION = 'dalal_project.asgi.application'
 
-# Optional WebSocket support (enable with USE_WEBSOCKETS=True and Redis)
+# Optional WebSocket support
 USE_WEBSOCKETS = os.getenv('USE_WEBSOCKETS', 'False').lower() == 'true'
 if USE_WEBSOCKETS:
     try:
         import channels  # noqa: F401
         INSTALLED_APPS.insert(0, 'channels')
+        ASGI_APPLICATION = 'dalal_project.asgi.application'
         CHANNEL_LAYERS = {
             'default': {
                 'BACKEND': 'channels.layers.InMemoryChannelLayer',
@@ -180,24 +179,17 @@ if USE_WEBSOCKETS:
         USE_WEBSOCKETS = False
 
 # --- Database Configuration ---
-# PostgreSQL for production (Railway), SQLite for development only
-
 import dj_database_url
 
-# Detect Railway environment
-is_railway = os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('RAILWAY_SERVICE_NAME')
-
-# Try to get DATABASE_URL from Railway or environment variables
 database_url = os.getenv('DATABASE_URL')
 
-# Fallback for Railway: construct from individual variables if DATABASE_URL is not set
 if not database_url:
     db_name = os.getenv('DB_NAME') or os.getenv('POSTGRES_DB')
     db_user = os.getenv('DB_USER') or os.getenv('POSTGRES_USER')
     db_password = os.getenv('DB_PASSWORD') or os.getenv('POSTGRES_PASSWORD')
     db_host = os.getenv('DB_HOST') or os.getenv('POSTGRES_HOST')
     db_port = os.getenv('DB_PORT') or os.getenv('POSTGRES_PORT', '5432')
-    
+
     if db_name and db_user and db_password and db_host:
         database_url = f'postgres://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
 
@@ -205,7 +197,6 @@ if not database_url:
 if database_url:
     invalid_patterns = ['@host:', 'user:password@']
     if any(pattern in database_url for pattern in invalid_patterns):
-        print(f"WARNING: Invalid DATABASE_URL detected. Falling back to SQLite.")
         database_url = None
 
 if database_url:
@@ -224,7 +215,6 @@ elif DEBUG:
         }
     }
 elif os.getenv('ALLOW_SQLITE_FALLBACK', 'False').lower() == 'true':
-    print("WARNING: Using SQLite fallback. Attach PostgreSQL on Railway for production.")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -253,12 +243,9 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-if not DEBUG:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
-    WHITENOISE_MANIFEST_STRICT = False
-    WHITENOISE_IGNORE_IF_NOT_FOUND = True
-else:
-    WHITENOISE_USE_FINDERS = True
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+WHITENOISE_MANIFEST_STRICT = False
+WHITENOISE_IGNORE_IF_NOT_FOUND = True
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -273,40 +260,31 @@ SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
-# Railway SSL termination - commented out to prevent redirect loops with HTTP access
-# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
 if not DEBUG:
-    # Railway handles SSL termination at the edge proxy level.
-    # NEVER set SECURE_SSL_REDIRECT=True on Railway — it causes infinite redirect loops.
     SECURE_SSL_REDIRECT = False
-    # Enable secure cookies in production
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    # Disable HSTS to prevent redirect loops on Railway
     SECURE_HSTS_SECONDS = 0
     SECURE_HSTS_INCLUDE_SUBDOMAINS = False
     SECURE_HSTS_PRELOAD = False
 
 SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_HTTPONLY = False  # Must be False so Django's JS can read the CSRF token
+CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
 
-# CSRF settings for Railway - simplified to prevent conflicts
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_AGE = 3600 * 24 * 7  # 7 days
-
-# Session timeout (7 days)
 SESSION_COOKIE_AGE = 3600 * 24 * 7
 
 # --- File Upload Security ---
-DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5MB
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 
-# --- Cache (rate limiting + performance) ---
+# --- Cache ---
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -319,7 +297,7 @@ CACHES = {
     },
 }
 
-if os.getenv('REDIS_URL'):
+if os.getenv('REDIS_URL') and not DEBUG:
     try:
         import django_redis  # noqa: F401
         CACHES['default'] = {
@@ -327,33 +305,14 @@ if os.getenv('REDIS_URL'):
             'LOCATION': os.getenv('REDIS_URL'),
             'OPTIONS': {
                 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-                'CONNECTION_POOL_KWARGS': {
-                    'max_connections': 50,
-                    'retry_on_timeout': True,
-                },
                 'SOCKET_CONNECT_TIMEOUT': 5,
                 'SOCKET_TIMEOUT': 5,
             },
             'KEY_PREFIX': 'dalal',
             'TIMEOUT': 300,
         }
-        CACHES['sessions'] = {
-            'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': os.getenv('REDIS_URL'),
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-                'CONNECTION_POOL_KWARGS': {
-                    'max_connections': 20,
-                    'retry_on_timeout': True,
-                },
-            },
-            'KEY_PREFIX': 'dalal_sessions',
-            'TIMEOUT': 3600,
-        }
-        SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-        SESSION_CACHE_ALIAS = 'sessions'
     except ImportError:
-        print("WARNING: REDIS_URL set but django-redis is not installed. Using local memory cache.")
+        pass
 
 # --- Logging ---
 LOG_DIR = BASE_DIR / 'logs'
@@ -403,12 +362,71 @@ MESSAGE_TAGS = {
     message_constants.ERROR: 'error',
 }
 
-# Site
 SITE_NAME = os.getenv('SITE_NAME', 'دلال')
 
+# --- Social Authentication ---
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'social_core.backends.google.GoogleOAuth2',
+    'social_core.backends.facebook.FacebookOAuth2',
+]
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', '').strip()
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET', '').strip()
+SOCIAL_AUTH_FACEBOOK_OAUTH2_KEY = os.getenv('SOCIAL_AUTH_FACEBOOK_OAUTH2_KEY', '').strip()
+SOCIAL_AUTH_FACEBOOK_OAUTH2_SECRET = os.getenv('SOCIAL_AUTH_FACEBOOK_OAUTH2_SECRET', '').strip()
+
+RAILWAY_PUBLIC_DOMAIN = os.getenv('RAILWAY_PUBLIC_DOMAIN', '')
+if RAILWAY_PUBLIC_DOMAIN:
+    BASE_URL = f'https://{RAILWAY_PUBLIC_DOMAIN}'
+elif custom_domain:
+    BASE_URL = f'https://{custom_domain}'
+else:
+    BASE_URL = 'http://127.0.0.1:8000'
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+]
+SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = ['first_name', 'last_name', 'picture']
+SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = f'{BASE_URL}/social/complete/google-oauth2/'
+
+SOCIAL_AUTH_FACEBOOK_OAUTH2_SCOPE = ['email', 'public_profile']
+SOCIAL_AUTH_FACEBOOK_OAUTH2_EXTRA_DATA = ['first_name', 'last_name', 'picture']
+SOCIAL_AUTH_FACEBOOK_OAUTH2_REDIRECT_URI = f'{BASE_URL}/social/complete/facebook/'
+
+SOCIAL_AUTH_CSRF_IGNORE = True
+SOCIAL_AUTH_ALLOW_REDIRECT_URI_CHANGE = True
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = not DEBUG
+
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.auth_allowed',
+    'social_core.pipeline.social_auth.social_user',
+    'social_core.pipeline.user.get_username',
+    'social_core.pipeline.user.create_user',
+    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.load_extra_data',
+    'social_core.pipeline.user.user_details',
+    'properties.social_auth.save_profile_picture',
+    'properties.social_auth.save_social_data',
+    'properties.social_auth.social_auth_error',
+)
+
+SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/dashboard/'
+SOCIAL_AUTH_LOGIN_ERROR_URL = '/login/'
+SOCIAL_AUTH_NEW_ASSOCIATION_REDIRECT_URL = '/dashboard/'
+SOCIAL_AUTH_DISCONNECT_REDIRECT_URL = '/settings/social/'
+
+SOCIAL_AUTH_USER_MODEL = 'auth.User'
+SOCIAL_AUTH_FORCE_RANDOM_USERNAME = False
+SOCIAL_AUTH_USERNAME_IS_FULL_EMAIL = True
+SOCIAL_AUTH_SLUGIFY_USERNAMES = 'lower'
+SOCIAL_AUTH_SANITIZE_USERNAMES = True
+
 # CORS Settings
-# In production, never allow all origins for security
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only allow all in development
+CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
@@ -421,12 +439,9 @@ if not DEBUG:
             f'https://{custom_domain}',
             f'https://www.{custom_domain}',
         ])
-    # Add Railway domains for production
     cors_origins = _unique(cors_origins + [
         'https://muq.up.railway.app',
         'https://muqq.up.railway.app',
-        'http://muq.up.railway.app',
-        'http://muqq.up.railway.app',
     ])
     if railway_public_domain:
         cors_origins = _unique(cors_origins + [f'https://{railway_public_domain}'])
@@ -441,10 +456,6 @@ EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-
-# Security Headers for API
-SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_BROWSER_XSS_FILTER = True
 
 # --- REST Framework Settings ---
 REST_FRAMEWORK = {

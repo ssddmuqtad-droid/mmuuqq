@@ -1,0 +1,168 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}نشر العقار - {{ property.display_title }}{% endblock %}
+
+{% block content %}
+<div class="container dashboard-container">
+    <h1>📢 نشر العقار</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>معلومات العقار</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>العنوان:</strong> {{ property.display_title }}</p>
+                    <p><strong>النوع:</strong> {{ property.get_type_display }}</p>
+                    <p><strong>الموقع:</strong> {{ property.full_location }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>المساحة:</strong> {{ property.area }} م²</p>
+                    <p><strong>السعر:</strong> {{ property.price }} د.ع</p>
+                    <p><strong>الحالة الحالية:</strong> 
+                        <span class="badge badge-info">{{ property.get_status_display }}</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5>اختر خطة النشر</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" id="publication_form">
+                {% csrf_token %}
+                
+                <div class="form-group mb-4">
+                    <label class="font-weight-bold">نوع النشر:</label>
+                    <div class="row mt-2">
+                        <div class="col-md-6">
+                            <div class="card publication-type-card" data-type="normal">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="publication_type" 
+                                               id="pub_normal" value="normal" checked>
+                                        <label class="form-check-label" for="pub_normal">
+                                            <h5>نشر عادي</h5>
+                                            <p class="text-muted mb-0">نشر العقار في القائمة العادية</p>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card publication-type-card" data-type="featured">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="publication_type" 
+                                               id="pub_featured" value="featured">
+                                        <label class="form-check-label" for="pub_featured">
+                                            <h5>نشر مميز ⭐</h5>
+                                            <p class="text-muted mb-0">نشر مميز مع إبراز خاص</p>
+                                            <small class="text-primary">+ {{ featured_price }} د.ع</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label for="publication_days" class="font-weight-bold">مدة النشر:</label>
+                    <select class="form-control" name="publication_days" id="publication_days">
+                        <option value="1">يوم واحد - {{ daily_price }} د.ع</option>
+                        <option value="7">7 أيام - {{ daily_price|multiply:7 }} د.ع</option>
+                        <option value="15">15 يوم - {{ daily_price|multiply:15 }} د.ع</option>
+                        <option value="30" selected>30 يوم - {{ daily_price|multiply:30 }} د.ع</option>
+                        <option value="60">60 يوم - {{ daily_price|multiply:60 }} د.ع</option>
+                        <option value="90">90 يوم - {{ daily_price|multiply:90 }} د.ع</option>
+                        <option value="180">6 أشهر - {{ daily_price|multiply:180 }} د.ع</option>
+                        <option value="365">سنة - {{ daily_price|multiply:365 }} د.ع</option>
+                        <option value="1825">5 سنوات - {{ daily_price|multiply:1825 }} د.ع</option>
+                    </select>
+                </div>
+
+                <div class="alert alert-info">
+                    <h5>💰 ملخص التكلفة</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p>السعر اليومي: <strong>{{ daily_price }} د.ع</strong></p>
+                            <p>عدد الأيام: <strong id="days_display">30</strong></p>
+                            <p>نوع النشر: <strong id="type_display">عادي</strong></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p>تكلفة الأيام: <strong id="days_cost">{{ daily_price|multiply:30 }} د.ع</strong></p>
+                            <p>تكلفة المميز: <strong id="featured_cost">0 د.ع</strong></p>
+                            <hr>
+                            <h4 class="text-primary">الإجمالي: <strong id="total_cost">{{ daily_price|multiply:30 }} د.ع</strong></h4>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-lg btn-block">
+                        متابعة للدفع
+                    </button>
+                    <a href="{% url 'property_detail' property.slug %}" class="btn btn-secondary btn-block">
+                        إلغاء
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dailyPrice = parseFloat("{{ daily_price }}");
+    const featuredPrice = parseFloat("{{ featured_price }}");
+    
+    const publicationDays = document.getElementById('publication_days');
+    const publicationTypeRadios = document.querySelectorAll('input[name="publication_type"]');
+    const daysDisplay = document.getElementById('days_display');
+    const typeDisplay = document.getElementById('type_display');
+    const daysCost = document.getElementById('days_cost');
+    const featuredCost = document.getElementById('featured_cost');
+    const totalCost = document.getElementById('total_cost');
+    
+    function calculateTotal() {
+        const days = parseInt(publicationDays.value);
+        const type = document.querySelector('input[name="publication_type"]:checked').value;
+        
+        const baseAmount = days * dailyPrice;
+        const featuredAmount = type === 'featured' ? featuredPrice : 0;
+        const total = baseAmount + featuredAmount;
+        
+        daysDisplay.textContent = days;
+        typeDisplay.textContent = type === 'featured' ? 'مميز' : 'عادي';
+        daysCost.textContent = baseAmount.toLocaleString() + ' د.ع';
+        featuredCost.textContent = featuredAmount.toLocaleString() + ' د.ع';
+        totalCost.textContent = total.toLocaleString() + ' د.ع';
+    }
+    
+    publicationDays.addEventListener('change', calculateTotal);
+    publicationTypeRadios.forEach(radio => {
+        radio.addEventListener('change', calculateTotal);
+    });
+    
+    // Highlight selected card
+    publicationTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('.publication-type-card').forEach(card => {
+                card.classList.remove('border-primary');
+            });
+            this.closest('.publication-type-card').classList.add('border-primary');
+        });
+    });
+    
+    // Initial calculation
+    calculateTotal();
+});
+</script>
+{% endblock %}

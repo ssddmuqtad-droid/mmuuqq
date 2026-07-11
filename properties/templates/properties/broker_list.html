@@ -93,6 +93,7 @@
         <tr>
           <th>الدلال</th>
           <th>معلومات الاتصال</th>
+          <th>القناة</th>
           <th>الاشتراك</th>
           <th>العقارات</th>
           <th>الإحصائيات</th>
@@ -110,10 +111,31 @@
           <td>
             <div class="contact-info">
               <span>📱 {{ item.broker.phone }}</span>
-              <span>📍 {{ item.broker.governorate|default:"—" }}</span>
+              <span>📍 {{ item.broker.governorate|default:"—"  }}</span>
             </div>
             {% if item.broker.office_name %}
             <div class="office-name">🏢 {{ item.broker.office_name }}</div>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.channel %}
+            <div class="channel-info">
+              <div class="channel-name">📺 {{ item.channel.name }}</div>
+              <div class="channel-stats">
+                <span>👥 {{ item.channel.followers }}</span>
+                <span>👁️ {{ item.channel.views }}</span>
+                <span>⭐ {{ item.channel.rating|floatformat:1 }}</span>
+              </div>
+              <div class="channel-status">
+                {% if item.channel.is_verified %}
+                  <span class="badge badge-success">موثق</span>
+                {% endif %}
+                <span class="badge badge-{{ item.channel.status }}">{{ item.channel.get_status_display }}</span>
+              </div>
+            </div>
+            {% else %}
+            <div class="no-channel">لا توجد قناة</div>
+            <a href="{% url 'broker_channel_settings' %}" class="btn btn-sm btn-outline">إنشاء قناة</a>
             {% endif %}
           </td>
           <td>
@@ -171,6 +193,10 @@
           <td>
             <div class="action-buttons">
               <a href="{% url 'broker_edit' item.broker.id %}" class="btn btn-sm btn-outline" title="تعديل">✏️</a>
+              {% if item.channel %}
+              <a href="{% url 'broker_channel_detail' item.channel.id %}" class="btn btn-sm btn-primary" title="عرض القناة">📺</a>
+              <a href="{% url 'channel_management' %}" class="btn btn-sm btn-info" title="إدارة القناة">⚙️</a>
+              {% endif %}
               {% if item.subscription_status == 'منتهي' %}
               <button type="button" class="btn btn-sm btn-success" data-broker-id="{{ item.broker.id }}" data-broker-name="{{ item.broker.display_name }}" onclick="openRenewModal(this)" title="تجديد الاشتراك">🔄 تجديد</button>
               {% else %}
@@ -189,7 +215,7 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" style="text-align:center;padding: 2rem;">لا يوجد دلالين</td></tr>
+        <tr><td colspan="8" style="text-align:center;padding: 2rem;">لا يوجد دلالين</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -298,6 +324,61 @@
   font-size: 0.85rem;
   color: var(--text-light);
   margin-top: 0.25rem;
+}
+
+.channel-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.channel-name {
+  font-weight: 600;
+  color: var(--primary);
+  font-size: 0.9rem;
+}
+
+.channel-stats {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.channel-status {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.no-channel {
+  color: var(--text-light);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.badge-active {
+  background: rgba(72, 187, 120, 0.1);
+  color: #48bb78;
+  border: 1px solid rgba(72, 187, 120, 0.3);
+}
+
+.badge-inactive {
+  background: rgba(245, 101, 101, 0.1);
+  color: #f56565;
+  border: 1px solid rgba(245, 101, 101, 0.3);
+}
+
+.badge-suspended {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-pending {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  border: 1px solid rgba(102, 126, 234, 0.3);
 }
 
 .subscription-info {

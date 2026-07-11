@@ -1,0 +1,90 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}دعوات المزاد - {{ auction.title }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: 40px 20px;">
+    <div class="invitations-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+        <div>
+            <h1 style="font-size: 28px; margin: 0 0 10px 0;">📧 دعوات المزاد</h1>
+            <p style="color: rgba(255,255,255,0.7); margin: 0;">{{ auction.title }}</p>
+        </div>
+        <a href="{% url 'create_auction_invitation' auction.id %}" 
+           style="padding: 12px 24px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; border-radius: 8px; color: white; text-decoration: none;">
+            ➕ إنشاء دعوة جديدة
+        </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin-bottom: 40px;">
+        <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; text-align: center;">
+            <h3 style="font-size: 32px; margin: 0; color: #667eea;">{{ invitations.count }}</h3>
+            <p style="color: rgba(255,255,255,0.7); margin: 5px 0 0 0;">إجمالي الدعوات</p>
+        </div>
+        <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; text-align: center;">
+            <h3 style="font-size: 32px; margin: 0; color: #38ef7d;">{{ invitations|filter:status:'accepted'|length }}</h3>
+            <p style="color: rgba(255,255,255,0.7); margin: 5px 0 0 0;">مقبولة</p>
+        </div>
+        <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; text-align: center;">
+            <h3 style="font-size: 32px; margin: 0; color: #f093fb;">{{ invitations|filter:status:'pending'|length }}</h3>
+            <p style="color: rgba(255,255,255,0.7); margin: 5px 0 0 0;">قيد الانتظار</p>
+        </div>
+    </div>
+
+    <!-- Invitations List -->
+    <div class="invitations-section">
+        {% if invitations %}
+        <div class="invitations-list" style="display: grid; gap: 20px;">
+            {% for invitation in invitations %}
+            <div class="invitation-item" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <h3 style="font-size: 18px; margin: 0;">
+                            {% if invitation.invited_user %}
+                                {{ invitation.invited_user.get_full_name|default:invitation.invited_user.username }}
+                            {% elif invitation.invited_broker %}
+                                {{ invitation.invited_broker.display_name }}
+                            {% else %}
+                                {{ invitation.email|default:invitation.phone }}
+                            {% endif %}
+                        </h3>
+                        <span style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 12px; font-size: 12px;">
+                            {{ invitation.get_status_display }}
+                        </span>
+                    </div>
+                    <p style="color: rgba(255,255,255,0.7); margin: 5px 0;">🔑 كود الدعوة: <strong>{{ invitation.invitation_code }}</strong></p>
+                    <p style="color: rgba(255,255,255,0.5); margin: 5px 0; font-size: 14px;">📅 أرسلت: {{ invitation.sent_at|date:"Y-m-d H:i" }}</p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="copyCode('{{ invitation.invitation_code }}')" 
+                            style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: none; border-radius: 6px; color: white; cursor: pointer;">
+                        📋 نسخ الكود
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 60px 20px; background: rgba(255,255,255,0.05); border-radius: 12px;">
+            <p style="font-size: 18px; color: rgba(255,255,255,0.7); margin: 0 0 20px 0;">لم يتم إنشاء أي دعوات بعد</p>
+            <a href="{% url 'create_auction_invitation' auction.id %}" 
+               style="padding: 12px 24px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; border-radius: 8px; color: white; text-decoration: none;">
+                إنشاء دعوة جديدة
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="{% url 'auction_detail' auction.id %}" style="color: rgba(255,255,255,0.7); text-decoration: none;">العودة للمزاد</a>
+    </div>
+</div>
+
+<script>
+function copyCode(code) {
+    navigator.clipboard.writeText(code).then(function() {
+        alert('تم نسخ الكود بنجاح!');
+    });
+}
+</script>
+{% endblock %}

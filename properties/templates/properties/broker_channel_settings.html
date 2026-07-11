@@ -174,7 +174,7 @@
   </div>
 
   <div class="settings-card">
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" enctype="multipart/form-data" id="main-form">
       {% csrf_token %}
       
       <div class="form-group">
@@ -229,9 +229,234 @@
           <input type="file" id="cover_image" name="cover_image" accept="image/*" style="display: none;">
         </div>
       </div>
-
-      <button type="submit" class="btn-save">💾 حفظ التغييرات</button>
     </form>
+  </div>
+
+  <div class="settings-card">
+    <h3 style="color: var(--text); margin-bottom: 20px;">📱 معلومات التواصل</h3>
+    
+    <div class="form-group">
+      <label for="phone">رقم الهاتف</label>
+      <input 
+        type="tel" 
+        id="phone" 
+        name="phone" 
+        value="{{ channel.phone }}" 
+        placeholder="07xxxxxxxxx"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="email">البريد الإلكتروني</label>
+      <input 
+        type="email" 
+        id="email" 
+        name="email" 
+        value="{{ channel.email }}" 
+        placeholder="example@email.com"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="address">العنوان</label>
+      <textarea 
+        id="address" 
+        name="address" 
+        placeholder="أدخل عنوانك الكامل..."
+      >{{ channel.address }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="work_area">منطقة العمل</label>
+      <input 
+        type="text" 
+        id="work_area" 
+        name="work_area" 
+        value="{{ channel.work_area }}" 
+        placeholder="مثال: بغداد، أربيل، البصرة..."
+      >
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <h3 style="color: var(--text); margin-bottom: 20px;">👤 معلومات شخصية</h3>
+    
+    <div class="form-group">
+      <label for="experience_years">سنوات الخبرة</label>
+      <input 
+        type="number" 
+        id="experience_years" 
+        name="experience_years" 
+        value="{{ channel.experience_years }}" 
+        placeholder="مثال: 5"
+        min="0"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="specialization">التخصص</label>
+      <input 
+        type="text" 
+        id="specialization" 
+        name="specialization" 
+        value="{{ channel.specialization }}" 
+        placeholder="مثال: عقارات سكنية، تجارية، أراضي..."
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="working_hours">ساعات العمل</label>
+      <input 
+        type="text" 
+        id="working_hours" 
+        name="working_hours" 
+        value="{{ channel.working_hours }}" 
+        placeholder="مثال: 9 صباحاً - 5 مساءً"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="languages">اللغات</label>
+      <input 
+        type="text" 
+        id="languages" 
+        name="languages" 
+        value="{{ channel.languages }}" 
+        placeholder="مثال: العربية، الكردية، الإنجليزية"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="about_me">عني</label>
+      <textarea 
+        id="about_me" 
+        name="about_me" 
+        placeholder="اكتب نبذة عنك وخبراتك..."
+        style="min-height: 150px;"
+      >{{ channel.about_me }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="achievements">الإنجازات</label>
+      <textarea 
+        id="achievements" 
+        name="achievements" 
+        placeholder="اكتب إنجازاتك ومشاريعك المميزة..."
+        style="min-height: 120px;"
+      >{{ channel.achievements }}</textarea>
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <h3 style="color: var(--text); margin-bottom: 20px;">🔗 الروابط الاجتماعية</h3>
+    
+    <div class="form-group">
+      <label for="whatsapp">واتساب</label>
+      <input 
+        type="text" 
+        id="whatsapp" 
+        name="whatsapp" 
+        value="{{ channel.whatsapp }}" 
+        placeholder="07xxxxxxxxx"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="facebook">فيسبوك</label>
+      <input 
+        type="url" 
+        id="facebook" 
+        name="facebook" 
+        value="{{ channel.facebook }}" 
+        placeholder="https://facebook.com/..."
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="instagram">انستغرام</label>
+      <input 
+        type="url" 
+        id="instagram" 
+        name="instagram" 
+        value="{{ channel.instagram }}" 
+        placeholder="https://instagram.com/..."
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="telegram">تيليجرام</label>
+      <input 
+        type="text" 
+        id="telegram" 
+        name="telegram" 
+        value="{{ channel.telegram }}" 
+        placeholder="@username"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="youtube">يوتيوب</label>
+      <input 
+        type="url" 
+        id="youtube" 
+        name="youtube" 
+        value="{{ channel.youtube }}" 
+        placeholder="https://youtube.com/..."
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="tiktok">تيك توك</label>
+      <input 
+        type="url" 
+        id="tiktok" 
+        name="tiktok" 
+        value="{{ channel.tiktok }}" 
+        placeholder="https://tiktok.com/..."
+      >
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <h3 style="color: var(--text); margin-bottom: 20px;">🔍 تحسين محركات البحث (SEO)</h3>
+    
+    <div class="form-group">
+      <label for="meta_title">عنوان SEO</label>
+      <input 
+        type="text" 
+        id="meta_title" 
+        name="meta_title" 
+        value="{{ channel.meta_title }}" 
+        placeholder="عنوان مختصر للقناة (أقصى 70 حرف)"
+        maxlength="70"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="meta_description">وصف SEO</label>
+      <textarea 
+        id="meta_description" 
+        name="meta_description" 
+        placeholder="وصف مختصر للقناة (أقصى 160 حرف)"
+        maxlength="160"
+        style="min-height: 80px;"
+      >{{ channel.meta_description }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="keywords">كلمات مفتاحية</label>
+      <input 
+        type="text" 
+        id="keywords" 
+        name="keywords" 
+        value="{{ channel.keywords }}" 
+        placeholder="كلمات مفتاحية مفصولة بفواصل"
+      >
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <button type="submit" form="main-form" class="btn-save">💾 حفظ جميع التغييرات</button>
   </div>
 
   <div class="settings-card">

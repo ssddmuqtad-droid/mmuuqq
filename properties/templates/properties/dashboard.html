@@ -3,7 +3,7 @@
 
 {% block title %}لوحة التحكم{% endblock %}
 
-{% block dashboard_title %}لوحة تحكم {% if broker %}<span>{{ broker.display_name }}</span>{% else %}<span>الإدارة</span>{% endif %}{% endblock %}
+{% block dashboard_title %}لوحة تحكم {% if broker %}<span>الدلال</span>{% else %}<span>الإدارة</span>{% endif %}{% endblock %}
 
 {% block dashboard_subtitle %}
 <p style="margin:4px 0 0;color:var(--text-muted);font-size:0.9rem;">
@@ -18,11 +18,15 @@
 {% endblock %}
 
 {% block dashboard_actions %}
-<a href="{% url 'add_property' %}" class="btn btn-primary btn-sm">➕ إضافة عقار</a>
+<a href="{% url 'dynamic_add_property' %}" class="btn btn-primary btn-sm">➕ إضافة عقار</a>
+<a href="{% url 'building_request_create' %}" class="btn btn-primary btn-sm">🏗️ طلب بناء</a>
+<a href="{% url 'subscription_renewal_request' %}" class="btn btn-warning btn-sm">🔄 تجديد اشتراك</a>
 <a href="{% url 'broker_messages' %}" class="btn btn-outline btn-sm">💬 الرسائل</a>
 <a href="{% url 'properties_map' %}" class="btn btn-outline btn-sm">🗺️ الخريطة</a>
 {% if can_manage_brokers %}
 <a href="{% url 'broker_list' %}" class="btn btn-outline btn-sm">👔 الدلالين</a>
+<a href="{% url 'subscription_renewal_requests_list' %}" class="btn btn-outline btn-sm">🔄 طلبات التجديد</a>
+<a href="{% url 'user_monitoring_panel' %}" class="btn btn-outline btn-sm">👥 مراقبة المستخدمين</a>
 {% endif %}
 {% if broker and broker.role == 'main' %}
 <a href="{% url 'main_broker_panel' %}" class="btn btn-outline btn-sm">لوحة الدلال الرئيسي</a>
@@ -36,6 +40,86 @@
   .dashboard-content {
     background: var(--bg-primary, #0B0B0B);
     min-height: calc(100vh - var(--header-height, 72px));
+  }
+
+  /* Property Type Categories */
+  .property-type-categories {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .category-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .category-btn:hover {
+    border-color: var(--primary);
+    background: rgba(102, 126, 234, 0.05);
+    transform: translateY(-2px);
+  }
+
+  .category-btn.active {
+    border-color: var(--primary);
+    background: rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  }
+
+  .category-icon {
+    font-size: 2rem;
+  }
+
+  .category-name {
+    font-weight: 600;
+    color: var(--text);
+    text-align: center;
+  }
+
+  #property_type_select {
+    padding: 0.75rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+
+  #property_type_select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  }
+
+  /* Form Sections */
+  .form-section {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .section-icon {
+    font-size: 1.5rem;
   }
 
   /* Chart Container */
@@ -486,14 +570,28 @@
     </div>
   </div>
 
+  {% if stats.subscription %}
+  <div class="subscription-timer-card" style="background: linear-gradient(135deg, #FF7A00 0%, #FF5500 100%); border-radius: 16px; padding: 20px; margin-bottom: 20px; color: white;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+      <div>
+        <h3 style="margin: 0 0 10px 0; font-size: 1.2rem;">⏱️ الوقت المتبقي للاشتراك</h3>
+        <p style="margin: 0; opacity: 0.9;">{{ stats.subscription.plan_name }}</p>
+        <p style="margin: 5px 0 0 0; opacity: 0.9;">العقارات: {{ stats.subscription.properties_used }} / {{ stats.subscription.max_properties }}</p>
+      </div>
+      <div style="text-align: center;">
+        <div id="subscription-timer" style="font-size: 2rem; font-weight: bold; font-family: monospace;" data-seconds="{{ stats.subscription.seconds_remaining }}">
+          --:--:--
+        </div>
+        <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 0.9rem;">أيام:ساعات:دقائق:ثواني</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="dashboard-tabs">
     <button type="button" class="tab-btn active" data-tab="properties">
       <span class="tab-icon">🏠</span>
       <span>العقارات</span>
-    </button>
-    <button type="button" class="tab-btn" data-tab="add">
-      <span class="tab-icon">➕</span>
-      <span>إضافة عقار</span>
     </button>
     <button type="button" class="tab-btn" data-tab="auctions">
       <span class="tab-icon">🔨</span>
@@ -512,13 +610,38 @@
       <span>الملاحظات</span>
     </button>
     <button type="button" class="tab-btn" data-tab="messages">
-      <span class="tab-icon">💬</span>
+      <span class="tab-icon">📧</span>
       <span>الرسائل</span>
     </button>
+    {% if can_access_admin_panel %}
+    <a href="{% url 'notification_center' %}" class="tab-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: transparent; border: none; color: var(--text-light); cursor: pointer; border-radius: var(--radius); transition: all 0.3s ease;">
+      <span class="tab-icon">🔔</span>
+      <span>الإشعارات</span>
+      <span class="notification-badge" id="dashboard-notification-badge" style="display: none;">0</span>
+    </a>
+    {% endif %}
+    <a href="{% url 'admin_contact' %}" class="tab-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: transparent; border: none; color: var(--text-light); cursor: pointer; border-radius: var(--radius); transition: all 0.3s ease;">
+      <span class="tab-icon">📧</span>
+      <span>مراسلة الإدارة</span>
+    </a>
     <button type="button" class="tab-btn" data-tab="activity">
       <span class="tab-icon">📋</span>
       <span>سجل النشاطات</span>
     </button>
+    {% if broker %}
+    <a href="{% url 'my_channel' %}" class="tab-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: transparent; border: none; color: var(--text-light); cursor: pointer; border-radius: var(--radius); transition: all 0.3s ease;">
+      <span class="tab-icon">📺</span>
+      <span>قناتي</span>
+    </a>
+    <a href="{% url 'broker_building_requests' %}" class="tab-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: transparent; border: none; color: var(--text-light); cursor: pointer; border-radius: var(--radius); transition: all 0.3s ease;">
+      <span class="tab-icon">🏗️</span>
+      <span>طلبات البناء</span>
+    </a>
+    <a href="{% url 'broker_auctions' %}" class="tab-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: transparent; border: none; color: var(--text-light); cursor: pointer; border-radius: var(--radius); transition: all 0.3s ease;">
+      <span class="tab-icon">🔨</span>
+      <span>المزادات</span>
+    </a>
+    {% endif %}
     {% if can_manage_brokers %}
     <button type="button" class="tab-btn" data-tab="brokers">
       <span class="tab-icon">👥</span>
@@ -538,10 +661,14 @@
       <span class="tab-icon">👤</span>
       <span>المستخدمين</span>
     </button>
-    <button type="button" class="tab-btn" data-tab="content-moderation">
+    <a href="{% url 'content_moderation' %}" class="tab-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: transparent; border: none; color: var(--text-light); cursor: pointer; border-radius: var(--radius); transition: all 0.3s ease;">
       <span class="tab-icon">✅</span>
       <span>الموافقة على المحتوى</span>
-    </button>
+    </a>
+    <a href="{% url 'user_monitoring' %}" class="tab-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: transparent; border: none; color: var(--text-light); cursor: pointer; border-radius: var(--radius); transition: all 0.3s ease;">
+      <span class="tab-icon">👥</span>
+      <span>مراقبة المستخدمين</span>
+    </a>
     <button type="button" class="tab-btn" data-tab="ads-payments">
       <span class="tab-icon">💰</span>
       <span>الإعلانات والمدفوعات</span>
@@ -636,65 +763,6 @@
           {% endfor %}
         </tbody>
       </table>
-    </div>
-  </div>
-
-  <div id="panel-add" class="panel">
-    <div class="panel-header">
-      <div class="panel-badge">
-        <span class="badge-icon">➕</span>
-        <span>إضافة</span>
-      </div>
-      <h2>إضافة عقار جديد</h2>
-    </div>
-    <div class="form-card">
-      <form method="post" action="{% url 'add_property' %}" enctype="multipart/form-data" class="property-form">
-        {% csrf_token %}
-        <div class="form-row">
-          {% for field in property_form %}
-          <div class="form-group">
-            <label>
-              <span class="label-icon">📝</span>
-              {{ field.label }}{% if field.field.required %} *{% endif %}
-            </label>
-            {{ field }}
-            {% if field.help_text %}<small class="help-text">{{ field.help_text }}</small>{% endif %}
-          </div>
-          {% endfor %}
-          <div class="form-group">
-            <label>
-              <span class="label-icon">🖼️</span>
-              صور إضافية (متعددة)
-            </label>
-            <input type="file" name="gallery_images" class="form-control" accept="image/*" multiple>
-          </div>
-          <div class="form-group">
-            <label>
-              <span class="label-icon">🎥</span>
-              فيديوهات إضافية (متعددة)
-            </label>
-            <input type="file" name="gallery_videos" class="form-control" accept="video/*" multiple>
-          </div>
-          <div class="form-group" style="grid-column: 1 / -1;">
-            <label>
-              <span class="label-icon">📍</span>
-              موقع العقار على الخريطة
-            </label>
-            <div id="property-map" style="height: 300px; border-radius: var(--radius-sm); border: 2px solid var(--border);"></div>
-            <div style="margin-top: 8px;">
-              <button type="button" class="btn btn-sm btn-outline" id="open-fullscreen-map">
-                <span class="btn-icon">⛶</span>
-                <span>فتح الخريطة بملء الشاشة</span>
-              </button>
-            </div>
-            <small class="help-text">انقر على الخريطة لتحديد موقع العقار</small>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary btn-lg submit-btn">
-          <span class="btn-icon">🚀</span>
-          <span>نشر العقار</span>
-        </button>
-      </form>
     </div>
   </div>
 
@@ -1769,7 +1837,7 @@
     </div>
     <div class="dashboard-stats">
       <div class="stat-card">
-        <div class="stat-icon">📨</div>
+        <div class="stat-icon">📧</div>
         <div class="stat-content">
           <div class="stat-number">{{ platform_stats.total_tickets|default:0 }}</div>
           <div class="stat-label">إجمالي التذاكر</div>
@@ -2545,12 +2613,46 @@
   opacity: 0.6;
   text-decoration: line-through;
 }
+
+.notification-badge {
+  background-color: #dc3545;
+  color: white;
+  border-radius: 50%;
+  padding: 2px 8px;
+  font-size: 12px;
+  margin-left: 4px;
+  min-width: 20px;
+  text-align: center;
+}
 </style>
 {% endblock %}
 
 {% block dashboard_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  // Update notification badge count
+  function updateDashboardNotificationBadge() {
+    fetch('/api/notifications/unread-count/')
+        .then(response => response.json())
+        .then(data => {
+          const badge = document.getElementById('dashboard-notification-badge');
+          if (badge) {
+            if (data.count > 0) {
+              badge.textContent = data.count;
+              badge.style.display = 'inline-block';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        });
+  }
+
+  // Update badge on page load
+  updateDashboardNotificationBadge();
+
+  // Update badge every 30 seconds
+  setInterval(updateDashboardNotificationBadge, 30000);
+
   // Tab switching
   const tabBtns = document.querySelectorAll('.tab-btn');
   const panels = document.querySelectorAll('.panel');
@@ -3451,6 +3553,38 @@ document.addEventListener('DOMContentLoaded', function() {
     window.location.href = '/admin-panel/users/' + userId + '/edit/';
   }
 
+  // Subscription Timer
+  function updateSubscriptionTimer() {
+    const timerElement = document.getElementById('subscription-timer');
+    if (!timerElement) return;
+    
+    let seconds = parseInt(timerElement.dataset.seconds);
+    if (isNaN(seconds) || seconds <= 0) {
+      timerElement.textContent = '00:00:00:00';
+      return;
+    }
+    
+    const days = Math.floor(seconds / (24 * 60 * 60));
+    const hours = Math.floor((seconds % (24 * 60 * 60)) / (60 * 60));
+    const minutes = Math.floor((seconds % (60 * 60)) / 60);
+    const secs = seconds % 60;
+    
+    timerElement.textContent = 
+      String(days).padStart(2, '0') + ':' +
+      String(hours).padStart(2, '0') + ':' +
+      String(minutes).padStart(2, '0') + ':' +
+      String(secs).padStart(2, '0');
+    
+    timerElement.dataset.seconds = seconds - 1;
+  }
+  
+  // Start timer if exists
+  const timerElement = document.getElementById('subscription-timer');
+  if (timerElement) {
+    updateSubscriptionTimer();
+    setInterval(updateSubscriptionTimer, 1000);
+  }
+
   // Subscription Request Management
   function approveRequest(requestId) {
     if (confirm('هل تريد الموافقة على هذا الطلب؟')) {
@@ -3474,5 +3608,87 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
   }
+
+  // Property Type Categories
+  const propertyTypesByCategory = {
+    inside_iraq: [
+      { value: 'apartment', label: 'شقة' },
+      { value: 'house', label: 'منزل' },
+      { value: 'villa', label: 'فيلا' },
+      { value: 'duplex', label: 'دوبلكس' },
+      { value: 'residential_complex', label: 'مجمع سكني' },
+      { value: 'shop', label: 'محل تجاري' },
+      { value: 'office', label: 'مكتب' },
+      { value: 'mall', label: 'مول / مركز تجاري' },
+      { value: 'car_showroom', label: 'معرض سيارات' },
+      { value: 'warehouse', label: 'مخزن' },
+      { value: 'residential_building', label: 'بناية سكنية' },
+      { value: 'commercial_building', label: 'عمارة تجارية' },
+      { value: 'investment_land', label: 'أرض للاستثمار' },
+      { value: 'apartment_complex', label: 'مجمع شقق' },
+      { value: 'residential_land', label: 'أرض سكنية' },
+      { value: 'agricultural_land', label: 'أرض زراعية' },
+      { value: 'commercial_land', label: 'أرض تجارية' },
+    ],
+    outside_iraq: [
+      { value: 'outside_apartment', label: 'شقة خارج العراق' },
+      { value: 'outside_villa', label: 'فيلا خارج العراق' },
+      { value: 'outside_palace', label: 'قصر خارج العراق' },
+      { value: 'outside_house', label: 'منزل خارج العراق' },
+      { value: 'outside_land', label: 'أرض خارج العراق' },
+      { value: 'outside_commercial', label: 'عقار تجاري خارج العراق' },
+    ],
+    hotels: [
+      { value: 'hotel', label: 'فندق' },
+      { value: 'small_hotel', label: 'فندق صغير' },
+      { value: 'hotel_apartment', label: 'شقق فندقية' },
+    ],
+    tourism: [
+      { value: 'resort', label: 'منتجع' },
+      { value: 'chalet', label: 'شاليه' },
+      { value: 'tourism_house', label: 'بيت سياحي' },
+    ],
+  };
+
+  // Category button click handler
+  document.addEventListener('DOMContentLoaded', function() {
+    const categoryButtons = document.querySelectorAll('.category-btn');
+    const typeSelect = document.getElementById('property_type_select');
+    
+    // Initialize with first category
+    if (categoryButtons.length > 0 && typeSelect) {
+      updatePropertyTypes('inside_iraq');
+    }
+    
+    categoryButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        // Remove active class from all buttons
+        categoryButtons.forEach(btn => btn.classList.remove('active'));
+        // Add active class to clicked button
+        this.classList.add('active');
+        
+        // Get category and update property types
+        const category = this.getAttribute('data-category');
+        updatePropertyTypes(category);
+      });
+    });
+    
+    function updatePropertyTypes(category) {
+      if (!typeSelect) return;
+      
+      // Clear existing options
+      typeSelect.innerHTML = '<option value="">اختر نوع العقار</option>';
+      
+      // Add options based on category
+      const types = propertyTypesByCategory[category] || [];
+      types.forEach(type => {
+        const option = document.createElement('option');
+        option.value = type.value;
+        option.textContent = type.label;
+        typeSelect.appendChild(option);
+      });
+    }
+  });
+
 </script>
 {% endblock %}

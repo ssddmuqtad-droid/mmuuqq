@@ -160,20 +160,13 @@
     <div class="form-row">
       <div class="form-group">
         <label>
-          <span class="label-icon">🔍</span>
-          بحث
-        </label>
-        <input type="text" class="form-control" name="search" placeholder="ابحث باسم المنتجع..." value="{{ request.GET.search }}">
-      </div>
-      <div class="form-group">
-        <label>
           <span class="label-icon">🏝️</span>
           نوع المنتجع
         </label>
         <select name="resort_type" class="form-control">
           <option value="">كل الأنواع</option>
           {% for value, label in form.resort_type.field.choices %}
-          <option value="{{ value }}" {% if value == request.GET.resort_type %}selected{% endif %}>{{ label }}</option>
+          <option value="{{ value }}" {% if value in request.GET.resort_type %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
@@ -185,19 +178,7 @@
         <select name="price_range" class="form-control">
           <option value="">كل الأسعار</option>
           {% for value, label in form.price_range.field.choices %}
-          <option value="{{ value }}" {% if value == request.GET.price_range %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-group">
-        <label>
-          <span class="label-icon">🏨</span>
-          الإقامة
-        </label>
-        <select name="accommodation_types" class="form-control">
-          <option value="">كل أنواع الإقامة</option>
-          {% for value, label in form.accommodation_types.field.choices %}
-          <option value="{{ value }}" {% if value == request.GET.accommodation_types %}selected{% endif %}>{{ label }}</option>
+          <option value="{{ value }}" {% if value in request.GET.price_range %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
@@ -210,6 +191,18 @@
           <option value="">الكل</option>
           {% for value, label in form.governorate.field.choices %}
           <option value="{{ value }}" {% if value == request.GET.governorate %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>
+          <span class="label-icon">⭐</span>
+          التقييم
+        </label>
+        <select name="rating" class="form-control">
+          <option value="">كل التقييمات</option>
+          {% for value, label in form.rating.field.choices %}
+          <option value="{{ value }}" {% if value == request.GET.rating %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
@@ -230,12 +223,19 @@
       {% for resort in resorts %}
         <div class="col-md-6 mb-4">
           <div class="resort-card h-100">
-            {% if resort.image %}
-              <img src="{{ resort.image.url }}" class="card-img-top" alt="{{ resort.name }}">
+            {% if resort.cover_image %}
+              <img src="{{ resort.cover_image.url }}" class="card-img-top" alt="{{ resort.name }}">
+            {% else %}
+              <div style="height: 220px; background: var(--bg-alt); display: flex; align-items: center; justify-content: center; color: var(--text-light);">
+                <span style="font-size: 3rem;">🏖️</span>
+              </div>
             {% endif %}
             <div class="card-body">
               <h5 class="card-title">
                 {{ resort.name }}
+                {% if resort.is_verified %}
+                  <span class="badge badge-warning" style="background: linear-gradient(135deg, #10b981, #059669);">✓ موثق</span>
+                {% endif %}
                 {% if resort.is_featured %}
                   <span class="badge badge-warning">⭐ مميز</span>
                 {% endif %}
@@ -247,45 +247,31 @@
               </div>
               
               <div class="resort-info">
-                <strong>💰 السعر:</strong> {{ resort.get_price_range_display }}
+                <strong>⭐ التقييم:</strong> {{ resort.rating|floatformat:1 }} ({{ resort.reviews_count }})
               </div>
               
+              {% if resort.min_price or resort.max_price %}
               <div class="resort-info">
-                <strong>📍 الموقع:</strong> {{ resort.city }}, {{ resort.get_governorate_display }}
+                <strong>💰 السعر:</strong>
+                {% if resort.min_price and resort.max_price %}
+                {{ resort.min_price }} - {{ resort.max_price }} {{ resort.currency }}
+                {% elif resort.min_price %}
+                من {{ resort.min_price }} {{ resort.currency }}
+                {% elif resort.max_price %}
+                حتى {{ resort.max_price }} {{ resort.currency }}
+                {% endif %}
               </div>
-              
-              {% if resort.facilities %}
-                <div class="resort-facilities">
-                  {% for facility in resort.facilities %}
-                    {% if facility == 'private_beach' %}<span>🏖️ شاطئ خاص</span>{% endif %}
-                    {% if facility == 'pools' %}<span>🏊 مسابح</span>{% endif %}
-                    {% if facility == 'water_park' %}<span>🌊 ألعاب مائية</span>{% endif %}
-                    {% if facility == 'spa' %}<span>🧖 سبا</span>{% endif %}
-                    {% if facility == 'gym' %}<span>🏋️ نادي رياضي</span>{% endif %}
-                    {% if facility == 'sports' %}<span>🎾 ملاعب رياضية</span>{% endif %}
-                    {% if facility == 'restaurants' %}<span>🍽️ مطاعم</span>{% endif %}
-                    {% if facility == 'event_halls' %}<span>🎉 قاعات مناسبات</span>{% endif %}
-                    {% if facility == 'kids_area' %}<span>🎈 منطقة أطفال</span>{% endif %}
-                    {% if facility == 'boat_trips' %}<span>🚤 رحلات بحرية</span>{% endif %}
-                    {% if facility == 'bbq' %}<span>🔥 جلسات خارجية</span>{% endif %}
-                    {% if facility == 'parking' %}<span>🚗 موقف سيارات</span>{% endif %}
-                    {% if facility == 'wifi' %}<span>📶 واي فاي</span>{% endif %}
-                  {% endfor %}
-                </div>
               {% endif %}
               
               <div class="resort-info">
-                <strong>مناسب لـ:</strong>
-                {% for suitable in resort.suitable_for %}
-                  {% if suitable == 'families' %}👨‍👩‍👧 العائلات{% endif %}
-                  {% if suitable == 'honeymoon' %}💑 شهر العسل{% endif %}
-                  {% if suitable == 'events' %}🎉 المناسبات{% endif %}
-                  {% if suitable == 'relaxation' %}🧘 الاسترخاء{% endif %}
-                  {% if suitable == 'summer' %}🏖️ الإجازات الصيفية{% endif %}
-                {% endfor %}
+                <strong>📍 الموقع:</strong> {{ resort.city }}, {{ resort.governorate }}
               </div>
               
-              <a href="#" class="btn btn-primary btn-block mt-3">عرض التفاصيل</a>
+              <div class="resort-info">
+                <strong>👁️ المشاهدات:</strong> {{ resort.views_count }}
+              </div>
+              
+              <a href="{% url 'resort_detail' resort.slug %}" class="btn btn-primary btn-block mt-3">عرض التفاصيل</a>
             </div>
           </div>
         </div>

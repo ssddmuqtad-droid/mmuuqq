@@ -1,0 +1,155 @@
+{% extends "properties/dashboard_base.html" %}
+{% load static %}
+
+{% block title %}طلبات تجديد الاشتراكات{% endblock %}
+{% block dashboard_title %}طلبات تجديد <span>الاشتراكات</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم الرئيسية</a>
+<a href="{% url 'admin_panel' %}" class="btn btn-primary">لوحة الإدارة</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">📋 طلبات تجديد الاشتراكات</h3>
+                    <a href="{% url 'dashboard' %}" class="btn btn-light btn-sm">عودة للوحة التحكم</a>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>الدلال</th>
+                                    <th>الخطة</th>
+                                    <th>عادي</th>
+                                    <th>مميز</th>
+                                    <th>الأيام</th>
+                                    <th>التكلفة</th>
+                                    <th>أنواع العقارات</th>
+                                    <th>الحالة</th>
+                                    <th>تاريخ الطلب</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in requests %}
+                                <tr>
+                                    <td>{{ request.broker.display_name }}</td>
+                                    <td>{{ request.plan.name }}</td>
+                                    <td>{{ request.regular_count }}</td>
+                                    <td>{{ request.premium_count }}</td>
+                                    <td>{{ request.days_requested }} يوم</td>
+                                    <td>{{ request.estimated_cost|floatformat:0 }} دينار</td>
+                                    <td>
+                                        {% for type in request.property_types %}
+                                            <span class="badge bg-secondary">{{ type }}</span>
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        {% if request.status == 'pending' %}
+                                            <span class="badge bg-warning">قيد الانتظار</span>
+                                        {% elif request.status == 'approved' %}
+                                            <span class="badge bg-success">موافق عليه</span>
+                                        {% elif request.status == 'rejected' %}
+                                            <span class="badge bg-danger">مرفوض</span>
+                                        {% elif request.status == 'completed' %}
+                                            <span class="badge bg-info">مكتمل</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ request.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if request.status == 'pending' %}
+                                            <button onclick="approveRequest({{ request.id }})" class="btn btn-success btn-sm">
+                                                ✅ موافقة
+                                            </button>
+                                            <button onclick="rejectRequest({{ request.id }})" class="btn btn-danger btn-sm">
+                                                ❌ رفض
+                                            </button>
+                                        {% elif request.status == 'approved' %}
+                                            <span class="text-success">تمت الموافقة</span>
+                                        {% elif request.status == 'rejected' %}
+                                            <span class="text-danger">مرفوض</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="10" class="text-center">لا توجد طلبات تجديد</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+function approveRequest(requestId) {
+    if (confirm('هل تريد الموافقة على هذا الطلب؟')) {
+        fetch(`/api/subscription-renewal/${requestId}/approve/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+                'Content-Type': 'application/json'
+            }
+        }).then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('تمت الموافقة على الطلب بنجاح');
+                location.reload();
+            } else {
+                alert('حدث خطأ: ' + (data.error || 'غير معروف'));
+            }
+        }).catch(error => {
+            console.error('Error:', error);
+            alert('حدث خطأ في الاتصال');
+        });
+    }
+}
+
+function rejectRequest(requestId) {
+    const reason = prompt('سبب الرفض:');
+    if (reason === null) return;
+    
+    fetch(`/api/subscription-renewal/${requestId}/reject/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason: reason })
+    }).then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('تم رفض الطلب بنجاح');
+            location.reload();
+        } else {
+            alert('حدث خطأ: ' + (data.error || 'غير معروف'));
+        }
+    }).catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ في الاتصال');
+    });
+}
+</script>
+{% endblock %}

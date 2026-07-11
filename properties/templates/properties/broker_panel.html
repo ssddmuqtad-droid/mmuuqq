@@ -13,15 +13,29 @@
       {% if broker.is_verified %}<span class="verified-badge">✅ دلال موثق</span>{% endif %}
     </p>
     <div class="dashboard-quick-links">
-      <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline">لوحة التحكم</a>
-      <a href="{% url 'broker_messages' %}" class="btn btn-sm btn-outline">الرسائل</a>
-      <a href="{% url 'properties_map' %}" class="btn btn-sm btn-outline">الخريطة</a>
+      <a href="{% url 'add_property' %}" class="btn btn-sm btn-primary">
+        <span>➕</span> إضافة عقار
+      </a>
+      <a href="{% url 'broker_messages' %}" class="btn btn-sm btn-outline">
+        <span>💬</span> الرسائل {% if unread_messages > 0 %}<span class="badge">{{ unread_messages }}</span>{% endif %}
+      </a>
+      <a href="{% url 'broker_bulk_messaging' %}" class="btn btn-sm btn-success">
+        <span>📤</span> مراسلة جماعية
+      </a>
+      <a href="{% url 'properties_map' %}" class="btn btn-sm btn-outline">
+        <span>🗺️</span> الخريطة
+      </a>
+      {% if broker_channel %}
+      <a href="{% url 'broker_channel_settings' %}" class="btn btn-sm btn-outline">
+        <span>📺</span> قناتي
+      </a>
+      {% endif %}
     </div>
   </div>
 
   <!-- Subscription Info Card -->
   <div class="form-card" style="margin-top:1.5rem; background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 140, 90, 0.05) 50%, rgba(255, 107, 53, 0.1) 100%);">
-    <h3>معلومات الاشتراك</h3>
+    <h3>📊 معلومات الاشتراك</h3>
     <div class="dashboard-stats" style="margin-top:1rem">
       <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-content"><div class="stat-number">{% if property_limit == 'inf' %}غير محدود{% else %}{{ property_limit }}{% endif %}</div><div class="stat-label">الحد الأقصى للعقارات</div></div></div>
       <div class="stat-card"><div class="stat-icon">🏠</div><div class="stat-content"><div class="stat-number">{{ stats.total_properties }}</div><div class="stat-label">العقارات المنشورة</div></div></div>
@@ -37,47 +51,191 @@
     {% endif %}
   </div>
 
-  <div class="dashboard-stats">
-    <div class="stat-card"><div class="stat-icon">👁️</div><div class="stat-content"><div class="stat-number">{{ stats.total_views }}</div><div class="stat-label">المشاهدات</div></div></div>
-    <div class="stat-card"><div class="stat-icon">💬</div><div class="stat-content"><div class="stat-number">{{ stats.unread_messages }}</div><div class="stat-label">رسائل جديدة</div></div></div>
-    <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-content"><div class="stat-number">{{ stats.sold_properties }}</div><div class="stat-label">مباعة</div></div></div>
-    <div class="stat-card"><div class="stat-icon">🔑</div><div class="stat-content"><div class="stat-number">{{ stats.rent_properties }}</div><div class="stat-label">مؤجرة</div></div></div>
-    <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-content"><div class="stat-number">{{ stats.total_commissions|default:0|format_price }}</div><div class="stat-label">العمولات</div></div></div>
-  </div>
-
+  <!-- Quick Actions -->
   <div class="form-card" style="margin-top:1.5rem">
-    <h3>آخر العقارات</h3>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead><tr><th>العقار</th><th>الحي</th><th>السعر</th><th>مشاهدات</th></tr></thead>
-        <tbody>
-          {% for p in my_properties %}
-          <tr>
-            <td><a href="{{ p.get_absolute_url }}">{{ p.display_title|truncatechars:35 }}</a></td>
-            <td>{{ p.district }}</td>
-            <td>{{ p.price_formatted }}</td>
-            <td>{{ p.views_count }}</td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="4" style="text-align:center">لا توجد عقارات</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <h3>⚡ إجراءات سريعة</h3>
+    <div class="quick-actions-grid">
+      <a href="{% url 'add_property' %}" class="quick-action-card">
+        <div class="action-icon">🏠</div>
+        <div class="action-text">إضافة عقار</div>
+      </a>
+      <a href="{% url 'broker_messages' %}" class="quick-action-card">
+        <div class="action-icon">💬</div>
+        <div class="action-text">الرسائل</div>
+        {% if unread_messages > 0 %}
+        <div class="action-badge">{{ unread_messages }}</div>
+        {% endif %}
+      </a>
+      <a href="{% url 'broker_bulk_messaging' %}" class="quick-action-card">
+        <div class="action-icon">📤</div>
+        <div class="action-text">مراسلة جماعية</div>
+      </a>
+      <a href="{% url 'broker_list' %}" class="quick-action-card">
+        <div class="action-icon">👥</div>
+        <div class="action-text">إدارة الدلالين</div>
+      </a>
+      <a href="{% url 'subscription_plans_list' %}" class="quick-action-card">
+        <div class="action-icon">⭐</div>
+        <div class="action-text">تجديد الاشتراك</div>
+      </a>
+      <a href="{% url 'broker_channel_settings' %}" class="quick-action-card">
+        <div class="action-icon">📺</div>
+        <div class="action-text">إعدادات القناة</div>
+      </a>
+      <a href="{% url 'properties_map' %}" class="quick-action-card">
+        <div class="action-icon">🗺️</div>
+        <div class="action-text">الخريطة التفاعلية</div>
+      </a>
+      <a href="{% url 'broker_statistics' %}" class="quick-action-card">
+        <div class="action-icon">📊</div>
+        <div class="action-text">الإحصائيات</div>
+      </a>
     </div>
   </div>
 
+  <!-- Performance Stats -->
+  <div class="form-card" style="margin-top:1.5rem">
+    <h3>📊 إحصائيات الأداء</h3>
+    <div class="dashboard-stats">
+      <div class="stat-card"><div class="stat-icon">👁️</div><div class="stat-content"><div class="stat-number">{{ stats.total_views }}</div><div class="stat-label">المشاهدات</div></div></div>
+      <div class="stat-card"><div class="stat-icon">💬</div><div class="stat-content"><div class="stat-number">{{ unread_messages }}</div><div class="stat-label">رسائل جديدة</div></div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-content"><div class="stat-number">{{ stats.sold_properties }}</div><div class="stat-label">مباعة</div></div></div>
+      <div class="stat-card"><div class="stat-icon">🔑</div><div class="stat-content"><div class="stat-number">{{ stats.rent_properties }}</div><div class="stat-label">مؤجرة</div></div></div>
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-content"><div class="stat-number">{{ stats.total_commissions|default:0|format_price }}</div><div class="stat-label">العمولات</div></div></div>
+      <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-content"><div class="stat-number">{{ stats.featured_properties|default:0 }}</div><div class="stat-label">مميزة</div></div></div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid" style="margin-top:1.5rem">
+    <!-- Recent Properties -->
+    <div class="form-card">
+      <div class="card-header">
+        <h3>🏠 آخر العقارات</h3>
+        <a href="{% url 'dashboard' %}" class="view-all">عرض الكل</a>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>العقار</th><th>الحي</th><th>السعر</th><th>الحالة</th><th>مشاهدات</th></tr></thead>
+          <tbody>
+            {% for p in my_properties %}
+            <tr>
+              <td><a href="{{ p.get_absolute_url }}">{{ p.display_title|truncatechars:35 }}</a></td>
+              <td>{{ p.district }}</td>
+              <td>{{ p.price_formatted }}</td>
+              <td><span class="status-badge status-{{ p.status }}">{{ p.get_status_display }}</span></td>
+              <td>{{ p.views_count }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="text-align:center">لا توجد عقارات</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="form-card">
+      <div class="card-header">
+        <h3>📋 النشاط الحديث</h3>
+        <a href="{% url 'activity_log' %}" class="view-all">عرض الكل</a>
+      </div>
+      <div class="activity-list">
+        {% for activity in recent_activity %}
+        <div class="activity-item">
+          <div class="activity-icon">
+            {% if activity.action == 'create' %}➕
+            {% elif activity.action == 'update' %}✏️
+            {% elif activity.action == 'delete' %}🗑️
+            {% elif activity.action == 'login' %}🔐
+            {% elif activity.action == 'view' %}👁️
+            {% elif activity.action == 'message' %}�
+            {% else %}�📌{% endif %}
+          </div>
+          <div class="activity-content">
+            <div class="activity-text">{{ activity.description }}</div>
+            <div class="activity-time">{{ activity.created_at|timesince }} مضى</div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">لا يوجد نشاط حديث</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    {% if notifications %}
+    <div class="form-card">
+      <div class="card-header">
+        <h3>🔔 الإشعارات</h3>
+        <a href="{% url 'notifications' %}" class="view-all">عرض الكل</a>
+      </div>
+      <div class="notification-list">
+        {% for notification in notifications %}
+        <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
+          <div class="notification-icon">
+            {% if notification.notification_type == 'success' %}✅
+            {% elif notification.notification_type == 'warning' %}⚠️
+            {% elif notification.notification_type == 'error' %}❌
+            {% elif notification.notification_type == 'info' %}ℹ️
+            {% else %}🔔{% endif %}
+          </div>
+          <div class="notification-content">
+            <div class="notification-title">{{ notification.title }}</div>
+            <div class="notification-message">{{ notification.message }}</div>
+            <div class="notification-time">{{ notification.created_at|timesince }} مضى</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Financial Section -->
+  <div class="form-card" style="margin-top:1.5rem">
+    <div class="card-header">
+      <h3>💰 العمولات المالية</h3>
+      <a href="{% url 'broker_commissions' %}" class="view-all">عرض الكل</a>
+    </div>
+    <div class="financial-stats">
+      <div class="financial-stat">
+        <span class="financial-label">إجمالي العمولات</span>
+        <span class="financial-value">{{ stats.total_commissions|default:0|format_price }}</span>
+      </div>
+      <div class="financial-stat">
+        <span class="financial-label">العمولات المدفوعة</span>
+        <span class="financial-value paid">{{ stats.paid_commissions|default:0|format_price }}</span>
+      </div>
+      <div class="financial-stat">
+        <span class="financial-label">العمولات المعلقة</span>
+        <span class="financial-value pending">{{ stats.pending_commissions|default:0|format_price }}</span>
+      </div>
+      <div class="financial-stat">
+        <span class="financial-label">عدد المبيعات</span>
+        <span class="financial-value">{{ stats.sales_count|default:0 }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sub-brokers Section -->
   {% if sub_brokers %}
   <div class="form-card" style="margin-top:1.5rem">
-    <h3>الدلالين التابعين</h3>
+    <div class="card-header">
+      <h3>👥 الدلالين التابعين</h3>
+      <a href="{% url 'broker_create' %}" class="btn btn-sm btn-primary">إضافة دلال</a>
+    </div>
     <div class="table-wrap">
       <table class="data-table">
-        <thead><tr><th>الاسم</th><th>العقارات</th><th>الحالة</th></tr></thead>
+        <thead><tr><th>الاسم</th><th>العقارات</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
         <tbody>
           {% for b in sub_brokers %}
           <tr>
             <td>{{ b.display_name }}</td>
             <td>{{ b.property_count }}</td>
-            <td>{% if b.is_active %}نشط{% else %}موقوف{% endif %}</td>
+            <td>{% if b.is_active %}<span class="badge badge-success">نشط</span>{% else %}<span class="badge badge-danger">موقوف</span>{% endif %}</td>
+            <td>
+              <a href="{% url 'broker_edit' b.id %}" class="btn btn-sm btn-outline">تعديل</a>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -85,5 +243,338 @@
     </div>
   </div>
   {% endif %}
+
+  <!-- Broker Channel Section -->
+  {% if broker_channel %}
+  <div class="form-card" style="margin-top:1.5rem">
+    <div class="card-header">
+      <h3>📺 قناتي</h3>
+      <a href="{% url 'broker_channel_settings' %}" class="btn btn-sm btn-outline">إعدادات القناة</a>
+    </div>
+    <div class="channel-info">
+      <div class="channel-stats">
+        <div class="channel-stat">
+          <span class="stat-label">المتابعين</span>
+          <span class="stat-value">{{ broker_channel.followers_count }}</span>
+        </div>
+        <div class="channel-stat">
+          <span class="stat-label">المشاهدات</span>
+          <span class="stat-value">{{ broker_channel.views_count }}</span>
+        </div>
+        <div class="channel-stat">
+          <span class="stat-label">الحالة</span>
+          <span class="stat-value">{{ broker_channel.get_status_display }}</span>
+        </div>
+      </div>
+      <div class="channel-actions">
+        <a href="{% url 'broker_channel_stats' %}" class="btn btn-sm btn-outline">الإحصائيات</a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="form-card" style="margin-top:1.5rem">
+    <div class="card-header">
+      <h3>📺 قناتي</h3>
+    </div>
+    <div class="empty-state">
+      <p>لم تقم بإنشاء قناة بعد</p>
+      <a href="{% url 'broker_channel_settings' %}" class="btn btn-primary">إنشاء قناة</a>
+    </div>
+  </div>
+  {% endif %}
 </div>
+
+<style>
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.quick-action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--text);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.quick-action-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.2);
+}
+
+.action-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.action-text {
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.action-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--primary);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.view-all {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.view-all:hover {
+  text-decoration: underline;
+}
+
+.activity-list,
+.notification-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.activity-item,
+.notification-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.3s ease;
+}
+
+.activity-item:hover,
+.notification-item:hover {
+  background: var(--bg-alt);
+}
+
+.activity-item:last-child,
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.activity-icon {
+  font-size: 1.5rem;
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.activity-content,
+.notification-content {
+  flex: 1;
+}
+
+.activity-text,
+.notification-title {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.activity-time,
+.notification-time {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.notification-message {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+
+.notification-item.unread {
+  background: rgba(255, 107, 53, 0.05);
+  border-left: 3px solid var(--primary);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-light);
+}
+
+.channel-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.channel-stats {
+  display: flex;
+  gap: 2rem;
+}
+
+.channel-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.channel-stat .stat-label {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.channel-stat .stat-value {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.badge-success {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.badge-danger {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.status-published {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.status-pending {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+}
+
+.status-sold {
+  background: rgba(33, 150, 243, 0.1);
+  color: #2196f3;
+}
+
+.status-rent {
+  background: rgba(156, 39, 176, 0.1);
+  color: #9c27b0;
+}
+
+.notification-icon {
+  font-size: 1.5rem;
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.financial-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.financial-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 1rem;
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.financial-label {
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+.financial-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.financial-value.paid {
+  color: #4caf50;
+}
+
+.financial-value.pending {
+  color: #ffc107;
+}
+
+.badge {
+  background: var(--primary);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  margin-left: 4px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .channel-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .channel-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+</style>
 {% endblock %}

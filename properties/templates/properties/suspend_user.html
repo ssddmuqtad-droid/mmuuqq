@@ -1,0 +1,94 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}تعطيل المستخدم - {{ target_user.username }}{% endblock %}
+{% block dashboard_title %}تعطيل <span>المستخدم</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'user_moderation_detail' target_user.id %}" class="btn btn-outline">العودة للتفاصيل</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card">
+  <div class="card-header">
+    <h5>🚫 تعطيل المستخدم: {{ target_user.username }}</h5>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-danger">
+      <h6>⚠️ تحذير هام</h6>
+      <p>أنت على وشك تعطيل حساب هذا المستخدم. سيتم:</p>
+      <ul>
+        <li>منع المستخدم من تسجيل الدخول</li>
+        <li>تعطيل جميع صلاحياته</li>
+        <li>إرسال إشعار للمستخدم</li>
+        <li>تسجيل الإجراء في سجل المراقبة</li>
+      </ul>
+    </div>
+
+    <div class="alert alert-info">
+      <h6>📋 معلومات المستخدم</h6>
+      <p><strong>الاسم:</strong> {{ target_user.get_full_name|default:target_user.username }}</p>
+      <p><strong>البريد الإلكتروني:</strong> {{ target_user.email }}</p>
+      <p><strong>تاريخ التسجيل:</strong> {{ target_user.date_joined|date:"Y-m-d" }}</p>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="mb-3">
+        <label for="reason" class="form-label">سبب التعطيل *</label>
+        <select class="form-select" id="reason" name="reason" required>
+          <option value="">اختر السبب</option>
+          {% for value, label in reason_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="description" class="form-label">الوصف التفصيلي *</label>
+        <textarea class="form-control" id="description" name="description" rows="4" required placeholder="اشرح سبب التعطيل بالتفصيل..."></textarea>
+      </div>
+
+      <div class="mb-3">
+        <label for="duration_days" class="form-label">مدة التعطيل (أيام)</label>
+        <input type="number" class="form-control" id="duration_days" name="duration_days" min="1" placeholder="اتركه فارغاً للتعطيل الدائم">
+        <small class="form-text text-muted">سيتم رفع التعطيل تلقائياً بعد هذه المدة</small>
+      </div>
+
+      <div class="alert alert-warning">
+        <h6>🔐 تأكيد الإجراء</h6>
+        <p>هل أنت متأكد من أنك تريد تعطيل هذا المستخدم؟ هذا الإجراء قابل للعكس.</p>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-danger">🚫 تأكيد التعطيل</button>
+        <a href="{% url 'user_moderation_detail' target_user.id %}" class="btn btn-outline-secondary">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.card {
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.btn {
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.form-control:focus,
+.form-select:focus {
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+</style>
+{% endblock %}

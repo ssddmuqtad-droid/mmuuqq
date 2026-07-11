@@ -1,0 +1,238 @@
+{% extends "properties/dashboard_base.html" %}
+{% load static %}
+
+{% block title %}{{ notification.title }}{% endblock %}
+{% block dashboard_title %}تفاصيل <span>الإشعار</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'admin_notification_panel' %}" class="btn btn-outline">العودة للإشعارات</a>
+{% if notification.status == 'draft' or notification.status == 'scheduled' %}
+<a href="{% url 'admin_edit_notification' notification.id %}" class="btn btn-warning">
+    تعديل
+</a>
+<a href="{% url 'admin_send_notification' notification.id %}" class="btn btn-success">
+    إرسال الإشعار
+</a>
+{% endif %}
+{% if notification.status == 'sent' %}
+<a href="{% url 'admin_resend_notification' notification.id %}" class="btn btn-info"
+   onclick="return confirm('هل أنت متأكد من إعادة إرسال هذا الإشعار؟')">
+    إعادة الإرسال
+</a>
+{% endif %}
+<a href="{% url 'admin_delete_notification' notification.id %}" class="btn btn-danger"
+   onclick="return confirm('هل أنت متأكد من حذف هذا الإشعار؟')">
+    حذف
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Notification Details -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center"
+                     style="background-color: {{ notification.color }}; color: white;">
+                    <div class="d-flex align-items-center">
+                        {% if notification.icon %}
+                        <span class="me-3" style="font-size: 2rem;">{{ notification.icon }}</span>
+                        {% endif %}
+                        <div>
+                            <h4 class="mb-0">{{ notification.title }}</h4>
+                            <small>{{ notification.created_at|date:"Y-m-d H:i" }}</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-light text-dark">{{ notification.get_notification_type_display }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5>الوصف</h5>
+                        <p>{{ notification.description|linebreaks }}</p>
+                    </div>
+                    
+                    {% if notification.image %}
+                    <div class="mb-4">
+                        <h5>صورة</h5>
+                        <img src="{{ notification.image.url }}" class="img-fluid rounded" alt="Notification Image">
+                    </div>
+                    {% endif %}
+                    
+                    {% if notification.button_text and notification.button_link %}
+                    <div class="mb-4">
+                        <h5>زر الإجراء</h5>
+                        <a href="{{ notification.button_link }}" class="btn btn-primary" target="_blank">
+                            {{ notification.button_text }}
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Targeting Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">معلومات الاستهداف</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong>جميع المستخدمين:</strong>
+                            <span class="badge {% if notification.target_all_users %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if notification.target_all_users %}نعم{% else %}لا{% endif %}
+                            </span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>جميع الدلالين:</strong>
+                            <span class="badge {% if notification.target_all_brokers %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if notification.target_all_brokers %}نعم{% else %}لا{% endif %}
+                            </span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>جميع المشرفين:</strong>
+                            <span class="badge {% if notification.target_all_admins %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if notification.target_all_admins %}نعم{% else %}لا{% endif %}
+                            </span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>المستخدمين النشطين:</strong>
+                            <span class="badge {% if notification.target_active_users %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if notification.target_active_users %}نعم{% else %}لا{% endif %}
+                            </span>
+                        </div>
+                        {% if notification.target_governorate %}
+                        <div class="col-md-6 mb-3">
+                            <strong>المحافظة:</strong>
+                            <span class="badge bg-info">{{ notification.target_governorate }}</span>
+                        </div>
+                        {% endif %}
+                        {% if notification.target_city %}
+                        <div class="col-md-6 mb-3">
+                            <strong>المدينة:</strong>
+                            <span class="badge bg-info">{{ notification.target_city }}</span>
+                        </div>
+                        {% endif %}
+                        {% if notification.target_property_type %}
+                        <div class="col-md-6 mb-3">
+                            <strong>نوع العقار:</strong>
+                            <span class="badge bg-info">{{ notification.target_property_type }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Stats Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">الإحصائيات</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>عدد المستلمين:</strong>
+                        <span class="float-end">{{ notification.get_recipients_count }}</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>عدد المقروءة:</strong>
+                        <span class="float-end">{{ notification.get_read_count }}</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>عدد النقرات:</strong>
+                        <span class="float-end">{{ notification.get_clicked_count }}</span>
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <strong>نسبة القراءة:</strong>
+                        <span class="float-end">
+                            {% if notification.get_recipients_count > 0 %}
+                                {% widthratio notification.get_read_count notification.get_recipients_count 100 %}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>نسبة النقر:</strong>
+                        <span class="float-end">
+                            {% if notification.get_recipients_count > 0 %}
+                                {% widthratio notification.get_clicked_count notification.get_recipients_count 100 %}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">الحالة</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>الحالة:</strong>
+                        <span class="badge {% if notification.status == 'sent' %}bg-success{% elif notification.status == 'draft' %}bg-secondary{% elif notification.status == 'scheduled' %}bg-info{% else %}bg-danger{% endif %}">
+                            {{ notification.get_status_display }}
+                        </span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>الأولوية:</strong>
+                        <span class="badge {% if notification.priority == 'urgent' %}bg-danger{% elif notification.priority == 'high' %}bg-warning{% elif notification.priority == 'low' %}bg-success{% else %}bg-info{% endif %}">
+                            {{ notification.get_priority_display }}
+                        </span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>تاريخ الإرسال:</strong>
+                        <span>{{ notification.sent_at|date:"Y-m-d H:i"|default:"لم يرسل بعد" }}</span>
+                    </div>
+                    {% if notification.scheduled_for %}
+                    <div class="mb-3">
+                        <strong>مجدولة للإرسال:</strong>
+                        <span>{{ notification.scheduled_for|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if notification.expires_at %}
+                    <div class="mb-3">
+                        <strong>تنتهي في:</strong>
+                        <span>{{ notification.expires_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Logs -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">سجل الإرسال</h5>
+                </div>
+                <div class="card-body">
+                    {% if logs %}
+                    {% for log in logs %}
+                    <div class="mb-3 p-3 bg-light rounded">
+                        <div class="mb-2">
+                            <strong>العدد المرسل:</strong> {{ log.total_sent }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>العدد المستلم:</strong> {{ log.total_delivered }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>العدد المقروء:</strong> {{ log.total_read }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>نسبة النجاح:</strong> {{ log.delivery_rate|floatformat:2 }}%
+                        </div>
+                        <small class="text-muted">{{ log.created_at|date:"Y-m-d H:i" }}</small>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">لا يوجد سجلات</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -72,23 +72,24 @@ class BrokerEditForm(forms.ModelForm):
         fields = [
             'phone', 'office_name', 'governorate', 'role',
             'is_verified', 'is_active', 'is_suspended', 'bio',
+            'profile_image', 'cover_image',
             # Sub-broker specific fields
             'commission_rate', 'commission_type', 'fixed_commission',
             'target_sales', 'performance_rating',
             'can_add_properties', 'can_edit_properties', 'can_delete_properties',
-            'max_properties',
         ]
         widgets = {
             'phone': forms.TextInput(attrs=_fc('07XXXXXXXXX')),
             'office_name': forms.TextInput(attrs=_fc('المكتب')),
             'role': forms.Select(attrs={'class': 'form-control'}),
             'bio': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'profile_image': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'cover_image': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
             'commission_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'}),
             'commission_type': forms.Select(attrs={'class': 'form-control'}),
             'fixed_commission': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'target_sales': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'performance_rating': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '5'}),
-            'max_properties': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
         }
 
     def __init__(self, *args, editor=None, **kwargs):
@@ -147,7 +148,7 @@ class OfficeForm(forms.ModelForm):
 class MessageReplyForm(forms.ModelForm):
     class Meta:
         model = Message
-        fields = ['reply']
+        fields = ['content']
         widgets = {
-            'reply': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'اكتب ردك...'}),
+            'content': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'اكتب ردك...'}),
         }

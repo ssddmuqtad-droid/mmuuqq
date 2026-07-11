@@ -41,7 +41,7 @@
 
       <div class="form-group">
         <label for="phone">رقم الهاتف</label>
-        <input type="tel" id="phone" name="phone" class="form-control" value="{% if user.broker_profile %}{{ user.broker_profile.phone }}{% elif user.user_profile %}{{ user.user_profile.phone }}{% endif %}">
+        <input type="tel" id="phone" name="phone" class="form-control" value="{% if user.broker %}{{ user.broker.phone }}{% elif user.userprofile %}{{ user.userprofile.phone }}{% endif %}">
       </div>
 
       <div class="form-group">
@@ -59,8 +59,8 @@
         <h4>نوع الحساب</h4>
         <p>
           {% if user.is_superuser %}👑 مدير النظام
-          {% elif user.broker_profile %}👔 دلال
-          {% elif user.user_profile %}👤 مستخدم عادي
+          {% elif user.broker %}👔 دلال
+          {% elif user.userprofile %}👤 مستخدم عادي
           {% else %}❓ غير معروف{% endif %}
         </p>
         <p style="margin-top:10px;">

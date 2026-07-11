@@ -5,14 +5,31 @@ from .models import (
     Message, Property, PropertyImage, SiteSettings, Broker, BrokerJoinRequest, Office,
     PropertyRating, BrokerRating, TwoFactorAuth, SecurityLog,
     DallalGlobalSettings, BasicDallalSettings, PremiumDallalSettings,
-    DallalSubscription, PropertyDallalAssignment, SubscriptionPlan, BrokerChannel
+    DallalSubscription, PropertyDallalAssignment, SubscriptionPlan, BrokerChannel,
+    Conversation, MessageAttachment, MessageReaction, MessageReport,
+    Country, City, Area, LiveStream, LiveStreamComment, PropertyVideo, PropertyDocument,
+    PropertyMediaStats, PropertyViewStats, PropertyEngagementStats, PropertyConversionStats,
+    AdvancedSubscriptionPlan, BrokerPlanSubscription, SubscriptionRenewalRequest,
+    BuildingRequestSubscription, AuctionSubscription, Role, UserRole, PermissionLog
 )
 
 
 class PropertyImageInline(admin.TabularInline):
     model = PropertyImage
     extra = 1
-    fields = ('image', 'caption', 'sort_order', 'is_primary')
+    fields = ('image', 'caption', 'sort_order', 'is_primary', 'image_type')
+
+
+class PropertyVideoInline(admin.TabularInline):
+    model = PropertyVideo
+    extra = 1
+    fields = ('video', 'caption', 'sort_order', 'video_type', 'duration')
+
+
+class PropertyDocumentInline(admin.TabularInline):
+    model = PropertyDocument
+    extra = 1
+    fields = ('document_type', 'title', 'file', 'description')
 
 
 @admin.register(Property)
@@ -21,29 +38,124 @@ class PropertyAdmin(admin.ModelAdmin):
         'display_title', 'type', 'district', 'price', 'status',
         'is_featured', 'is_promoted', 'views_count', 'created_at',
     )
-    list_filter = ('type', 'status', 'district', 'is_featured', 'is_promoted', 'parking', 'furnished')
-    search_fields = ('title', 'location', 'district', 'street', 'description', 'phone', 'slug')
+    list_filter = ('type', 'status', 'category', 'governorate', 'is_featured', 'is_promoted', 'parking', 'furnished')
+    search_fields = ('title', 'location', 'district', 'street', 'description', 'phone', 'slug', 'property_number')
     list_editable = ('is_featured', 'is_promoted')
     prepopulated_fields = {'slug': ('title',)}
-    readonly_fields = ('views_count', 'created_at', 'updated_at')
-    inlines = [PropertyImageInline]
+    readonly_fields = ('views_count', 'created_at', 'updated_at', 'short_share_code')
+    inlines = [PropertyImageInline, PropertyVideoInline, PropertyDocumentInline]
     list_per_page = 25
 
     fieldsets = (
-        ('أساسي', {'fields': ('title', 'slug', 'type', 'status', 'is_featured', 'is_promoted', 'promotion_until')}),
-        ('المالك والدلال', {'fields': ('owner', 'broker', 'office')}),
-        ('الموقع', {'fields': ('district', 'street', 'location', 'latitude', 'longitude')}),
-        ('التفاصيل', {'fields': ('area', 'price', 'bedrooms', 'bathrooms', 'floors', 'year_built', 'parking', 'furnished')}),
-        ('المحتوى', {'fields': ('description', 'phone', 'image')}),
-        ('إحصائيات', {'fields': ('views_count', 'created_at', 'updated_at'), 'classes': ('collapse',)}),
+        ('المعلومات الأساسية', {
+            'fields': ('title', 'slug', 'property_number', 'category', 'type', 'status', 
+                      'is_featured', 'is_promoted', 'promotion_until', 'publication_type')
+        }),
+        ('المالك والدلال', {
+            'fields': ('owner', 'owner_name', 'broker', 'office')
+        }),
+        ('الموقع داخل العراق', {
+            'fields': ('governorate', 'city', 'district', 'subdistrict', 'nahiyah', 
+                      'street', 'landmark', 'location')
+        }),
+        ('الموقع خارج العراق', {
+            'fields': ('country', 'city_outside', 'area_outside', 'postal_code',
+                      'taxes', 'registration_fees', 'foreign_ownership_laws'),
+            'classes': ('collapse',)
+        }),
+        ('الإحداثيات', {
+            'fields': ('latitude', 'longitude', 'nearest_landmark', 
+                      'distance_to_city_center', 'distance_to_airport')
+        }),
+        ('السعر والعملة', {
+            'fields': ('price', 'currency', 'original_price', 'negotiable')
+        }),
+        ('المساحة والبناء', {
+            'fields': ('total_area', 'building_area', 'area', 'facade', 'direction', 
+                      'year_built', 'building_condition', 'total_floors', 'floor_number',
+                      'property_age', 'last_renovation')
+        }),
+        ('الغرف والمرافق', {
+            'fields': ('bedrooms', 'living_rooms', 'dining_rooms', 'bathrooms', 
+                      'kitchens', 'balconies', 'parking_spaces', 'parking_type')
+        }),
+        ('المرافق الأساسية', {
+            'fields': ('parking', 'furnished', 'has_pool', 'has_garden', 'has_elevator', 
+                      'has_generator', 'has_national_electricity', 'has_water', 'has_internet', 
+                      'has_sewerage', 'has_heating', 'has_cooling', 'has_solar_power')
+        }),
+        ('الأمان', {
+            'fields': ('has_security_system', 'has_cctv', 'has_alarm'),
+            'classes': ('collapse',)
+        }),
+        ('معلومات الفنادق والمنتجعات', {
+            'fields': ('hotel_stars', 'hotel_rating', 'hotel_rooms', 'hotel_suites', 
+                      'hotel_family_rooms', 'has_restaurant', 'has_cafe', 'has_swimming_pool', 
+                      'has_gym', 'has_spa', 'has_conference_hall', 'has_wifi', 'has_parking', 
+                      'has_room_service', 'has_laundry', 'has_airport_shuttle'),
+            'classes': ('collapse',)
+        }),
+        ('معلومات المنتجعات السياحية', {
+            'fields': ('resort_capacity', 'resort_activities', 'booking_available', 
+                      'booking_url', 'min_booking_duration', 'max_booking_duration'),
+            'classes': ('collapse',)
+        }),
+        ('الجولات الافتراضية والوسائط', {
+            'fields': ('virtual_tour_url', 'vr_tour_url', 'ar_available', 'qr_code', 
+                      'short_share_code'),
+            'classes': ('collapse',)
+        }),
+        ('البث المباشر', {
+            'fields': ('live_stream_enabled', 'live_stream_url', 'live_stream_scheduled', 
+                      'live_stream_status'),
+            'classes': ('collapse',)
+        }),
+        ('الذكاء الاصطناعي', {
+            'fields': ('ai_generated_description', 'ai_suggested_price', 'ai_keywords', 
+                      'ai_image_enhanced'),
+            'classes': ('collapse',)
+        }),
+        ('الرسوم الإضافية', {
+            'fields': ('maintenance_fee', 'hoa_fee'),
+            'classes': ('collapse',)
+        }),
+        ('إمكانية الوصول', {
+            'fields': ('wheelchair_accessible', 'has_ramp', 'has_elevator_accessibility'),
+            'classes': ('collapse',)
+        }),
+        ('الميزات الخضراء', {
+            'fields': ('energy_efficient', 'has_green_building_cert', 'has_smart_home', 
+                      'has_double_glazing', 'has_insulation'),
+            'classes': ('collapse',)
+        }),
+        ('الإطلالة', {
+            'fields': ('view_type',)
+        }),
+        ('المحتوى', {
+            'fields': ('description', 'phone')
+        }),
+        ('إحصائيات', {
+            'fields': ('views_count', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
     )
+
+
+@admin.register(Conversation)
+class ConversationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'get_participants', 'created_at', 'updated_at')
+    search_fields = ('participants__username',)
+    
+    def get_participants(self, obj):
+        return ', '.join([p.username for p in obj.participants.all()])
+    get_participants.short_description = 'المشاركون'
 
 
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone', 'property', 'is_read', 'created_at')
-    list_filter = ('is_read', 'created_at')
-    search_fields = ('name', 'message', 'email', 'phone')
+    list_display = ('id', 'sender', 'recipient', 'message_type', 'status', 'is_read', 'created_at')
+    list_filter = ('message_type', 'status', 'is_read', 'created_at')
+    search_fields = ('content', 'sender__username', 'recipient__username')
     list_editable = ('is_read',)
     actions = ['mark_read', 'mark_unread']
 
@@ -54,6 +166,28 @@ class MessageAdmin(admin.ModelAdmin):
     @admin.action(description='تعليم كغير مقروء')
     def mark_unread(self, request, queryset):
         queryset.update(is_read=False)
+
+
+@admin.register(MessageAttachment)
+class MessageAttachmentAdmin(admin.ModelAdmin):
+    list_display = ('message', 'attachment_type', 'file_name', 'file_size')
+    list_filter = ('attachment_type',)
+    search_fields = ('file_name', 'message__content')
+
+
+@admin.register(MessageReaction)
+class MessageReactionAdmin(admin.ModelAdmin):
+    list_display = ('message', 'user', 'reaction_type', 'created_at')
+    list_filter = ('reaction_type', 'created_at')
+    search_fields = ('user__username', 'message__content')
+
+
+@admin.register(MessageReport)
+class MessageReportAdmin(admin.ModelAdmin):
+    list_display = ('message', 'reporter', 'report_type', 'status', 'created_at')
+    list_filter = ('report_type', 'status', 'created_at')
+    search_fields = ('reporter__username', 'description')
+    list_editable = ('status',)
 
 
 @admin.register(SiteSettings)
@@ -89,6 +223,75 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     list_filter = ('period', 'is_active')
     search_fields = ('name',)
     list_editable = ('is_active',)
+
+
+@admin.register(AdvancedSubscriptionPlan)
+class AdvancedSubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ('name', 'plan_type', 'tier', 'price_per_day', 'max_properties', 'is_active')
+    list_filter = ('plan_type', 'tier', 'is_active')
+    search_fields = ('name',)
+    list_editable = ('is_active',)
+
+
+@admin.register(BrokerPlanSubscription)
+class BrokerPlanSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('broker', 'plan', 'start_date', 'end_date', 'status', 'properties_used', 'get_seconds_remaining')
+    list_filter = ('status', 'plan__plan_type', 'plan__tier')
+    search_fields = ('broker__display_name', 'plan__name')
+    readonly_fields = ('get_seconds_remaining', 'created_at', 'updated_at')
+    
+    def get_seconds_remaining(self, obj):
+        return obj.get_seconds_remaining()
+    get_seconds_remaining.short_description = 'الثواني المتبقية'
+
+
+@admin.register(SubscriptionRenewalRequest)
+class SubscriptionRenewalRequestAdmin(admin.ModelAdmin):
+    list_display = ('broker', 'plan', 'days_requested', 'estimated_cost', 'status', 'created_at')
+    list_filter = ('status', 'plan__plan_type')
+    search_fields = ('broker__display_name', 'plan__name')
+    list_editable = ('status',)
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(BuildingRequestSubscription)
+class BuildingRequestSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('broker', 'annual_price', 'start_date', 'end_date', 'status', 'requests_used', 'max_requests')
+    list_filter = ('status',)
+    search_fields = ('broker__display_name',)
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(AuctionSubscription)
+class AuctionSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('broker', 'price_per_auction', 'status', 'auctions_used', 'auctions_paid', 'total_paid')
+    list_filter = ('status',)
+    search_fields = ('broker__display_name',)
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ('name', 'display_name', 'priority', 'is_active')
+    list_filter = ('is_active', 'priority')
+    search_fields = ('name', 'display_name')
+    list_editable = ('is_active',)
+
+
+@admin.register(UserRole)
+class UserRoleAdmin(admin.ModelAdmin):
+    list_display = ('user', 'role', 'assigned_at', 'expires_at', 'is_active')
+    list_filter = ('role', 'is_active')
+    search_fields = ('user__username', 'role__display_name')
+    readonly_fields = ('assigned_at',)
+
+
+@admin.register(PermissionLog)
+class PermissionLogAdmin(admin.ModelAdmin):
+    list_display = ('user', 'role', 'action', 'performed_by', 'created_at')
+    list_filter = ('action', 'created_at')
+    search_fields = ('user__username', 'role__display_name')
+    readonly_fields = ('created_at',)
 
 
 @admin.register(Office)
@@ -243,26 +446,118 @@ class PropertyDallalAssignmentAdmin(admin.ModelAdmin):
 
 @admin.register(BrokerChannel)
 class BrokerChannelAdmin(admin.ModelAdmin):
-    list_display = ('name', 'broker', 'is_active', 'is_verified', 'followers_count', 'views_count', 'created_at')
-    list_filter = ('is_active', 'is_verified', 'is_archived', 'created_at')
+    list_display = ('name', 'broker', 'status', 'is_verified', 'followers_count', 'views_count', 'created_at')
+    list_filter = ('status', 'is_verified', 'created_at')
     search_fields = ('name', 'description', 'broker__display_name', 'broker__user__username')
     readonly_fields = ('properties_count', 'views_count', 'followers_count', 'created_at', 'updated_at')
-    list_editable = ('is_active', 'is_verified')
+    list_editable = ('status', 'is_verified')
     fieldsets = (
         ('معلومات القناة', {
-            'fields': ('broker', 'name', 'slug', 'description', 'is_active', 'is_verified', 'is_archived')
+            'fields': ('broker', 'name', 'description', 'status', 'is_verified')
         }),
         ('الصور', {
             'fields': ('logo', 'cover_image')
-        }),
-        ('معلومات التواصل', {
-            'fields': ('phone', 'whatsapp', 'email', 'website')
-        }),
-        ('الموقع', {
-            'fields': ('city', 'country')
         }),
         ('الإحصائيات', {
             'fields': ('followers_count', 'views_count', 'properties_count', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
+
+
+@admin.register(Country)
+class CountryAdmin(admin.ModelAdmin):
+    list_display = ('name_ar', 'name_en', 'code', 'currency_code', 'is_active')
+    search_fields = ('name_ar', 'name_en', 'code')
+    list_filter = ('is_active', 'currency_code')
+
+
+@admin.register(City)
+class CityAdmin(admin.ModelAdmin):
+    list_display = ('name_ar', 'name_en', 'country', 'governorate_state', 'is_active')
+    search_fields = ('name_ar', 'name_en', 'country__name_ar')
+    list_filter = ('country', 'is_active')
+
+
+@admin.register(Area)
+class AreaAdmin(admin.ModelAdmin):
+    list_display = ('name_ar', 'name_en', 'city', 'is_active')
+    search_fields = ('name_ar', 'name_en', 'city__name_ar')
+    list_filter = ('city', 'is_active')
+
+
+@admin.register(LiveStream)
+class LiveStreamAdmin(admin.ModelAdmin):
+    list_display = ('title', 'property', 'broker', 'status', 'scheduled_start', 'viewers_count')
+    list_filter = ('status', 'platform', 'scheduled_start')
+    search_fields = ('title', 'description', 'property__title', 'broker__display_name')
+    readonly_fields = ('actual_start', 'actual_end', 'created_at', 'updated_at')
+    list_editable = ('status',)
+    actions = ['start_streams', 'end_streams', 'cancel_streams']
+
+    @admin.action(description='بدء البث المباشر')
+    def start_streams(self, request, queryset):
+        for stream in queryset.filter(status='scheduled'):
+            stream.start_stream()
+        self.message_user(request, f'تم بدء {queryset.count()} بث مباشر')
+
+    @admin.action(description='إنهاء البث المباشر')
+    def end_streams(self, request, queryset):
+        for stream in queryset.filter(status='live'):
+            stream.end_stream()
+        self.message_user(request, f'تم إنهاء {queryset.count()} بث مباشر')
+
+    @admin.action(description='إلغاء البث المباشر')
+    def cancel_streams(self, request, queryset):
+        for stream in queryset.filter(status__in=['scheduled', 'live']):
+            stream.cancel_stream()
+        self.message_user(request, f'تم إلغاء {queryset.count()} بث مباشر')
+
+
+@admin.register(LiveStreamComment)
+class LiveStreamCommentAdmin(admin.ModelAdmin):
+    list_display = ('author_name', 'live_stream', 'comment', 'created_at')
+    list_filter = ('created_at', 'live_stream')
+    search_fields = ('author_name', 'comment', 'live_stream__title')
+
+
+@admin.register(PropertyVideo)
+class PropertyVideoAdmin(admin.ModelAdmin):
+    list_display = ('property', 'video_type', 'sort_order', 'duration', 'created_at')
+    list_filter = ('video_type', 'created_at')
+    search_fields = ('property__title', 'caption')
+
+
+@admin.register(PropertyDocument)
+class PropertyDocumentAdmin(admin.ModelAdmin):
+    list_display = ('property', 'document_type', 'title', 'created_at')
+    list_filter = ('document_type', 'created_at')
+    search_fields = ('property__title', 'title', 'description')
+
+
+@admin.register(PropertyMediaStats)
+class PropertyMediaStatsAdmin(admin.ModelAdmin):
+    list_display = ('property', 'total_images', 'total_videos', 'total_360_tours', 'updated_at')
+    search_fields = ('property__title',)
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(PropertyViewStats)
+class PropertyViewStatsAdmin(admin.ModelAdmin):
+    list_display = ('property', 'total_views', 'unique_views', 'views_today', 'updated_at')
+    search_fields = ('property__title',)
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(PropertyEngagementStats)
+class PropertyEngagementStatsAdmin(admin.ModelAdmin):
+    list_display = ('property', 'total_favorites', 'total_shares', 'total_calls', 'updated_at')
+    search_fields = ('property__title',)
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(PropertyConversionStats)
+class PropertyConversionStatsAdmin(admin.ModelAdmin):
+    list_display = ('property', 'total_leads', 'total_appointments', 'total_sales', 'updated_at')
+    search_fields = ('property__title',)
+    readonly_fields = ('created_at', 'updated_at')

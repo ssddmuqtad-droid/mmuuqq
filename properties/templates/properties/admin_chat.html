@@ -1,0 +1,168 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}محادثة مع الإدارة{% endblock %}
+
+{% block content %}
+<div class="container chat-container">
+    <h1>💬 محادثة مع الإدارة</h1>
+    
+    <div class="chat-layout">
+        <!-- Chat List -->
+        <div class="chat-list">
+            <div class="chat-list-header">
+                <h3>المحادثات</h3>
+                <button class="btn btn-sm btn-primary" onclick="startNewChat()">محادثة جديدة</button>
+            </div>
+            <div class="chat-list-items">
+                {% for chat in chats %}
+                <div class="chat-item {% if chat.id == active_chat_id %}active{% endif %}" 
+                     onclick="loadChat('{{ chat.id }}')">
+                    <div class="chat-avatar">
+                        {% if chat.broker.logo %}
+                            <img src="{{ chat.broker.logo.url }}" alt="{{ chat.broker.display_name }}">
+                        {% else %}
+                            <div class="default-avatar">{{ chat.broker.display_name|slice:":1" }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="chat-info">
+                        <div class="chat-name">{{ chat.broker.display_name }}</div>
+                        <div class="chat-preview">{{ chat.last_message|truncatechars:30 }}</div>
+                        <div class="chat-time">{{ chat.updated_at|timesince }}</div>
+                    </div>
+                    {% if chat.unread_count > 0 %}
+                    <div class="unread-badge">{{ chat.unread_count }}</div>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="no-chats">
+                    <p>لا توجد محادثات</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Chat Window -->
+        <div class="chat-window">
+            {% if active_chat %}
+            <div class="chat-header">
+                <div class="chat-header-info">
+                    <div class="chat-header-avatar">
+                        {% if active_chat.broker.logo %}
+                            <img src="{{ active_chat.broker.logo.url }}" alt="{{ active_chat.broker.display_name }}">
+                        {% else %}
+                            <div class="default-avatar">{{ active_chat.broker.display_name|slice:":1" }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="chat-header-details">
+                        <h3>{{ active_chat.broker.display_name }}</h3>
+                        <p class="chat-header-status">{{ active_chat.broker.get_status_display }}</p>
+                    </div>
+                </div>
+                <div class="chat-header-actions">
+                    <button class="btn btn-sm btn-outline" onclick="viewSubscriptionRequest()">عرض طلب الاشتراك</button>
+                </div>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages">
+                {% for message in messages %}
+                <div class="message {% if message.sender == user %}sent{% else %}received{% endif %}">
+                    <div class="message-content">
+                        <p>{{ message.content }}</p>
+                        <span class="message-time">{{ message.created_at|date:"H:i" }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="chat-input">
+                <form id="message-form" onsubmit="sendMessage(event)">
+                    {% csrf_token %}
+                    <input type="hidden" name="chat_id" value="{{ active_chat.id }}">
+                    <div class="input-group">
+                        <input type="text" name="message" placeholder="اكتب رسالتك..." required>
+                        <button type="submit" class="btn btn-primary">إرسال</button>
+                    </div>
+                </form>
+            </div>
+            {% else %}
+            <div class="no-chat-selected">
+                <p>اختر محادثة للبدء</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function loadChat(chatId) {
+    window.location.href = `{% url 'admin_chat' %}?chat_id=${chatId}`;
+}
+
+function sendMessage(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    fetch('/api/admin-chat/send/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            form.reset();
+            loadChatMessages(data.chat_id);
+        }
+    });
+}
+
+function loadChatMessages(chatId) {
+    fetch(`/api/admin-chat/messages/${chatId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const messagesContainer = document.getElementById('chat-messages');
+            messagesContainer.innerHTML = data.messages.map(msg => `
+                <div class="message ${msg.is_sent ? 'sent' : 'received'}">
+                    <div class="message-content">
+                        <p>${msg.content}</p>
+                        <span class="message-time">${msg.time}</span>
+                    </div>
+                </div>
+            `).join('');
+        });
+}
+
+function viewSubscriptionRequest() {
+    const chatId = document.querySelector('input[name="chat_id"]').value;
+    window.location.href = `/api/subscription-request/chat/${chatId}/`;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Auto-refresh messages every 30 seconds
+setInterval(() => {
+    const chatId = document.querySelector('input[name="chat_id"]');
+    if (chatId) {
+        loadChatMessages(chatId.value);
+    }
+}, 30000);
+</script>
+{% endblock %}

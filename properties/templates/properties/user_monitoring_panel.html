@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}مراقبة المستخدمين{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">👥 مراقبة المستخدمين</h3>
+                    <a href="{% url 'dashboard' %}" class="btn btn-light btn-sm">عودة للوحة التحكم</a>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>المستخدم</th>
+                                    <th>البريد الإلكتروني</th>
+                                    <th>الدلال</th>
+                                    <th>الاشتراك</th>
+                                    <th>الحالة</th>
+                                    <th>تاريخ التسجيل</th>
+                                    <th>آخر دخول</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for data in users_data %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ data.user.username }}</strong>
+                                        {% if data.is_superuser %}
+                                            <span class="badge bg-danger">مسؤول</span>
+                                        {% elif data.is_staff %}
+                                            <span class="badge bg-warning">طاقم</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ data.user.email }}</td>
+                                    <td>
+                                        {% if data.broker %}
+                                            {{ data.broker.display_name }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if data.subscription %}
+                                            <span class="badge bg-success">{{ data.subscription.plan.name }}</span>
+                                            <br>
+                                            <small>{{ data.subscription.get_seconds_remaining }} ثانية متبقية</small>
+                                        {% else %}
+                                            <span class="badge bg-secondary">لا يوجد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if data.is_active %}
+                                            <span class="badge bg-success">نشط</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">معطل</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ data.date_joined|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if data.last_login %}
+                                            {{ data.last_login|date:"Y-m-d H:i" }}
+                                        {% else %}
+                                            لم يسجل دخول
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'user_monitoring_detail' data.user.id %}" class="btn btn-info btn-sm">
+                                            👁️ عرض التفاصيل
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">لا يوجد مستخدمين</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

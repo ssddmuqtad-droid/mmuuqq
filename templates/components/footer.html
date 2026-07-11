@@ -1,0 +1,40 @@
+<footer class="footer bg-dark text-light">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <h5>{{ site_name }}</h5>
+                <p>منصة العقارات الأولى في العراق</p>
+                <div class="social-links">
+                    <a href="#" class="social-link"><i class="fab fa-facebook"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-linkedin"></i></a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <h5>روابط سريعة</h5>
+                <ul class="list-unstyled">
+                    <li><a href="{% url 'explore' %}">العقارات</a></li>
+                    <li><a href="{% url 'public_building_requests' %}">طلبات البناء</a></li>
+                    <li><a href="{% url 'public_service_advertisements' %}">الخدمات</a></li>
+                    <li><a href="{% url 'about' %}">من نحن</a></li>
+                    <li><a href="{% url 'contact' %}">اتصل بنا</a></li>
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <h5>معلومات التواصل</h5>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-envelope"></i> {{ DEFAULT_FROM_EMAIL }}</li>
+                    <li><i class="fas fa-phone"></i> +964 XXX XXX XXXX</li>
+                    <li><i class="fas fa-map-marker-alt"></i> بغداد، العراق</li>
+                </ul>
+            </div>
+        </div>
+        <hr>
+        <div class="row">
+            <div class="col-md-12 text-center">
+                <p>&copy; {% now "Y" %} {{ site_name }}. جميع الحقوق محفوظة.</p>
+            </div>
+        </div>
+    </div>
+</footer>

@@ -1,0 +1,755 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    {{ page.name }} - {{ site_name }}
+{% endblock %}
+
+{% block content %}
+<div class="service-provider-detail-container">
+    <!-- Cover Image -->
+    {% if page.cover_image %}
+    <div class="provider-cover" style="background-image: url('{{ page.cover_image.url }}');">
+    {% else %}
+    <div class="provider-cover default-cover">
+    {% endif %}
+        <div class="cover-overlay">
+            <div class="container">
+                <div class="provider-header-content">
+                    <div class="provider-avatar-large">
+                        {% if page.profile_image %}
+                        <img src="{{ page.profile_image.url }}" alt="{{ page.name }}">
+                        {% else %}
+                        <div class="avatar-placeholder">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        {% endif %}
+                        {% if page.is_verified %}
+                        <span class="verified-badge-large">
+                            <i class="fas fa-check-circle"></i>
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="provider-title-section">
+                        <h1 class="provider-title">{{ page.name }}</h1>
+                        <p class="provider-subtitle">
+                            {% if page.category %}
+                            {{ page.category.icon }} {{ page.category.name_ar }}
+                            {% endif %}
+                            <span class="separator">|</span>
+                            <i class="fas fa-map-marker-alt"></i>{{ page.governorate }} - {{ page.city }}
+                        </p>
+                        <div class="provider-badges">
+                            {% if page.availability == 'available' %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-circle me-1"></i>متاح الآن
+                            </span>
+                            {% elif page.availability == 'busy' %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-circle me-1"></i>مشغول
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">
+                                <i class="fas fa-circle me-1"></i>إجازة
+                            </span>
+                            {% endif %}
+                            <span class="badge bg-info">
+                                <i class="fas fa-briefcase me-1"></i>{{ page.projects_count }} مشروع
+                            </span>
+                            <span class="badge bg-primary">
+                                <i class="fas fa-users me-1"></i>{{ page.clients_count }} عميل
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-lg-8">
+                <!-- About Section -->
+                <div class="content-card">
+                    <h2 class="card-title">نبذة عن مقدم الخدمة</h2>
+                    <p class="card-text">{{ page.description }}</p>
+                    
+                    <div class="provider-details-grid">
+                        <div class="detail-item">
+                            <i class="fas fa-clock"></i>
+                            <span>{{ page.years_of_experience }} سنة خبرة</span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{ page.working_areas }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-clock"></i>
+                            <span>{{ page.working_hours }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Services Section -->
+                {% if services %}
+                <div class="content-card">
+                    <h2 class="card-title">الخدمات المقدمة</h2>
+                    <div class="services-list">
+                        {% for service in services %}
+                        <div class="service-item">
+                            <div class="service-header">
+                                <h3 class="service-name">{{ service.name }}</h3>
+                                {% if service.price %}
+                                <span class="service-price">{{ service.price }} {{ service.price_unit }}</span>
+                                {% endif %}
+                            </div>
+                            {% if service.description %}
+                            <p class="service-description">{{ service.description }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Works Section -->
+                {% if works %}
+                <div class="content-card">
+                    <h2 class="card-title">الأعمال المنجزة</h2>
+                    <div class="works-grid">
+                        {% for work in works %}
+                        <div class="work-card">
+                            {% if work.after_image %}
+                            <img src="{{ work.after_image.url }}" alt="{{ work.title }}" class="work-image">
+                            {% elif work.before_image %}
+                            <img src="{{ work.before_image.url }}" alt="{{ work.title }}" class="work-image">
+                            {% endif %}
+                            <div class="work-info">
+                                <h3 class="work-title">{{ work.title }}</h3>
+                                <p class="work-location">
+                                    <i class="fas fa-map-marker-alt me-1"></i>{{ work.location }}
+                                </p>
+                                {% if work.estimated_price %}
+                                <p class="work-price">{{ work.estimated_price }} د.ع</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Gallery Section -->
+                {% if gallery %}
+                <div class="content-card">
+                    <h2 class="card-title">معرض الصور</h2>
+                    <div class="gallery-grid">
+                        {% for image in gallery %}
+                        <div class="gallery-item">
+                            <img src="{{ image.image.url }}" alt="{{ image.caption }}" class="gallery-image">
+                                                </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Ratings Section -->
+                {% if ratings %}
+                <div class="content-card">
+                    <h2 class="card-title">التقييمات</h2>
+                    <div class="ratings-list">
+                        {% for rating in ratings %}
+                        <div class="rating-item">
+                            <div class="rating-header">
+                                <div class="rating-stars">
+                                    {% for i in "12345" %}
+                                        {% if i <= rating.rating %}
+                                        <i class="fas fa-star text-warning"></i>
+                                        {% else %}
+                                        <i class="far fa-star text-warning"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <span class="rating-date">{{ rating.created_at|date:"Y-m-d" }}</span>
+                            </div>
+                            {% if rating.review %}
+                            <p class="rating-review">{{ rating.review }}</p>
+                            {% endif %}
+                            <p class="rating-user">بواسطة {{ rating.user.username }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Rating Card -->
+                <div class="sidebar-card">
+                    <h3 class="sidebar-title">التقييم العام</h3>
+                    <div class="rating-display">
+                        <div class="rating-score">{{ page.rating|floatformat:1 }}</div>
+                        <div class="rating-stars-large">
+                            {% for i in "12345" %}
+                                {% if i <= page.rating %}
+                                <i class="fas fa-star"></i>
+                                {% else %}
+                                <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <p class="rating-count">{{ page.reviews_count }} تقييم</p>
+                    </div>
+                    
+                    {% if user.is_authenticated %}
+                    <form method="post" action="{% url 'service_provider_rating_create' slug=page.slug %}" class="rating-form">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">تقييمك</label>
+                            <select name="rating" class="form-select">
+                                <option value="">اختر التقييم</option>
+                                <option value="5">5 نجوم</option>
+                                <option value="4">4 نجوم</option>
+                                <option value="3">3 نجوم</option>
+                                <option value="2">نجمتان</option>
+                                <option value="1">نجمة واحدة</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <textarea name="review" class="form-control" rows="3" placeholder="أضف تعليقك..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-star me-2"></i>إضافة تقييم
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+
+                <!-- Contact Card -->
+                <div class="sidebar-card">
+                    <h3 class="sidebar-title">معلومات التواصل</h3>
+                    <div class="contact-info">
+                        {% if page.phone %}
+                        <a href="tel:{{ page.phone }}" class="contact-item">
+                            <i class="fas fa-phone"></i>
+                            <span>{{ page.phone }}</span>
+                        </a>
+                        {% endif %}
+                        {% if page.whatsapp %}
+                        <a href="https://wa.me/{{ page.whatsapp }}" target="_blank" class="contact-item">
+                            <i class="fab fa-whatsapp"></i>
+                            <span>{{ page.whatsapp }}</span>
+                        </a>
+                        {% endif %}
+                        {% if page.telegram %}
+                        <a href="https://t.me/{{ page.telegram }}" target="_blank" class="contact-item">
+                            <i class="fab fa-telegram"></i>
+                            <span>{{ page.telegram }}</span>
+                        </a>
+                        {% endif %}
+                        {% if page.facebook %}
+                        <a href="{{ page.facebook }}" target="_blank" class="contact-item">
+                            <i class="fab fa-facebook"></i>
+                            <span>فيسبوك</span>
+                        </a>
+                        {% endif %}
+                        {% if page.instagram %}
+                        <a href="{{ page.instagram }}" target="_blank" class="contact-item">
+                            <i class="fab fa-instagram"></i>
+                            <span>انستغرام</span>
+                        </a>
+                        {% endif %}
+                        {% if page.website %}
+                        <a href="{{ page.website }}" target="_blank" class="contact-item">
+                            <i class="fas fa-globe"></i>
+                            <span>الموقع الإلكتروني</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="contact-actions">
+                        <a href="{% url 'service_provider_contact' slug=page.slug %}" class="btn btn-primary w-100 mb-2">
+                            <i class="fas fa-envelope me-2"></i>مراسلة
+                        </a>
+                        <a href="{% url 'service_provider_quote' slug=page.slug %}" class="btn btn-outline-primary w-100 mb-2">
+                            <i class="fas fa-file-invoice me-2"></i>طلب عرض سعر
+                        </a>
+                        {% if user.is_authenticated %}
+                            {% if is_following %}
+                            <a href="{% url 'service_provider_unfollow' slug=page.slug %}" class="btn btn-outline-danger w-100">
+                                <i class="fas fa-user-minus me-2"></i>إلغاء المتابعة
+                            </a>
+                            {% else %}
+                            <a href="{% url 'service_provider_follow' slug=page.slug %}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-user-plus me-2"></i>متابعة
+                            </a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Stats Card -->
+                <div class="sidebar-card">
+                    <h3 class="sidebar-title">الإحصائيات</h3>
+                    <div class="stats-list">
+                        <div class="stat-row">
+                            <i class="fas fa-eye"></i>
+                            <span>المشاهدات</span>
+                            <strong>{{ page.views_count }}</strong>
+                        </div>
+                        <div class="stat-row">
+                            <i class="fas fa-phone"></i>
+                            <span>الاتصالات</span>
+                            <strong>{{ page.contacts_count }}</strong>
+                        </div>
+                        <div class="stat-row">
+                            <i class="fas fa-file-invoice"></i>
+                            <span>طلبات الأسعار</span>
+                            <strong>{{ page.quotes_count }}</strong>
+                        </div>
+                        <div class="stat-row">
+                            <i class="fas fa-users"></i>
+                            <span>المتابعون</span>
+                            <strong>{{ page.followers_count }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Map Card -->
+                {% if page.latitude and page.longitude %}
+                <div class="sidebar-card">
+                    <h3 class="sidebar-title">الموقع</h3>
+                    <div class="map-container" id="provider-map"></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.service-provider-detail-container {
+    padding-bottom: 40px;
+}
+
+.provider-cover {
+    height: 300px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+
+.provider-cover.default-cover {
+    background: linear-gradient(135deg, var(--primary-color), #ff6b35);
+}
+
+.cover-overlay {
+    background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7));
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 40px;
+}
+
+.provider-header-content {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+}
+
+.provider-avatar-large {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid white;
+    position: relative;
+    background-color: var(--bg-secondary);
+}
+
+.provider-avatar-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    color: var(--text-secondary);
+}
+
+.verified-badge-large {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background: #4CAF50;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.provider-title-section {
+    flex: 1;
+    color: white;
+}
+
+.provider-title {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.provider-subtitle {
+    font-size: 16px;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+.separator {
+    margin: 0 10px;
+}
+
+.provider-badges {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.content-card {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 25px;
+}
+
+.card-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.card-text {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 20px;
+}
+
+.provider-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-primary);
+}
+
+.detail-item i {
+    color: var(--primary-color);
+    font-size: 18px;
+}
+
+.services-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.service-item {
+    background-color: var(--bg-tertiary);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.service-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.service-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.service-price {
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.service-description {
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.works-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.work-card {
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.work-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.work-info {
+    padding: 15px;
+}
+
+.work-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.work-location {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+}
+
+.work-price {
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin: 0;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.gallery-item {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.gallery-image {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.gallery-image:hover {
+    transform: scale(1.1);
+}
+
+.ratings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.rating-item {
+    background-color: var(--bg-tertiary);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.rating-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.rating-stars {
+    color: #ffc107;
+}
+
+.rating-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.rating-review {
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.rating-user {
+    font-size: 14px;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.sidebar-card {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.sidebar-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.rating-display {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.rating-score {
+    font-size: 48px;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.rating-stars-large {
+    font-size: 24px;
+    color: #ffc107;
+    margin: 10px 0;
+}
+
+.rating-count {
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: background-color 0.3s;
+}
+
+.contact-item:hover {
+    background-color: var(--border-color);
+}
+
+.contact-item i {
+    color: var(--primary-color);
+    font-size: 18px;
+}
+
+.contact-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.stat-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+}
+
+.stat-row i {
+    color: var(--primary-color);
+    font-size: 18px;
+}
+
+.stat-row span {
+    color: var(--text-secondary);
+}
+
+.stat-row strong {
+    color: var(--text-primary);
+}
+
+.map-container {
+    height: 200px;
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+}
+
+.form-control, .form-select {
+    background-color: var(--bg-primary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--bg-primary);
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{% if page.latitude and page.longitude %}
+<script>
+function initMap() {
+    const map = L.map('provider-map').setView([{{ page.latitude }}, {{ page.longitude }}], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+    L.marker([{{ page.latitude }}, {{ page.longitude }}]).addTo(map)
+        .bindPopup('{{ page.name }}');
+}
+</script>
+{% endif %}
+{% endblock %}

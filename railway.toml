@@ -1,8 +1,5 @@
 [build]
 builder = "NIXPACKS"
-watchPatterns = ["**"]
-
-# Force rebuild - 2026-07-05
 
 [deploy]
 startCommand = "python run_server.py"
@@ -14,8 +11,8 @@ restartPolicyMaxRetries = 10
 [variables]
 DEBUG = "False"
 PORT = "8080"
-CUSTOM_DOMAIN = "daluailiraq.com"
-SECURE_SSL_REDIRECT = "False"
 PYTHONUNBUFFERED = "1"
 DJANGO_SETTINGS_MODULE = "dalal_project.settings"
-SECRET_KEY = "+3a#x7a*wvrshr(pcjgznlgh0r&eemu)iazs16f0-f8_k5f_!6"
+ALLOW_SQLITE_FALLBACK = "False"
+GUNICORN_WORKERS = "2"
+GUNICORN_TIMEOUT = "120"

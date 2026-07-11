@@ -1,0 +1,107 @@
+{% extends "properties/dashboard_base.html" %}
+{% load static %}
+
+{% block title %}{{ notification.title }}{% endblock %}
+{% block dashboard_title %}تفاصيل الإشعار{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'notification_center' %}" class="btn btn-outline">العودة للإشعارات</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center" 
+                     style="background-color: {{ notification.color }}; color: white;">
+                    <div class="d-flex align-items-center">
+                        {% if notification.icon %}
+                        <span class="me-3" style="font-size: 2rem;">{{ notification.icon }}</span>
+                        {% endif %}
+                        <div>
+                            <h4 class="mb-0">{{ notification.title }}</h4>
+                            <small>{{ notification.created_at|date:"Y-m-d H:i" }}</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-light text-dark">{{ notification.get_notification_type_display }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5>الوصف</h5>
+                        <p>{{ notification.description|linebreaks }}</p>
+                    </div>
+                    
+                    {% if notification.image %}
+                    <div class="mb-4">
+                        <h5>صورة</h5>
+                        <img src="{{ notification.image.url }}" class="img-fluid rounded" alt="Notification Image">
+                    </div>
+                    {% endif %}
+                    
+                    {% if notification.button_text and notification.button_link %}
+                    <div class="mb-4">
+                        <a href="{{ notification.button_link }}" class="btn btn-primary" onclick="markClicked({{ notification.id }})">
+                            {{ notification.button_text }}
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-4 pt-4 border-top">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <strong>الأولوية:</strong> {{ notification.get_priority_display }}
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <strong>تاريخ الإرسال:</strong> {{ notification.sent_at|date:"Y-m-d H:i"|default:"لم يرسل بعد" }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'archive_notification' notification.id %}" class="btn btn-outline-secondary">
+                            أرشفة
+                        </a>
+                        <a href="{% url 'delete_notification' notification.id %}" class="btn btn-outline-danger" 
+                           onclick="return confirm('هل أنت متأكد من حذف هذا الإشعار؟')">
+                            حذف
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function markClicked(notificationId) {
+    fetch(`/notifications/${notificationId}/clicked/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

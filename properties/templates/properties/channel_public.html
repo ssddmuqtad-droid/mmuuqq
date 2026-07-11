@@ -1,0 +1,812 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}{{ channel.name }} - قناة الدلال{% endblock %}
+
+{% block content %}
+<div class="channel-container" style="background: #0a0a0a; min-height: 100vh;">
+  
+  <!-- Cover Photo -->
+  <div class="channel-cover" style="height: 350px; background-size: cover; background-position: center; position: relative;">
+    {% if channel.cover_image %}
+    <div style="height: 100%; background-image: url('{{ channel.cover_image.url }}'); background-size: cover; background-position: center;"></div>
+    {% else %}
+    <div style="height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+    {% endif %}
+    
+    <!-- Cover Actions -->
+    {% if request.user == channel.broker.user %}
+    <div style="position: absolute; top: 20px; right: 20px;">
+      <button onclick="changeCover()" style="background: rgba(0,0,0,0.5); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+        📷 تغيير الغلاف
+      </button>
+    </div>
+    {% endif %}
+  </div>
+  
+  <!-- Channel Info -->
+  <div class="channel-info-wrapper" style="max-width: 1200px; margin: -80px auto 0; padding: 0 20px; position: relative; z-index: 10;">
+    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+      <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+        <!-- Profile Picture -->
+        <div style="flex-shrink: 0;">
+          <div style="width: 160px; height: 160px; border-radius: 50%; border: 5px solid #1a1a2e; overflow: hidden; background: #2a2a4e;">
+            {% if channel.logo %}
+            <img src="{{ channel.logo.url }}" alt="{{ channel.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+            {% else %}
+            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 4rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+              🏢
+            </div>
+            {% endif %}
+          </div>
+          {% if request.user == channel.broker.user %}
+          <button onclick="changeLogo()" style="width: 100%; margin-top: 10px; background: rgba(255,255,255,0.1); color: white; border: none; padding: 8px; border-radius: 8px; cursor: pointer;">
+            تغيير الصورة
+          </button>
+          {% endif %}
+        </div>
+        
+        <!-- Channel Details -->
+        <div style="flex: 1; min-width: 300px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <h1 style="font-size: 2rem; margin: 0; color: white;">{{ channel.name }}</h1>
+            {% if channel.is_verified %}
+            <span style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 5px 12px; border-radius: 20px; font-size: 0.9rem; color: white;">✓ موثق</span>
+            {% endif %}
+            {% if channel.is_online %}
+            <span style="background: #28a745; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; color: white;">● متصل الآن</span>
+            {% else %}
+            <span style="background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; color: rgba(255,255,255,0.7);">
+              آخر ظهور: {% if channel.last_seen %}{{ channel.last_seen|timesince }}{% else %}غير معروف{% endif %}
+            </span>
+            {% endif %}
+          </div>
+          
+          <p style="color: rgba(255,255,255,0.7); margin-bottom: 15px; line-height: 1.6;">{{ channel.description|default:'لا يوجد وصف' }}</p>
+          
+          <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; color: rgba(255,255,255,0.6); font-size: 0.9rem;">
+            {% if channel.governorate %}
+            <span>📍 {{ channel.get_governorate_display }}{% if channel.city %}, {{ channel.city }}{% endif %}</span>
+            {% endif %}
+            {% if channel.office_name %}
+            <span>🏢 {{ channel.office_name }}</span>
+            {% endif %}
+            {% if channel.experience_years %}
+            <span>⭐ {{ channel.experience_years }} سنة خبرة</span>
+            {% endif %}
+          </div>
+          
+          <!-- Action Buttons -->
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+            {% if request.user.is_authenticated %}
+              {% if is_following %}
+              <button onclick="toggleFollow()" style="background: transparent; border: 2px solid rgba(255,255,255,0.3); color: white; padding: 10px 25px; border-radius: 25px; cursor: pointer; font-weight: 600;">
+                ✓ متابَع
+              </button>
+              {% else %}
+              <button onclick="toggleFollow()" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); border: none; color: white; padding: 10px 25px; border-radius: 25px; cursor: pointer; font-weight: 600;">
+                + متابعة
+              </button>
+              {% endif %}
+            {% else %}
+            <a href="{% url 'login' %}" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); border: none; color: white; padding: 10px 25px; border-radius: 25px; text-decoration: none; font-weight: 600;">
+              + متابعة
+            </a>
+            {% endif %}
+            
+            <a href="{% url 'message_create' %}?recipient={{ channel.broker.user.id }}" style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 10px 20px; border-radius: 25px; text-decoration: none;">
+              💬 مراسلة
+            </a>
+            
+            {% if channel.whatsapp %}
+            <a href="https://wa.me/{{ channel.whatsapp }}" target="_blank" style="background: #25D366; border: none; color: white; padding: 10px 20px; border-radius: 25px; text-decoration: none;">
+              📱 واتساب
+            </a>
+            {% endif %}
+            
+            {% if channel.phone %}
+            <a href="tel:{{ channel.phone }}" style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 10px 20px; border-radius: 25px; text-decoration: none;">
+              📞 اتصال
+            </a>
+            {% endif %}
+            
+            <button onclick="shareChannel()" style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 10px 20px; border-radius: 25px; cursor: pointer;">
+              📤 مشاركة
+            </button>
+            
+            <button onclick="copyLink()" style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 10px 20px; border-radius: 25px; cursor: pointer;">
+              🔗 نسخ الرابط
+            </button>
+          </div>
+        </div>
+        
+        <!-- Stats -->
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; min-width: 200px;">
+          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center;">
+            <div style="font-size: 1.8rem; font-weight: 700; color: #667eea;">{{ channel.followers_count }}</div>
+            <div style="color: rgba(255,255,255,0.6); font-size: 0.85rem;">متابع</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center;">
+            <div style="font-size: 1.8rem; font-weight: 700; color: #f093fb;">{{ channel.views_count }}</div>
+            <div style="color: rgba(255,255,255,0.6); font-size: 0.85rem;">مشاهدة</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center;">
+            <div style="font-size: 1.8rem; font-weight: 700; color: #11998e;">{{ properties_count }}</div>
+            <div style="color: rgba(255,255,255,0.6); font-size: 0.85rem;">عقار</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center;">
+            <div style="font-size: 1.8rem; font-weight: 700; color: #ff6b35;">{{ channel.rating|default:"0.0" }}</div>
+            <div style="color: rgba(255,255,255,0.6); font-size: 0.85rem;">تقييم</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Search and Filter -->
+  <div style="max-width: 1200px; margin: 30px auto; padding: 0 20px;">
+    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 15px; padding: 20px;">
+      <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+        <div style="flex: 1; min-width: 200px;">
+          <input type="text" id="searchInput" placeholder="🔍 بحث في القناة..." 
+                 value="{{ search_query }}"
+                 style="width: 100%; padding: 12px 20px; border: 2px solid rgba(255,255,255,0.1); border-radius: 25px; background: rgba(255,255,255,0.05); color: white; font-size: 1rem;"
+                 onkeyup="searchChannel()">
+        </div>
+        <select id="typeFilter" onchange="filterChannel()" style="padding: 12px 20px; border: 2px solid rgba(255,255,255,0.1); border-radius: 25px; background: rgba(255,255,255,0.05); color: white; font-size: 1rem; cursor: pointer;">
+          <option value="all" {% if property_type == 'all' %}selected{% endif %}>الكل</option>
+          <option value="sale" {% if property_type == 'sale' %}selected{% endif %}>بيع</option>
+          <option value="rent" {% if property_type == 'rent' %}selected{% endif %}>إيجار</option>
+          <option value="auction" {% if property_type == 'auction' %}selected{% endif %}>مزاد</option>
+        </select>
+        <select id="sortFilter" onchange="filterChannel()" style="padding: 12px 20px; border: 2px solid rgba(255,255,255,0.1); border-radius: 25px; background: rgba(255,255,255,0.05); color: white; font-size: 1rem; cursor: pointer;">
+          <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>الأحدث</option>
+          <option value="price_high" {% if sort_by == 'price_high' %}selected{% endif %}>الأعلى سعراً</option>
+          <option value="price_low" {% if sort_by == 'price_low' %}selected{% endif %}>الأقل سعراً</option>
+          <option value="most_viewed" {% if sort_by == 'most_viewed' %}selected{% endif %}>الأكثر مشاهدة</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Tabs -->
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div style="display: flex; gap: 5px; background: rgba(255,255,255,0.05); border-radius: 15px; padding: 5px; overflow-x: auto;">
+      <button onclick="switchTab('home')" class="tab-btn {% if tab == 'home' %}active{% endif %}" data-tab="home">
+        🏠 الرئيسية
+      </button>
+      <button onclick="switchTab('properties')" class="tab-btn {% if tab == 'properties' %}active{% endif %}" data-tab="properties">
+        🏢 العقارات
+      </button>
+      <button onclick="switchTab('posts')" class="tab-btn {% if tab == 'posts' %}active{% endif %}" data-tab="posts">
+        📝 المنشورات
+      </button>
+      <button onclick="switchTab('auctions')" class="tab-btn {% if tab == 'auctions' %}active{% endif %}" data-tab="auctions">
+        🔨 المزادات
+      </button>
+      <button onclick="switchTab('hotels')" class="tab-btn {% if tab == 'hotels' %}active{% endif %}" data-tab="hotels">
+        🏨 الفنادق
+      </button>
+      <button onclick="switchTab('resorts')" class="tab-btn {% if tab == 'resorts' %}active{% endif %}" data-tab="resorts">
+        🏖️ المنتجعات
+      </button>
+      <button onclick="switchTab('reviews')" class="tab-btn {% if tab == 'reviews' %}active{% endif %}" data-tab="reviews">
+        ⭐ المراجعات
+      </button>
+      <button onclick="switchTab('about')" class="tab-btn {% if tab == 'about' %}active{% endif %}" data-tab="about">
+        ℹ️ حول
+      </button>
+      <button onclick="switchTab('gallery')" class="tab-btn {% if tab == 'gallery' %}active{% endif %}" data-tab="gallery">
+        🖼️ المعرض
+      </button>
+    </div>
+  </div>
+  
+  <!-- Tab Content -->
+  <div style="max-width: 1200px; margin: 30px auto; padding: 0 20px;">
+    
+    <!-- Home Tab -->
+    <div id="home-tab" class="tab-content {% if tab == 'home' %}active{% endif %}">
+      <!-- Achievements -->
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 30px; margin-bottom: 30px;">
+        <h2 style="color: white; margin: 0 0 20px 0;">🏆 الإنجازات</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+          <div style="text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 10px;">💼</div>
+            <div style="font-size: 1.8rem; font-weight: 700; color: #667eea;">{{ channel.deals_count|default:0 }}</div>
+            <div style="color: rgba(255,255,255,0.6);">صفقة منجزة</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 10px;">👥</div>
+            <div style="font-size: 1.8rem; font-weight: 700; color: #f093fb;">{{ channel.clients_count|default:0 }}</div>
+            <div style="color: rgba(255,255,255,0.6);">عميل سعيد</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 10px;">⭐</div>
+            <div style="font-size: 1.8rem; font-weight: 700; color: #11998e;">{{ channel.experience_years|default:0 }}</div>
+            <div style="color: rgba(255,255,255,0.6);">سنة خبرة</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 10px;">🏠</div>
+            <div style="font-size: 1.8rem; font-weight: 700; color: #ff6b35;">{{ channel.sales_count|default:0 }}</div>
+            <div style="color: rgba(255,255,255,0.6);">عملية بيع</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Services -->
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 30px; margin-bottom: 30px;">
+        <h2 style="color: white; margin: 0 0 20px 0;">🛠️ الخدمات</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+          <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 10px;">🏠</div>
+            <div style="color: white;">بيع العقارات</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 10px;">🔑</div>
+            <div style="color: white;">شراء العقارات</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 10px;">📝</div>
+            <div style="color: white;">إيجار</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 10px;">📊</div>
+            <div style="color: white;">إدارة أملاك</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 10px;">💰</div>
+            <div style="color: white;">استثمار عقاري</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 10px;">📐</div>
+            <div style="color: white;">تقييم عقاري</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Latest Properties -->
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 style="color: white; margin: 0;">🏢 أحدث العقارات</h2>
+          <a href="?tab=properties" style="color: #667eea; text-decoration: none;">عرض الكل →</a>
+        </div>
+        
+        {% if properties %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+          {% for property in properties|slice:":6" %}
+          <div style="background: rgba(255,255,255,0.05); border-radius: 15px; overflow: hidden; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+            {% if property.gallery_images.first %}
+            <img src="{{ property.gallery_images.first.image.url }}" alt="{{ property.title }}" style="width: 100%; height: 200px; object-fit: cover;">
+            {% else %}
+            <div style="width: 100%; height: 200px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 3rem;">🏠</div>
+            {% endif %}
+            <div style="padding: 20px;">
+              <h3 style="color: white; margin: 0 0 10px 0; font-size: 1.1rem;">{{ property.title|truncatechars:50 }}</h3>
+              <div style="color: #667eea; font-size: 1.3rem; font-weight: 700; margin-bottom: 10px;">{{ property.price }} {{ property.currency }}</div>
+              <div style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 15px;">📍 {{ property.get_governorate_display }}</div>
+              <a href="{% url 'property_detail' property.id %}" style="display: block; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px; border-radius: 10px; text-decoration: none;">
+                عرض التفاصيل
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 60px 20px;">
+          <div style="font-size: 4rem; margin-bottom: 20px;">🏠</div>
+          <h3 style="color: white; margin: 0 0 10px 0;">لا توجد عقارات</h3>
+          <p style="color: rgba(255,255,255,0.6); margin: 0 0 20px 0;">لم يضف الدلال أي عقارات بعد</p>
+          {% if request.user == channel.broker.user %}
+          <a href="{% url 'property_create' %}" style="display: inline-block; background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 12px 30px; border-radius: 25px; text-decoration: none;">
+            + إضافة أول عقار
+          </a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Properties Tab -->
+    <div id="properties-tab" class="tab-content {% if tab == 'properties' %}active{% endif %}">
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 30px;">
+        <h2 style="color: white; margin: 0 0 20px 0;">🏢 العقارات ({{ properties|length }})</h2>
+        
+        {% if properties %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+          {% for property in properties %}
+          <div style="background: rgba(255,255,255,0.05); border-radius: 15px; overflow: hidden; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+            {% if property.gallery_images.first %}
+            <img src="{{ property.gallery_images.first.image.url }}" alt="{{ property.title }}" style="width: 100%; height: 200px; object-fit: cover;">
+            {% else %}
+            <div style="width: 100%; height: 200px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 3rem;">🏠</div>
+            {% endif %}
+            <div style="padding: 20px;">
+              <h3 style="color: white; margin: 0 0 10px 0; font-size: 1.1rem;">{{ property.title|truncatechars:50 }}</h3>
+              <div style="color: #667eea; font-size: 1.3rem; font-weight: 700; margin-bottom: 10px;">{{ property.price }} {{ property.currency }}</div>
+              <div style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 15px;">📍 {{ property.get_governorate_display }}</div>
+              <a href="{% url 'property_detail' property.id %}" style="display: block; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px; border-radius: 10px; text-decoration: none;">
+                عرض التفاصيل
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 60px 20px;">
+          <div style="font-size: 4rem; margin-bottom: 20px;">🏠</div>
+          <h3 style="color: white; margin: 0 0 10px 0;">لا توجد عقارات</h3>
+          <p style="color: rgba(255,255,255,0.6); margin: 0 0 20px 0;">لم يضف الدلال أي عقارات بعد</p>
+          {% if request.user == channel.broker.user %}
+          <a href="{% url 'property_create' %}" style="display: inline-block; background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 12px 30px; border-radius: 25px; text-decoration: none;">
+            + إضافة أول عقار
+          </a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Posts Tab -->
+    <div id="posts-tab" class="tab-content {% if tab == 'posts' %}active{% endif %}">
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 30px;">
+        <h2 style="color: white; margin: 0 0 20px 0;">📝 المنشورات ({{ posts|length }})</h2>
+        
+        {% if posts %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;">
+          {% for post in posts %}
+          <div style="background: rgba(255,255,255,0.05); border-radius: 15px; overflow: hidden;">
+            <div style="padding: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+              {% if channel.logo %}
+              <img src="{{ channel.logo.url }}" alt="{{ channel.name }}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+              {% else %}
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center;">🏢</div>
+              {% endif %}
+              <div>
+                <div style="color: white; font-weight: 600;">{{ channel.name }}</div>
+                <div style="color: rgba(255,255,255,0.6); font-size: 0.85rem;">{{ post.created_at|timesince }}</div>
+              </div>
+              {% if post.is_pinned %}
+              <span style="margin-left: auto; background: #667eea; padding: 3px 10px; border-radius: 10px; font-size: 0.75rem; color: white;">📌 مثبت</span>
+              {% endif %}
+            </div>
+            
+            {% if post.image %}
+            <img src="{{ post.image.url }}" alt="Post" style="width: 100%; height: 250px; object-fit: cover;">
+            {% endif %}
+            
+            <div style="padding: 15px;">
+              <p style="color: rgba(255,255,255,0.8); margin: 0 0 15px 0;">{{ post.content }}</p>
+              
+              <div style="display: flex; gap: 15px; color: rgba(255,255,255,0.6);">
+                <button onclick="togglePostLike({{ post.id }})" style="background: none; border: none; color: inherit; cursor: pointer;">
+                  ❤️ <span id="post-likes-{{ post.id }}">{{ post.likes_count }}</span>
+                </button>
+                <span>💬 {{ post.comments_count }}</span>
+                <span>👁️ {{ post.views_count }}</span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 60px 20px;">
+          <div style="font-size: 4rem; margin-bottom: 20px;">📝</div>
+          <h3 style="color: white; margin: 0 0 10px 0;">لا توجد منشورات</h3>
+          <p style="color: rgba(255,255,255,0.6); margin: 0 0 20px 0;">لم ينشر الدلال أي منشورات بعد</p>
+          {% if request.user == channel.broker.user %}
+          <a href="{% url 'create_channel_post' %}" style="display: inline-block; background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 12px 30px; border-radius: 25px; text-decoration: none;">
+            + إنشاء منشور
+          </a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Auctions Tab -->
+    <div id="auctions-tab" class="tab-content {% if tab == 'auctions' %}active{% endif %}">
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 30px;">
+        <h2 style="color: white; margin: 0 0 20px 0;">🔨 المزادات ({{ auctions|length }})</h2>
+        
+        {% if auctions %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;">
+          {% for auction in auctions %}
+          <div style="background: rgba(255,255,255,0.05); border-radius: 15px; overflow: hidden;">
+            {% if auction.property.gallery_images.first %}
+            <img src="{{ auction.property.gallery_images.first.image.url }}" alt="{{ auction.title }}" style="width: 100%; height: 200px; object-fit: cover;">
+            {% else %}
+            <div style="width: 100%; height: 200px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 3rem;">🔨</div>
+            {% endif %}
+            <div style="padding: 20px;">
+              <h3 style="color: white; margin: 0 0 10px 0;">{{ auction.title }}</h3>
+              <div style="color: #ff6b35; font-size: 1.3rem; font-weight: 700; margin-bottom: 10px;">{{ auction.starting_price }} د.ع</div>
+              <div style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 15px;">📅 {{ auction.start_date|date:"Y-m-d H:i" }}</div>
+              <a href="{% url 'auction_detail' auction.id %}" style="display: block; text-align: center; background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 10px; border-radius: 10px; text-decoration: none;">
+                عرض التفاصيل
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 60px 20px;">
+          <div style="font-size: 4rem; margin-bottom: 20px;">🔨</div>
+          <h3 style="color: white; margin: 0 0 10px 0;">لا توجد مزادات</h3>
+          <p style="color: rgba(255,255,255,0.6); margin: 0;">لم ينشر الدلال أي مزادات بعد</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Hotels Tab -->
+    <div id="hotels-tab" class="tab-content {% if tab == 'hotels' %}active{% endif %}">
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 30px;">
+        <h2 style="color: white; margin: 0 0 20px 0;">🏨 الفنادق ({{ hotels|length }})</h2>
+        
+        {% if hotels %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;">
+          {% for hotel in hotels %}
+          <div style="background: rgba(255,255,255,0.05); border-radius: 15px; overflow: hidden;">
+            {% if hotel.image %}
+            <img src="{{ hotel.image.url }}" alt="{{ hotel.name }}" style="width: 100%; height: 200px; object-fit: cover;">
+            {% else %}
+            <div style="width: 100%; height: 200px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 3rem;">🏨</div>
+            {% endif %}
+            <div style="padding: 20px;">
+              <h3 style="color: white; margin: 0 0 10px 0;">{{ hotel.name }}</h3>
+              <div style="color: #11998e; font-size: 1.3rem; font-weight: 700; margin-bottom: 10px;">{{ hotel.price_per_night }} د.ع/ليلة</div>
+              <div style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 15px;">📍 {{ hotel.location }}</div>
+              <a href="{% url 'hotel_detail' hotel.id %}" style="display: block; text-align: center; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 10px; border-radius: 10px; text-decoration: none;">
+                عرض التفاصيل
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 60px 20px;">
+          <div style="font-size: 4rem; margin-bottom: 20px;">🏨</div>
+          <h3 style="color: white; margin: 0 0 10px 0;">لا توجد فنادق</h3>
+          <p style="color: rgba(255,255,255,0.6); margin: 0;">لم يضف الدلال أي فنادق بعد</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Resorts Tab -->
+    <div id="resorts-tab" class="tab-content {% if tab == 'resorts' %}active{% endif %}">
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 30px;">
+        <h2 style="color: white; margin: 0 0 20px 0;">🏖️ المنتجعات ({{ resorts|length }})</h2>
+        
+        {% if resorts %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;">
+          {% for resort in resorts %}
+          <div style="background: rgba(255,255,255,0.05); border-radius: 15px; overflow: hidden;">
+            {% if resort.image %}
+            <img src="{{ resort.image.url }}" alt="{{ resort.name }}" style="width: 100%; height: 200px; object-fit: cover;">
+            {% else %}
+            <div style="width: 100%; height: 200px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 3rem;">🏖️</div>
+            {% endif %}
+            <div style="padding: 20px;">
+              <h3 style="color: white; margin: 0 0 10px 0;">{{ resort.name }}</h3>
+              <div style="color: #f093fb; font-size: 1.3rem; font-weight: 700; margin-bottom: 10px;">{{ resort.price_per_night }} د.ع/ليلة</div>
+              <div style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 15px;">📍 {{ resort.location }}</div>
+              <a href="{% url 'resort_detail' resort.id %}" style="display: block; text-align: center; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 10px; border-radius: 10px; text-decoration: none;">
+                عرض التفاصيل
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 60px 20px;">
+          <div style="font-size: 4rem; margin-bottom: 20px;">🏖️</div>
+          <h3 style="color: white; margin: 0 0 10px 0;">لا توجد منتجعات</h3>
+          <p style="color: rgba(255,255,255,0.6); margin: 0;">لم يضف الدلال أي منتجعات بعد</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Reviews Tab -->
+    <div id="reviews-tab" class="tab-content {% if tab == 'reviews' %}active{% endif %}">
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 30px;">
+        <h2 style="color: white; margin: 0 0 20px 0;">⭐ المراجعات ({{ reviews|length }})</h2>
+        
+        {% if reviews %}
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          {% for review in reviews %}
+          <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px;">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+              <div style="width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">👤</div>
+              <div>
+                <div style="color: white; font-weight: 600;">{{ review.user.get_full_name|default:review.user.username }}</div>
+                <div style="color: rgba(255,255,255,0.6); font-size: 0.85rem;">{{ review.created_at|timesince }}</div>
+              </div>
+              <div style="margin-left: auto; color: #ff6b35;">{{ '⭐' * review.rating }}</div>
+            </div>
+            <p style="color: rgba(255,255,255,0.8); margin: 0;">{{ review.comment }}</p>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 60px 20px;">
+          <div style="font-size: 4rem; margin-bottom: 20px;">⭐</div>
+          <h3 style="color: white; margin: 0 0 10px 0;">لا توجد مراجعات</h3>
+          <p style="color: rgba(255,255,255,0.6); margin: 0;">كن أول من يراجع هذا الدلال</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- About Tab -->
+    <div id="about-tab" class="tab-content {% if tab == 'about' %}active{% endif %}">
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 30px;">
+        <h2 style="color: white; margin: 0 0 20px 0;">ℹ️ معلومات عن القناة</h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+          <div>
+            <h3 style="color: white; margin: 0 0 15px 0;">معلومات الاتصال</h3>
+            <div style="color: rgba(255,255,255,0.7); line-height: 2;">
+              {% if channel.phone %}<div>📞 {{ channel.phone }}</div>{% endif %}
+              {% if channel.email %}<div>📧 {{ channel.email }}</div>{% endif %}
+              {% if channel.whatsapp %}<div>📱 واتساب: {{ channel.whatsapp }}</div>{% endif %}
+              {% if channel.telegram %}<div>📨 تيليجرام: {{ channel.telegram }}</div>{% endif %}
+              {% if channel.website %}<div>🌐 {{ channel.website }}</div>{% endif %}
+            </div>
+          </div>
+          
+          <div>
+            <h3 style="color: white; margin: 0 0 15px 0;">معلومات العمل</h3>
+            <div style="color: rgba(255,255,255,0.7); line-height: 2;">
+              {% if channel.office_name %}<div>🏢 {{ channel.office_name }}</div>{% endif %}
+              {% if channel.governorate %}<div>📍 {{ channel.get_governorate_display }}{% if channel.city %}, {{ channel.city }}{% endif %}</div>{% endif %}
+              {% if channel.working_hours %}<div>⏰ {{ channel.working_hours }}</div>{% endif %}
+              {% if channel.languages %}<div>🌍 {{ channel.languages }}</div>{% endif %}
+            </div>
+          </div>
+          
+          <div>
+            <h3 style="color: white; margin: 0 0 15px 0;">التخصص</h3>
+            <div style="color: rgba(255,255,255,0.7); line-height: 2;">
+              {% if channel.specialization %}<div>{{ channel.specialization }}</div>{% endif %}
+              {% if channel.experience_years %}<div>⭐ {{ channel.experience_years }} سنة خبرة</div>{% endif %}
+            </div>
+          </div>
+        </div>
+        
+        {% if channel.about_me %}
+        <div style="margin-top: 30px;">
+          <h3 style="color: white; margin: 0 0 15px 0;">عني</h3>
+          <p style="color: rgba(255,255,255,0.7); line-height: 1.8;">{{ channel.about_me }}</p>
+        </div>
+        {% endif %}
+        
+        {% if channel.achievements %}
+        <div style="margin-top: 30px;">
+          <h3 style="color: white; margin: 0 0 15px 0;">الإنجازات</h3>
+          <p style="color: rgba(255,255,255,0.7); line-height: 1.8;">{{ channel.achievements }}</p>
+        </div>
+        {% endif %}
+        
+        <!-- Google Map -->
+        {% if channel.address %}
+        <div style="margin-top: 30px;">
+          <h3 style="color: white; margin: 0 0 15px 0;">📍 الموقع على الخريطة</h3>
+          <div style="width: 100%; height: 300px; border-radius: 15px; overflow: hidden; background: rgba(255,255,255,0.05);">
+            <iframe 
+              width="100%" 
+              height="100%" 
+              frameborder="0" 
+              style="border:0"
+              src="https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q={{ channel.address|urlencode }}"
+              allowfullscreen>
+            </iframe>
+          </div>
+          <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem; margin-top: 10px;">
+            * يطلب إضافة مفتاح API من Google Maps لعرض الخريطة
+          </p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Gallery Tab -->
+    <div id="gallery-tab" class="tab-content {% if tab == 'gallery' %}active{% endif %}">
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 30px;">
+        <h2 style="color: white; margin: 0 0 20px 0;">🖼️ معرض الصور والفيديوهات</h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+          {% for property in properties|slice:":12" %}
+            {% if property.gallery_images.first %}
+            <div style="position: relative; border-radius: 15px; overflow: hidden; aspect-ratio: 16/9; cursor: pointer;" onclick="openGallery('{{ property.gallery_images.first.image.url }}')">
+              <img src="{{ property.gallery_images.first.image.url }}" alt="{{ property.title }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+              <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); padding: 15px; color: white; font-size: 0.9rem;">
+                {{ property.title|truncatechars:30 }}
+              </div>
+            </div>
+            {% endif %}
+          {% empty %}
+          <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+            <div style="font-size: 4rem; margin-bottom: 20px;">🖼️</div>
+            <h3 style="color: white; margin: 0 0 10px 0;">لا توجد صور</h3>
+            <p style="color: rgba(255,255,255,0.6); margin: 0;">لم يتم إضافة أي صور للمعرض بعد</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<style>
+.tab-btn {
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  font-size: 0.95rem;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .channel-info-wrapper > div > div {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .channel-actions {
+    justify-content: center;
+  }
+}
+</style>
+
+<script>
+function switchTab(tabName) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Remove active class from all buttons
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Show selected tab
+  document.getElementById(tabName + '-tab').classList.add('active');
+  
+  // Add active class to clicked button
+  document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+  
+  // Update URL
+  const url = new URL(window.location);
+  url.searchParams.set('tab', tabName);
+  window.history.pushState({}, '', url);
+}
+
+function toggleFollow() {
+  fetch('/channel/{{ channel.id }}/follow/', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCookie('csrftoken'),
+      'Content-Type': 'application/json',
+    },
+  })
+  .then(response => response.json())
+  .then(data => {
+    location.reload();
+  });
+}
+
+function togglePostLike(postId) {
+  fetch('/post/' + postId + '/like/', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCookie('csrftoken'),
+      'Content-Type': 'application/json',
+    },
+  })
+  .then(response => response.json())
+  .then(data => {
+    document.getElementById('post-likes-' + postId).textContent = data.likes_count;
+  });
+}
+
+function shareChannel() {
+  if (navigator.share) {
+    navigator.share({
+      title: '{{ channel.name }}',
+      text: '{{ channel.description }}',
+      url: window.location.href,
+    });
+  } else {
+    copyLink();
+  }
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(window.location.href).then(function() {
+    alert('تم نسخ الرابط بنجاح!');
+  });
+}
+
+function searchChannel() {
+  const query = document.getElementById('searchInput').value;
+  const url = new URL(window.location);
+  url.searchParams.set('q', query);
+  window.location.href = url.toString();
+}
+
+function filterChannel() {
+  const type = document.getElementById('typeFilter').value;
+  const sort = document.getElementById('sortFilter').value;
+  const url = new URL(window.location);
+  url.searchParams.set('type', type);
+  url.searchParams.set('sort', sort);
+  window.location.href = url.toString();
+}
+
+function changeCover() {
+  // Implement cover change functionality
+  alert('سيتم إضافة وظيفة تغيير الغلاف قريباً');
+}
+
+function changeLogo() {
+  // Implement logo change functionality
+  alert('سيتم إضافة وظيفة تغيير الشعار قريباً');
+}
+
+function openGallery(imageUrl) {
+  // Simple gallery lightbox
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+  modal.onclick = () => modal.remove();
+  
+  const img = document.createElement('img');
+  img.src = imageUrl;
+  img.style.cssText = 'max-width:90%;max-height:90%;object-fit:contain;';
+  
+  modal.appendChild(img);
+  document.body.appendChild(modal);
+}
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+</script>
+{% endblock %}

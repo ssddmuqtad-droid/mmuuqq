@@ -10,6 +10,7 @@ from django.dispatch import receiver
 from django.utils.text import slugify
 from django.utils import timezone
 from django.urls import reverse
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 from .constants import (
     IRAQ_GOVERNORATES,
@@ -774,6 +775,474 @@ class BrokerIndividualStats(models.Model):
         stats.save()
 
 
+class Role(models.Model):
+    """نظام الأدوار والصلاحيات المتقدم"""
+    
+    ROLE_CHOICES = [
+        ('super_admin', 'مسؤول النظام'),
+        ('admin', 'مسؤول'),
+        ('main_broker', 'دلال رئيسي'),
+        ('sub_broker', 'دلال فرعي'),
+        ('verified_broker', 'دلال موثق'),
+        ('regular_broker', 'دلال عادي'),
+        ('premium_user', 'مستخدم مميز'),
+        ('regular_user', 'مستخدم عادي'),
+    ]
+    
+    name = models.CharField(max_length=50, choices=ROLE_CHOICES, unique=True, verbose_name='اسم الدور')
+    display_name = models.CharField(max_length=100, verbose_name='الاسم المعروض')
+    description = models.TextField(blank=True, verbose_name='الوصف')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    priority = models.IntegerField(default=0, verbose_name='الأولوية')
+    
+    # Permissions flags
+    can_access_admin_panel = models.BooleanField(default=False, verbose_name='الوصول للوحة الإدارة')
+    can_manage_users = models.BooleanField(default=False, verbose_name='إدارة المستخدمين')
+    can_manage_brokers = models.BooleanField(default=False, verbose_name='إدارة الدلالين')
+    can_manage_properties = models.BooleanField(default=False, verbose_name='إدارة العقارات')
+    can_manage_auctions = models.BooleanField(default=False, verbose_name='إدارة المزادات')
+    can_manage_building_requests = models.BooleanField(default=False, verbose_name='إدارة طلبات البناء')
+    can_approve_content = models.BooleanField(default=False, verbose_name='الموافقة على المحتوى')
+    can_view_statistics = models.BooleanField(default=False, verbose_name='عرض الإحصائيات')
+    can_export_data = models.BooleanField(default=False, verbose_name='تصدير البيانات')
+    can_manage_settings = models.BooleanField(default=False, verbose_name='إدارة الإعدادات')
+    can_send_notifications = models.BooleanField(default=False, verbose_name='إرسال إشعارات')
+    can_moderate_users = models.BooleanField(default=False, verbose_name='مراقبة المستخدمين')
+    can_issue_warnings = models.BooleanField(default=False, verbose_name='إصدار إنذارات')
+    can_suspend_users = models.BooleanField(default=False, verbose_name='تعطيل المستخدمين')
+    can_delete_users = models.BooleanField(default=False, verbose_name='حذف المستخدمين')
+    
+    # Property permissions
+    can_add_properties = models.BooleanField(default=False, verbose_name='إضافة عقارات')
+    can_edit_own_properties = models.BooleanField(default=False, verbose_name='تعديل عقاراته')
+    can_edit_all_properties = models.BooleanField(default=False, verbose_name='تعديل جميع العقارات')
+    can_delete_own_properties = models.BooleanField(default=False, verbose_name='حذف عقاراته')
+    can_delete_all_properties = models.BooleanField(default=False, verbose_name='حذف جميع العقارات')
+    can_feature_properties = models.BooleanField(default=False, verbose_name='تمييز العقارات')
+    
+    # Broker permissions
+    can_verify_brokers = models.BooleanField(default=False, verbose_name='توثيق الدلالين')
+    can_assign_roles = models.BooleanField(default=False, verbose_name='تعيين الأدوار')
+    can_manage_sub_brokers = models.BooleanField(default=False, verbose_name='إدارة الدلالين الفرعيين')
+    can_view_broker_stats = models.BooleanField(default=False, verbose_name='عرض إحصائيات الدلالين')
+    
+    # Financial permissions
+    can_view_financial_data = models.BooleanField(default=False, verbose_name='عرض البيانات المالية')
+    can_manage_payments = models.BooleanField(default=False, verbose_name='إدارة المدفوعات')
+    can_manage_subscriptions = models.BooleanField(default=False, verbose_name='إدارة الاشتراكات')
+    can_view_commissions = models.BooleanField(default=False, verbose_name='عرض العمولات')
+    
+    # Content permissions
+    can_create_posts = models.BooleanField(default=False, verbose_name='إنشاء منشورات')
+    can_edit_all_posts = models.BooleanField(default=False, verbose_name='تعديل جميع المنشورات')
+    can_delete_posts = models.BooleanField(default=False, verbose_name='حذف المنشورات')
+    can_upload_videos = models.BooleanField(default=False, verbose_name='رفع فيديوهات')
+    
+    # Communication permissions
+    can_send_messages = models.BooleanField(default=False, verbose_name='إرسال رسائل')
+    can_view_all_messages = models.BooleanField(default=False, verbose_name='عرض جميع الرسائل')
+    can_broadcast_messages = models.BooleanField(default=False, verbose_name='بث رسائل')
+    
+    # Regional permissions
+    allowed_governorates = models.JSONField(default=list, blank=True, verbose_name='المحافظات المسموحة')
+    can_access_all_regions = models.BooleanField(default=False, verbose_name='الوصول لجميع المناطق')
+    
+    # Limits
+    max_properties = models.IntegerField(null=True, blank=True, verbose_name='الحد الأقصى للعقارات')
+    max_sub_brokers = models.IntegerField(null=True, blank=True, verbose_name='الحد الأقصى للدلالين الفرعيين')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'دور'
+        verbose_name_plural = 'الأدوار'
+        ordering = ['-priority', 'name']
+    
+    def __str__(self):
+        return self.display_name
+    
+    def has_permission(self, permission_name):
+        """Check if role has specific permission"""
+        return getattr(self, permission_name, False)
+
+
+class UserRole(models.Model):
+    """ربط المستخدم بالأدوار"""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_roles', verbose_name='المستخدم')
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='role_users', verbose_name='الدور')
+    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_roles', verbose_name='عين بواسطة')
+    assigned_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ التعيين')
+    expires_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الانتهاء')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    notes = models.TextField(blank=True, verbose_name='ملاحظات')
+    
+    class Meta:
+        verbose_name = 'دور مستخدم'
+        verbose_name_plural = 'أدوار المستخدمين'
+        unique_together = ['user', 'role']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.role.display_name}'
+    
+    def is_valid(self):
+        """Check if role assignment is still valid"""
+        if not self.is_active:
+            return False
+        if self.expires_at and self.expires_at < timezone.now():
+            return False
+        return True
+
+
+class AdvancedSubscriptionPlan(models.Model):
+    """نماذج الاشتراكات المتخصصة"""
+    
+    PLAN_TYPE_CHOICES = [
+        ('properties_iraq', 'عقارات داخل العراق'),
+        ('properties_outside', 'عقارات خارج العراق'),
+        ('hotels', 'فنادق'),
+        ('resorts', 'منتجعات'),
+        ('building_requests', 'طلبات بناء'),
+        ('auctions', 'مزادات'),
+        ('combined', 'اشتراك مركب'),
+    ]
+    
+    TIER_CHOICES = [
+        ('regular', 'عادي'),
+        ('premium', 'مميز'),
+    ]
+    
+    name = models.CharField(max_length=100, verbose_name='اسم الخطة')
+    plan_type = models.CharField(max_length=30, choices=PLAN_TYPE_CHOICES, verbose_name='نوع الخطة')
+    tier = models.CharField(max_length=20, choices=TIER_CHOICES, verbose_name='المستوى')
+    
+    # Pricing
+    price_per_day = models.DecimalField(max_digits=10, decimal_places=0, verbose_name='السعر باليوم')
+    price_per_month = models.DecimalField(max_digits=15, decimal_places=0, null=True, blank=True, verbose_name='السعر بالشهر')
+    price_per_year = models.DecimalField(max_digits=15, decimal_places=0, null=True, blank=True, verbose_name='السعر بالسنة')
+    
+    # Limits
+    max_properties = models.IntegerField(default=1, verbose_name='الحد الأقصى للعقارات')
+    max_auctions = models.IntegerField(default=0, verbose_name='الحد الأقصى للمزادات')
+    max_building_requests = models.IntegerField(default=0, verbose_name='الحد الأقصى لطلبات البناء')
+    
+    # Features
+    allow_property_replacement = models.BooleanField(default=True, verbose_name='السماح باستبدال العقارات')
+    allow_subscription_renewal = models.BooleanField(default=True, verbose_name='السماح بتجديد الاشتراك')
+    allow_expired_renewal = models.BooleanField(default=True, verbose_name='السماح بالتجديد على اشتراك منتهي')
+    
+    # Time calculation
+    extend_on_property_display = models.BooleanField(default=False, verbose_name='تمديد الوقت عند عرض العقار')
+    extend_days_per_display = models.IntegerField(default=0, verbose_name='أيام التمديد لكل عرض')
+    
+    description = models.TextField(blank=True, verbose_name='الوصف')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'خطة اشتراك متقدمة'
+        verbose_name_plural = 'خطط الاشتراك المتقدمة'
+        ordering = ['plan_type', 'tier']
+    
+    def __str__(self):
+        return f'{self.name} - {self.get_tier_display()}'
+
+
+class BrokerPlanSubscription(models.Model):
+    """اشتراكات الدلالين"""
+    
+    STATUS_CHOICES = [
+        ('active', 'نشط'),
+        ('expired', 'منتهي'),
+        ('suspended', 'معلق'),
+        ('pending', 'قيد الانتظار'),
+    ]
+    
+    broker = models.ForeignKey('Broker', on_delete=models.CASCADE, related_name='plan_subscriptions', verbose_name='الدلال')
+    plan = models.ForeignKey(AdvancedSubscriptionPlan, on_delete=models.PROTECT, related_name='plan_subscriptions', verbose_name='الخطة')
+    
+    # Time tracking
+    start_date = models.DateTimeField(verbose_name='تاريخ البداية')
+    end_date = models.DateTimeField(verbose_name='تاريخ النهاية')
+    actual_end_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الانتهاء الفعلي')
+    
+    # Usage tracking
+    properties_used = models.IntegerField(default=0, verbose_name='العقارات المستخدمة')
+    properties_replaced = models.IntegerField(default=0, verbose_name='العقارات المستبدلة')
+    auctions_used = models.IntegerField(default=0, verbose_name='المزادات المستخدمة')
+    building_requests_used = models.IntegerField(default=0, verbose_name='طلبات البناء المستخدمة')
+    
+    # Property replacement tracking
+    last_replaced_at = models.DateTimeField(null=True, blank=True, verbose_name='آخر استبدال')
+    replacement_history = models.JSONField(default=list, blank=True, verbose_name='تاريخ الاستبدال')
+    
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', verbose_name='الحالة')
+    is_auto_renew = models.BooleanField(default=False, verbose_name='تجديد تلقائي')
+    
+    # Payment
+    total_paid = models.DecimalField(max_digits=15, decimal_places=0, default=0, verbose_name='المبلغ المدفوع')
+    payment_method = models.CharField(max_length=50, blank=True, verbose_name='طريقة الدفع')
+    
+    # Notes
+    notes = models.TextField(blank=True, verbose_name='ملاحظات')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'اشتراك خطة دلال'
+        verbose_name_plural = 'اشتراكات خطط الدلالين'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.broker.display_name} - {self.plan.name}'
+    
+    def get_seconds_remaining(self):
+        """حساب الثواني المتبقية بدقة"""
+        from django.utils import timezone
+        now = timezone.now()
+        if self.actual_end_date:
+            end = self.actual_end_date
+        else:
+            end = self.end_date
+        
+        if end > now:
+            delta = end - now
+            return int(delta.total_seconds())
+        return 0
+    
+    def is_active(self):
+        """التحقق من أن الاشتراك نشط"""
+        from django.utils import timezone
+        return self.status == 'active' and self.get_seconds_remaining() > 0
+    
+    def can_add_property(self):
+        """التحقق من إمكانية إضافة عقار"""
+        if not self.is_active():
+            return False
+        return self.properties_used < self.plan.max_properties
+    
+    def can_replace_property(self):
+        """التحقق من إمكانية استبدال عقار"""
+        if not self.is_active():
+            return False
+        if not self.plan.allow_property_replacement:
+            return False
+        return self.properties_used > 0
+    
+    def can_add_auction(self):
+        """التحقق من إمكانية إضافة مزاد"""
+        if not self.is_active():
+            return False
+        return self.auctions_used < self.plan.max_auctions
+    
+    def use_auction(self):
+        """استخدام مزاد من الحصة"""
+        if not self.can_add_auction():
+            return False
+        self.auctions_used += 1
+        self.save()
+        return True
+    
+    def replace_property(self, old_property_id, new_property_id):
+        """استبدال عقار"""
+        if not self.can_replace_property():
+            return False
+        
+        from django.utils import timezone
+        self.properties_replaced += 1
+        self.last_replaced_at = timezone.now()
+        
+        # Add to replacement history
+        self.replacement_history.append({
+            'old_property_id': old_property_id,
+            'new_property_id': new_property_id,
+            'replaced_at': timezone.now().isoformat(),
+        })
+        
+        self.save()
+        return True
+    
+    def extend_on_display(self):
+        """تمديد الوقت عند عرض العقار"""
+        if not self.plan.extend_on_property_display:
+            return False
+        
+        from django.utils import timezone, timedelta
+        days = self.plan.extend_days_per_display
+        if self.actual_end_date:
+            self.actual_end_date += timedelta(days=days)
+        else:
+            self.end_date += timedelta(days=days)
+        
+        self.save()
+        return True
+    
+    def renew(self, days):
+        """تجديد الاشتراك"""
+        from django.utils import timezone, timedelta
+        
+        if self.actual_end_date:
+            new_end = max(timezone.now(), self.actual_end_date) + timedelta(days=days)
+            self.actual_end_date = new_end
+        else:
+            new_end = max(timezone.now(), self.end_date) + timedelta(days=days)
+            self.end_date = new_end
+        
+        self.status = 'active'
+        self.save()
+        return True
+
+
+class SubscriptionRenewalRequest(models.Model):
+    """طلبات تجديد الاشتراك"""
+    
+    STATUS_CHOICES = [
+        ('pending', 'قيد الانتظار'),
+        ('approved', 'موافق عليه'),
+        ('rejected', 'مرفوض'),
+        ('completed', 'مكتمل'),
+    ]
+    
+    broker = models.ForeignKey('Broker', on_delete=models.CASCADE, related_name='renewal_requests', verbose_name='الدلال')
+    current_subscription = models.ForeignKey(BrokerPlanSubscription, on_delete=models.SET_NULL, null=True, blank=True, related_name='renewal_requests', verbose_name='الاشتراك الحالي')
+    
+    plan = models.ForeignKey(AdvancedSubscriptionPlan, on_delete=models.PROTECT, verbose_name='الخطة المطلوبة')
+    days_requested = models.IntegerField(verbose_name='الأيام المطلوبة')
+    property_count = models.IntegerField(default=1, verbose_name='عدد العقارات الإجمالي')
+    regular_count = models.IntegerField(default=0, verbose_name='عدد العقارات العادية')
+    premium_count = models.IntegerField(default=0, verbose_name='عدد العقارات المميزة')
+    
+    # Property type selection
+    property_types = models.JSONField(default=list, verbose_name='أنواع العقارات المطلوبة')
+    
+    # Pricing
+    estimated_cost = models.DecimalField(max_digits=15, decimal_places=0, verbose_name='التكلفة التقديرية')
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='الحالة')
+    rejection_reason = models.TextField(blank=True, verbose_name='سبب الرفض')
+    
+    approved_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_renewals', verbose_name='تمت الموافقة بواسطة')
+    approved_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الموافقة')
+    
+    notes = models.TextField(blank=True, verbose_name='ملاحظات')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'طلب تجديد اشتراك'
+        verbose_name_plural = 'طلبات تجديد الاشتراكات'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.broker.display_name} - {self.plan.name}'
+
+
+class BuildingRequestSubscription(models.Model):
+    """اشتراكات طلبات البناء"""
+    
+    broker = models.ForeignKey('Broker', on_delete=models.CASCADE, related_name='building_plan_subscriptions', verbose_name='الدلال')
+    
+    # Pricing
+    annual_price = models.DecimalField(max_digits=15, decimal_places=0, default=150000, verbose_name='السعر السنوي')
+    
+    # Time tracking
+    start_date = models.DateTimeField(verbose_name='تاريخ البداية')
+    end_date = models.DateTimeField(verbose_name='تاريخ النهاية')
+    
+    # Usage
+    requests_used = models.IntegerField(default=0, verbose_name='الطلبات المستخدمة')
+    max_requests = models.IntegerField(default=1, verbose_name='الحد الأقصى للطلبات')
+    
+    status = models.CharField(max_length=20, choices=BrokerPlanSubscription.STATUS_CHOICES, default='active', verbose_name='الحالة')
+    
+    total_paid = models.DecimalField(max_digits=15, decimal_places=0, default=0, verbose_name='المبلغ المدفوع')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'اشتراك طلبات بناء'
+        verbose_name_plural = 'اشتراكات طلبات البناء'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.broker.display_name} - طلبات بناء'
+
+
+class AuctionSubscription(models.Model):
+    """اشتراكات المزادات"""
+    
+    broker = models.ForeignKey('Broker', on_delete=models.CASCADE, related_name='auction_plan_subscriptions', verbose_name='الدلال')
+    
+    # Pricing
+    price_per_auction = models.DecimalField(max_digits=15, decimal_places=0, default=100000, verbose_name='السعر لكل مزاد')
+    
+    # Usage
+    auctions_used = models.IntegerField(default=0, verbose_name='المزادات المستخدمة')
+    auctions_paid = models.IntegerField(default=0, verbose_name='المزادات المدفوعة')
+    
+    status = models.CharField(max_length=20, choices=BrokerPlanSubscription.STATUS_CHOICES, default='active', verbose_name='الحالة')
+    
+    total_paid = models.DecimalField(max_digits=15, decimal_places=0, default=0, verbose_name='المبلغ المدفوع')
+    
+    notes = models.TextField(blank=True, verbose_name='ملاحظات')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'اشتراك مزادات'
+        verbose_name_plural = 'اشتراكات المزادات'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.broker.display_name} - مزادات'
+    
+    def can_create_auction(self):
+        """التحقق من إمكانية إنشاء مزاد"""
+        return self.status == 'active'
+    
+    def pay_for_auction(self):
+        """دفع مقابل مزاد"""
+        from django.utils import timezone
+        self.auctions_paid += 1
+        self.total_paid += self.price_per_auction
+        self.save()
+
+
+class PermissionLog(models.Model):
+    """سجل تغييرات الصلاحيات"""
+    
+    ACTION_CHOICES = [
+        ('assigned', 'تعيين'),
+        ('revoked', 'إلغاء'),
+        ('modified', 'تعديل'),
+        ('expired', 'انتهاء'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='permission_logs', verbose_name='المستخدم')
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='permission_logs', verbose_name='الدور')
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES, verbose_name='الإجراء')
+    performed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='permitted_logs', verbose_name='نفذ بواسطة')
+    changes = models.JSONField(default=dict, verbose_name='التغييرات')
+    reason = models.TextField(blank=True, verbose_name='السبب')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ التغيير')
+    
+    class Meta:
+        verbose_name = 'سجل صلاحية'
+        verbose_name_plural = 'سجلات الصلاحيات'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.action} - {self.role.display_name}'
+
+
 class SiteSettings(models.Model):
     
     # General Settings
@@ -919,42 +1388,165 @@ class Property(models.Model):
         return choices
 
     PROPERTY_TYPES = get_property_type_choices()
-    STATUS_CHOICES = STATUS_CHOICES
+    
+    # New status choices for payment-based system
+    STATUS_DRAFT = 'draft'
+    STATUS_PAID = 'paid'
+    STATUS_PENDING_APPROVAL = 'pending_approval'
+    STATUS_PUBLISHED = 'published'
+    STATUS_REJECTED = 'rejected'
+    STATUS_EXPIRED = 'expired'
+    STATUS_RENEWED = 'renewed'
+    
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, 'مسودة'),
+        (STATUS_PAID, 'تم الدفع'),
+        (STATUS_PENDING_APPROVAL, 'بانتظار الموافقة'),
+        (STATUS_PUBLISHED, 'منشور'),
+        (STATUS_REJECTED, 'مرفوض'),
+        (STATUS_EXPIRED, 'منتهي'),
+        (STATUS_RENEWED, 'مجدد'),
+    ]
 
     title = models.CharField(max_length=200, blank=True, default='', verbose_name='عنوان الإعلان')
     slug = models.SlugField(max_length=220, unique=True, blank=True, default='', allow_unicode=True)
     category = models.CharField(max_length=20, choices=PROPERTY_CATEGORIES, blank=True, null=True, verbose_name='تصنيف العقار')
     type = models.CharField(max_length=50, choices=PROPERTY_TYPES, verbose_name='نوع العقار')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ready', verbose_name='الحالة')
-
-    # Location fields
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT, verbose_name='الحالة')
+    
+    # Property Purpose and Condition
+    PURPOSE_CHOICES = [
+        ('sale', 'بيع'),
+        ('rent', 'إيجار'),
+        ('investment', 'استثمار'),
+        ('auction', 'مزاد'),
+    ]
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES, blank=True, null=True, verbose_name='الغرض')
+    
+    CONDITION_CHOICES = [
+        ('new', 'جديد'),
+        ('used', 'مستعمل'),
+        ('under_construction', 'قيد الإنشاء'),
+    ]
+    property_condition = models.CharField(max_length=30, choices=CONDITION_CHOICES, blank=True, null=True, verbose_name='حالة العقار')
+    
+    OWNERSHIP_CHOICES = [
+        ('title_deed', 'طابو'),
+        ('agricultural', 'زراعي'),
+        ('investment', 'استثماري'),
+        ('commercial', 'تجاري'),
+        ('other', 'أخرى'),
+    ]
+    ownership_status = models.CharField(max_length=30, choices=OWNERSHIP_CHOICES, blank=True, null=True, verbose_name='حالة الملكية')
+    
+    # Property ID and Owner Information
+    property_number = models.CharField(max_length=20, unique=True, blank=True, null=True, verbose_name='رقم الإعلان')
+    owner_name = models.CharField(max_length=100, blank=True, null=True, verbose_name='اسم المالك (اختياري)')
+    
+    # Price and Currency
+    negotiable = models.BooleanField(default=False, verbose_name='قابل للتفاوض')
+    
+    # Location fields - Iraq
+    governorate = models.CharField(max_length=50, blank=True, null=True, verbose_name='المحافظة')
+    city = models.CharField(max_length=50, blank=True, null=True, verbose_name='المدينة')
     district = models.CharField(max_length=100, verbose_name='الحي', help_text='اسم الحي')
+    subdistrict = models.CharField(max_length=100, blank=True, null=True, verbose_name='القضاء')
+    nahiyah = models.CharField(max_length=100, blank=True, null=True, verbose_name='الناحية')
+    area = models.CharField(max_length=100, blank=True, null=True, verbose_name='المنطقة')
     street = models.CharField(max_length=100, blank=True, verbose_name='الشارع', help_text='اسم الشارع')
+    landmark = models.CharField(max_length=200, blank=True, null=True, verbose_name='أقرب نقطة دالة')
     location = models.CharField(max_length=200, verbose_name='العنوان التفصيلي', help_text='العنوان الكامل')
     
     # Outside Iraq location fields
     country = models.ForeignKey('Country', on_delete=models.SET_NULL, null=True, blank=True, related_name='properties', verbose_name='الدولة')
-    city = models.ForeignKey('City', on_delete=models.SET_NULL, null=True, blank=True, related_name='properties', verbose_name='المدينة')
+    city_outside = models.ForeignKey('City', on_delete=models.SET_NULL, null=True, blank=True, related_name='properties', verbose_name='المدينة')
     area_outside = models.ForeignKey('Area', on_delete=models.SET_NULL, null=True, blank=True, related_name='properties', verbose_name='المنطقة')
-
-    area = models.PositiveIntegerField(verbose_name='المساحة (م²)')
+    postal_code = models.CharField(max_length=20, blank=True, null=True, verbose_name='الرمز البريدي')
+    
+    # GPS Coordinates
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name='خط العرض')
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name='خط الطول')
+    
+    # Area and Building
+    total_area = models.PositiveIntegerField(null=True, blank=True, verbose_name='المساحة الكلية (م²)')
+    building_area = models.PositiveIntegerField(null=True, blank=True, verbose_name='مساحة البناء (م²)')
+    area = models.PositiveIntegerField(verbose_name='المساحة (م²)')  # Keep for backward compatibility
     price = models.BigIntegerField(verbose_name='السعر (د.ع)')
     
     # Currency for outside Iraq properties
     currency = models.CharField(max_length=3, blank=True, default='IQD', verbose_name='العملة')
     original_price = models.BigIntegerField(null=True, blank=True, verbose_name='السعر الأصلي بالعملة الأجنبية')
+    
+    # Additional Price Details
+    price_per_meter = models.BigIntegerField(null=True, blank=True, verbose_name='سعر المتر')
+    down_payment = models.BigIntegerField(null=True, blank=True, verbose_name='الدفعة الأولى')
+    installments = models.TextField(blank=True, null=True, verbose_name='الأقساط (إن وجدت)')
+    annual_maintenance_fee = models.BigIntegerField(null=True, blank=True, verbose_name='رسوم الصيانة السنوية')
+    
+    # Building Details
+    facade = models.CharField(max_length=50, blank=True, null=True, verbose_name='الواجهة')
+    direction = models.CharField(max_length=50, blank=True, null=True, verbose_name='الاتجاه')
+    year_built = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='سنة البناء')
+    building_condition = models.CharField(max_length=50, blank=True, null=True, verbose_name='حالة البناء')
+    total_floors = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد الطوابق')
+    floor_number = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='رقم الطابق')
+    
+    # Additional Building Details
+    floor_type = models.CharField(max_length=50, blank=True, null=True, verbose_name='نوع الأرضية')
+    roof_type = models.CharField(max_length=50, blank=True, null=True, verbose_name='نوع السقف')
+    wall_type = models.CharField(max_length=50, blank=True, null=True, verbose_name='نوع الجدران')
+    finish_condition = models.CharField(max_length=50, blank=True, null=True, verbose_name='حالة التشطيب')
+    last_maintenance = models.DateField(null=True, blank=True, verbose_name='آخر صيانة')
+    
+    # Room Details
+    bedrooms = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد الغرف')
+    living_rooms = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد الصالات')
+    dining_rooms = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد غرف الطعام')
+    bathrooms = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد الحمامات')
+    kitchens = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد المطابخ')
+    balconies = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد الشرفات')
+    
+    # Parking
+    parking_spaces = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد مواقف السيارات')
+    parking = models.BooleanField(default=False, verbose_name='موقف سيارة')  # Keep for backward compatibility
+    
+    # Amenities
+    furnished = models.BooleanField(default=False, verbose_name='مفروش')
+    has_pool = models.BooleanField(default=False, verbose_name='مسبح')
+    has_garden = models.BooleanField(default=False, verbose_name='حديقة')
+    has_elevator = models.BooleanField(default=False, verbose_name='مصعد')
+    has_generator = models.BooleanField(default=False, verbose_name='مولد')
+    has_national_electricity = models.BooleanField(default=False, verbose_name='الكهرباء الوطنية')
+    has_water = models.BooleanField(default=False, verbose_name='الماء')
+    has_internet = models.BooleanField(default=False, verbose_name='الإنترنت')
+    has_sewerage = models.BooleanField(default=False, verbose_name='المجاري')
+    has_heating = models.BooleanField(default=False, verbose_name='التدفئة')
+    has_cooling = models.BooleanField(default=False, verbose_name='التبريد')
+    has_solar_power = models.BooleanField(default=False, verbose_name='نظام الطاقة الشمسية')
+    
+    # Security
+    has_security_system = models.BooleanField(default=False, verbose_name='نظام الأمان')
+    has_cctv = models.BooleanField(default=False, verbose_name='كاميرات المراقبة')
+    has_alarm = models.BooleanField(default=False, verbose_name='نظام الإنذار')
+    
+    # Description
     description = models.TextField(verbose_name='وصف العقار')
     phone = models.CharField(max_length=20, verbose_name='رقم التواصل')
-
-    bedrooms = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد الغرف')
-    bathrooms = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد الحمامات')
+    
+    # Floors (keep for backward compatibility)
     floors = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد الطوابق')
-    year_built = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='سنة البناء')
-    parking = models.BooleanField(default=False, verbose_name='موقف سيارة')
-    furnished = models.BooleanField(default=False, verbose_name='مفروش')
-
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name='خط العرض')
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name='خط الطول')
+    
+    # Payment and publication fields
+    publication_type = models.CharField(
+        max_length=20,
+        choices=[('normal', 'عادي'), ('featured', 'مميز')],
+        default='normal',
+        verbose_name='نوع النشر'
+    )
+    publication_days = models.PositiveIntegerField(null=True, blank=True, verbose_name='مدة النشر (أيام)')
+    publication_start_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ بدء النشر')
+    publication_end_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ انتهاء النشر')
+    rejection_reason = models.TextField(blank=True, verbose_name='سبب الرفض')
 
     # image field removed - column does not exist in database
     # image = models.ImageField(upload_to=property_image_path, null=True, blank=True, verbose_name='الصورة الرئيسية')
@@ -963,6 +1555,12 @@ class Property(models.Model):
     is_featured = models.BooleanField(default=False, verbose_name='عقار مميز')
     is_promoted = models.BooleanField(default=False, verbose_name='إعلان خاص')
     promotion_until = models.DateField(null=True, blank=True, verbose_name='انتهاء الترويج')
+    is_pinned = models.BooleanField(default=False, verbose_name='مثبت في الأعلى')
+    pinned_until = models.DateTimeField(null=True, blank=True, verbose_name='مثبت حتى')
+    
+    # Cover and personal images
+    cover_image = models.ImageField(upload_to='property_covers/', null=True, blank=True, verbose_name='صورة الغلاف')
+    personal_image = models.ImageField(upload_to='property_personal/', null=True, blank=True, verbose_name='صورة شخصية')
 
     views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
     view_commission_rate = models.DecimalField(
@@ -1002,13 +1600,13 @@ class Property(models.Model):
     class Meta:
         verbose_name = 'عقار'
         verbose_name_plural = 'العقارات'
-        ordering = ['-is_featured', '-is_promoted', '-created_at']
+        ordering = ['-is_pinned', '-is_featured', '-is_promoted', '-created_at']
         indexes = [
             models.Index(fields=['district']),
             models.Index(fields=['type', 'status']),
             models.Index(fields=['price']),
             models.Index(fields=['-created_at']),
-            models.Index(fields=['is_featured', 'is_promoted']),
+            models.Index(fields=['is_featured', 'is_promoted', 'is_pinned']),
         ]
 
     def __str__(self):
@@ -1118,6 +1716,110 @@ class Property(models.Model):
     @property
     def price_formatted(self):
         return f'{self.price:,}'
+    
+    # Hotel/Resort specific fields
+    hotel_stars = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد النجوم')
+    hotel_rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True, verbose_name='التقييم')
+    hotel_rooms = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد الغرف')
+    hotel_suites = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد الأجنحة')
+    hotel_family_rooms = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='الغرف العائلية')
+    
+    # Hotel services
+    has_restaurant = models.BooleanField(default=False, verbose_name='مطعم')
+    has_cafe = models.BooleanField(default=False, verbose_name='مقهى')
+    has_swimming_pool = models.BooleanField(default=False, verbose_name='مسبح')
+    has_gym = models.BooleanField(default=False, verbose_name='نادي رياضي')
+    has_spa = models.BooleanField(default=False, verbose_name='سبا')
+    has_conference_hall = models.BooleanField(default=False, verbose_name='قاعة مؤتمرات')
+    has_wifi = models.BooleanField(default=False, verbose_name='واي فاي')
+    has_parking = models.BooleanField(default=False, verbose_name='موقف سيارات')
+    has_room_service = models.BooleanField(default=False, verbose_name='خدمة الغرف')
+    has_laundry = models.BooleanField(default=False, verbose_name='خدمة الغسيل')
+    has_airport_shuttle = models.BooleanField(default=False, verbose_name='نقل من المطار')
+    
+    # Resort/Tourism specific fields
+    resort_capacity = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='سعة الاستيعاب')
+    resort_activities = models.TextField(blank=True, verbose_name='الأنشطة المتاحة')
+    booking_available = models.BooleanField(default=False, verbose_name='الحجز متاح')
+    booking_url = models.URLField(blank=True, verbose_name='رابط الحجز')
+    min_booking_duration = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='أقل مدة حجز (أيام)')
+    max_booking_duration = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='أقصى مدة حجز (أيام)')
+    
+    # Outside Iraq specific fields
+    taxes = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='الضرائب (%)')
+    registration_fees = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='رسوم التسجيل')
+    foreign_ownership_laws = models.TextField(blank=True, verbose_name='قوانين التملك للأجانب')
+    
+    # Virtual Tour and Media
+    virtual_tour_url = models.URLField(blank=True, verbose_name='رابط الجولة الافتراضية')
+    vr_tour_url = models.URLField(blank=True, verbose_name='رابط جولة VR')
+    ar_available = models.BooleanField(default=False, verbose_name='دعم الواقع المعزز')
+    qr_code = models.ImageField(upload_to='qr_codes/', null=True, blank=True, verbose_name='QR Code')
+    short_share_code = models.CharField(max_length=20, unique=True, blank=True, verbose_name='رمز المشاركة المختصر')
+    
+    # Live Streaming
+    live_stream_enabled = models.BooleanField(default=False, verbose_name='تفعيل البث المباشر')
+    live_stream_url = models.URLField(blank=True, verbose_name='رابط البث المباشر')
+    live_stream_scheduled = models.DateTimeField(null=True, blank=True, verbose_name='موعد البث المجدول')
+    live_stream_status = models.CharField(
+        max_length=20,
+        choices=[('scheduled', 'مجدول'), ('live', 'مباشر'), ('ended', 'منتهي'), ('cancelled', 'ملغي')],
+        blank=True,
+        verbose_name='حالة البث'
+    )
+    
+    # AI Features
+    ai_generated_description = models.TextField(blank=True, verbose_name='وصف مولد بالذكاء الاصطناعي')
+    ai_suggested_price = models.BigIntegerField(null=True, blank=True, verbose_name='السعر المقترح')
+    ai_keywords = models.TextField(blank=True, verbose_name='كلمات مفتاحية مقترحة')
+    ai_image_enhanced = models.BooleanField(default=False, verbose_name='تم تحسين الصور')
+    
+    # Additional location details
+    nearest_landmark = models.CharField(max_length=200, blank=True, verbose_name='أقرب معلم')
+    distance_to_city_center = models.PositiveIntegerField(null=True, blank=True, verbose_name='المسافة لمركز المدينة (كم)')
+    distance_to_airport = models.PositiveIntegerField(null=True, blank=True, verbose_name='المسافة للمطار (كم)')
+    
+    # Additional property details
+    property_age = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عمر العقار (سنوات)')
+    last_renovation = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='سنة آخر ترميم')
+    maintenance_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='رسوم الصيانة الشهرية')
+    hoa_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='رسوم الجمعية')
+    
+    # Accessibility
+    wheelchair_accessible = models.BooleanField(default=False, verbose_name='مخصص للكراسي المتحركة')
+    has_ramp = models.BooleanField(default=False, verbose_name='منحدر')
+    has_elevator_accessibility = models.BooleanField(default=False, verbose_name='مصعد متاح')
+    
+    # Green features
+    energy_efficient = models.BooleanField(default=False, verbose_name='موفر للطاقة')
+    has_green_building_cert = models.BooleanField(default=False, verbose_name='شهادة بناء أخضر')
+    has_smart_home = models.BooleanField(default=False, verbose_name='منزل ذكي')
+    has_double_glazing = models.BooleanField(default=False, verbose_name='زجاج مزدوج')
+    has_insulation = models.BooleanField(default=False, verbose_name='عزل حراري')
+    
+    # Parking details
+    parking_type = models.CharField(
+        max_length=20,
+        choices=[('covered', 'مغطى'), ('open', 'مفتوح'), ('underground', 'تحت الأرض'), ('garage', 'مرآب')],
+        blank=True,
+        verbose_name='نوع الموقف'
+    )
+    
+    # View and orientation
+    view_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('city', 'إطلالة مدينة'),
+            ('sea', 'إطلالة بحر'),
+            ('mountain', 'إطلالة جبل'),
+            ('garden', 'إطلالة حديقة'),
+            ('street', 'إطلالة شارع'),
+            ('park', 'إطلالة حديقة عامة'),
+            ('none', 'لا يوجد'),
+        ],
+        blank=True,
+        verbose_name='نوع الإطلالة'
+    )
 
 
 class PropertyImage(models.Model):
@@ -1129,6 +1831,18 @@ class PropertyImage(models.Model):
     sort_order = models.PositiveSmallIntegerField(default=0, verbose_name='الترتيب')
     is_primary = models.BooleanField(default=False, verbose_name='رئيسية')
     is_360 = models.BooleanField(default=False, verbose_name='صورة 360°')
+    image_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('photo', 'صورة عادية'),
+            ('360', 'صورة 360°'),
+            ('floor_plan', 'مخطط طابق'),
+            ('site_plan', 'مخطط موقع'),
+            ('drone', 'تصوير جوي'),
+        ],
+        default='photo',
+        verbose_name='نوع الصورة'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -1155,6 +1869,18 @@ class PropertyVideo(models.Model):
     video = models.FileField(upload_to=property_video_path, verbose_name='الفيديو')
     caption = models.CharField(max_length=200, blank=True, verbose_name='تعليق')
     sort_order = models.PositiveSmallIntegerField(default=0, verbose_name='الترتيب')
+    video_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('regular', 'فيديو عادي'),
+            ('drone', 'فيديو Drone'),
+            ('intro', 'فيديو تعريفي'),
+            ('virtual_tour', 'جولة افتراضية'),
+        ],
+        default='regular',
+        verbose_name='نوع الفيديو'
+    )
+    duration = models.PositiveIntegerField(null=True, blank=True, verbose_name='المدة (ثواني)')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -1166,93 +1892,809 @@ class PropertyVideo(models.Model):
         return f'فيديو {self.property_id} #{self.pk}'
 
 
-class Message(models.Model):
-    # Message types
-    TYPE_PROPERTY_INQUIRY = 'property_inquiry'
-    TYPE_BROKER_MESSAGE = 'broker_message'
-    TYPE_USER_BROKER = 'user_broker'
+class PropertyDocument(models.Model):
+    """نموذج للمستندات والملفات"""
     
-    TYPE_CHOICES = [
-        (TYPE_PROPERTY_INQUIRY, 'استفسار عن عقار'),
-        (TYPE_BROKER_MESSAGE, 'رسالة بين دلالين'),
-        (TYPE_USER_BROKER, 'رسالة بين مستخدم ودلال'),
+    DOCUMENT_TYPES = [
+        ('pdf', 'ملف PDF'),
+        ('ownership', 'وثيقة الملكية'),
+        ('contract', 'عقد'),
+        ('floor_plan', 'مخطط الطابق'),
+        ('site_plan', 'مخطط الموقع'),
+        ('other', 'أخرى'),
     ]
     
-    name = models.CharField(max_length=100, verbose_name='الاسم')
-    email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
-    phone = models.CharField(max_length=20, blank=True, verbose_name='رقم الهاتف')
-    message = models.TextField(verbose_name='الرسالة')
-    message_type = models.CharField(
-        max_length=20, choices=TYPE_CHOICES, default=TYPE_PROPERTY_INQUIRY,
-        verbose_name='نوع الرسالة'
-    )
-    
-    # For property inquiries
     property = models.ForeignKey(
-        Property, on_delete=models.CASCADE, null=True, blank=True, related_name='inquiries'
+        Property, on_delete=models.CASCADE, related_name='documents',
+        verbose_name='العقار'
+    )
+    document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPES, verbose_name='نوع المستند')
+    title = models.CharField(max_length=200, verbose_name='عنوان المستند')
+    file = models.FileField(upload_to='property_documents/', verbose_name='الملف')
+    description = models.TextField(blank=True, verbose_name='الوصف')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'مستند عقار'
+        verbose_name_plural = 'مستندات العقارات'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.title} - {self.property.display_title}'
+
+
+class PropertyMediaStats(models.Model):
+    """إحصائيات الوسائط للعقارات"""
+    
+    property = models.OneToOneField(
+        Property, on_delete=models.CASCADE, related_name='media_stats',
+        verbose_name='العقار'
     )
     
-    # For broker-to-broker and user-to-broker messaging
+    # Image stats
+    total_images = models.PositiveIntegerField(default=0, verbose_name='عدد الصور')
+    image_views = models.PositiveIntegerField(default=0, verbose_name='مشاهدات الصور')
+    
+    # Video stats
+    total_videos = models.PositiveIntegerField(default=0, verbose_name='عدد الفيديوهات')
+    video_views = models.PositiveIntegerField(default=0, verbose_name='مشاهدات الفيديوهات')
+    
+    # 360 tour stats
+    total_360_tours = models.PositiveIntegerField(default=0, verbose_name='عدد الجولات 360°')
+    tour_views = models.PositiveIntegerField(default=0, verbose_name='مشاهدات الجولات')
+    
+    # Document stats
+    total_documents = models.PositiveIntegerField(default=0, verbose_name='عدد المستندات')
+    document_downloads = models.PositiveIntegerField(default=0, verbose_name='تحميلات المستندات')
+    
+    # VR/AR stats
+    vr_views = models.PositiveIntegerField(default=0, verbose_name='مشاهدات VR')
+    ar_views = models.PositiveIntegerField(default=0, verbose_name='مشاهدات AR')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'إحصائيات الوسائط'
+        verbose_name_plural = 'إحصائيات الوسائط'
+    
+    def __str__(self):
+        return f'إحصائيات وسائط {self.property.display_title}'
+
+
+class PropertyViewStats(models.Model):
+    """إحصائيات المشاهدات التفصيلية للعقارات"""
+    
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='view_stats',
+        verbose_name='العقار'
+    )
+    
+    # View tracking
+    total_views = models.PositiveIntegerField(default=0, verbose_name='إجمالي المشاهدات')
+    unique_views = models.PositiveIntegerField(default=0, verbose_name='المشاهدات الفريدة')
+    
+    # Daily views
+    views_today = models.PositiveIntegerField(default=0, verbose_name='مشاهدات اليوم')
+    views_yesterday = models.PositiveIntegerField(default=0, verbose_name='مشاهدات الأمس')
+    views_this_week = models.PositiveIntegerField(default=0, verbose_name='مشاهدات هذا الأسبوع')
+    views_this_month = models.PositiveIntegerField(default=0, verbose_name='مشاهدات هذا الشهر')
+    
+    # Peak viewing times
+    peak_hour = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='ساعة الذروة')
+    peak_day = models.CharField(max_length=20, blank=True, verbose_name='يوم الذروة')
+    
+    # View sources
+    views_from_search = models.PositiveIntegerField(default=0, verbose_name='مشاهدات من البحث')
+    views_from_direct = models.PositiveIntegerField(default=0, verbose_name='مشاهدات مباشرة')
+    views_from_social = models.PositiveIntegerField(default=0, verbose_name='مشاهدات من التواصل الاجتماعي')
+    views_from_referral = models.PositiveIntegerField(default=0, verbose_name='مشاهدات من إحالات')
+    
+    # Device breakdown
+    views_desktop = models.PositiveIntegerField(default=0, verbose_name='مشاهدات من سطح المكتب')
+    views_mobile = models.PositiveIntegerField(default=0, verbose_name='مشاهدات من الجوال')
+    views_tablet = models.PositiveIntegerField(default=0, verbose_name='مشاهدات من الأجهزة اللوحية')
+    
+    # Location data
+    top_viewing_locations = models.JSONField(default=dict, blank=True, verbose_name='أهم مواقع المشاهدة')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'إحصائيات المشاهدات'
+        verbose_name_plural = 'إحصائيات المشاهدات'
+        ordering = ['-updated_at']
+    
+    def __str__(self):
+        return f'إحصائيات مشاهدات {self.property.display_title}'
+
+
+class PropertyEngagementStats(models.Model):
+    """إحصائيات التفاعل مع العقارات"""
+    
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='engagement_stats',
+        verbose_name='العقار'
+    )
+    
+    # Favorites
+    total_favorites = models.PositiveIntegerField(default=0, verbose_name='إجمالي المفضلة')
+    active_favorites = models.PositiveIntegerField(default=0, verbose_name='المفضلة النشطة')
+    
+    # Shares
+    total_shares = models.PositiveIntegerField(default=0, verbose_name='إجمالي المشاركات')
+    shares_whatsapp = models.PositiveIntegerField(default=0, verbose_name='مشاركات واتساب')
+    shares_facebook = models.PositiveIntegerField(default=0, verbose_name='مشاركات فيسبوك')
+    shares_twitter = models.PositiveIntegerField(default=0, verbose_name='مشاركات تويتر')
+    shares_telegram = models.PositiveIntegerField(default=0, verbose_name='مشاركات تيليجرام')
+    
+    # Contact actions
+    total_calls = models.PositiveIntegerField(default=0, verbose_name='إجمالي المكالمات')
+    total_messages = models.PositiveIntegerField(default=0, verbose_name='إجمالي الرسائل')
+    total_inquiries = models.PositiveIntegerField(default=0, verbose_name='إجمالي الاستفسارات')
+    
+    # Comparisons
+    added_to_comparison = models.PositiveIntegerField(default=0, verbose_name='أضيف للمقارنة')
+    
+    # Time on page
+    avg_time_on_page = models.PositiveIntegerField(default=0, verbose_name='متوسط الوقت على الصفحة (ثواني)')
+    
+    # Bounce rate
+    bounce_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='معدل الارتداد (%)')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'إحصائيات التفاعل'
+        verbose_name_plural = 'إحصائيات التفاعل'
+        ordering = ['-updated_at']
+    
+    def __str__(self):
+        return f'إحصائيات تفاعل {self.property.display_title}'
+
+
+class PropertyConversionStats(models.Model):
+    """إحصائيات التحويل للعقارات"""
+    
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='conversion_stats',
+        verbose_name='العقار'
+    )
+    
+    # Lead generation
+    total_leads = models.PositiveIntegerField(default=0, verbose_name='إجمالي العملاء المحتملين')
+    qualified_leads = models.PositiveIntegerField(default=0, verbose_name='العملاء المؤهلين')
+    converted_leads = models.PositiveIntegerField(default=0, verbose_name='العملاء المحولين')
+    
+    # Appointments
+    total_appointments = models.PositiveIntegerField(default=0, verbose_name='إجمالي المواعيد')
+    completed_appointments = models.PositiveIntegerField(default=0, verbose_name='المواعيد المكتملة')
+    cancelled_appointments = models.PositiveIntegerField(default=0, verbose_name='المواعيد الملغاة')
+    
+    # Offers
+    total_offers = models.PositiveIntegerField(default=0, verbose_name='إجمالي العروض')
+    accepted_offers = models.PositiveIntegerField(default=0, verbose_name='العروض المقبولة')
+    rejected_offers = models.PositiveIntegerField(default=0, verbose_name='العروض المرفوضة')
+    
+    # Sales
+    total_sales = models.PositiveIntegerField(default=0, verbose_name='إجمالي المبيعات')
+    total_revenue = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='إجمالي الإيرادات')
+    
+    # Conversion rates
+    view_to_inquiry_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='معدل التحويل من مشاهدة لاستفسار (%)')
+    inquiry_to_appointment_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='معدل التحويل من استفسار لموعد (%)')
+    appointment_to_sale_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='معدل التحويل من موعد لبيع (%)')
+    
+    # Time metrics
+    avg_time_to_first_contact = models.PositiveIntegerField(default=0, verbose_name='متوسط الوقت للتواصل الأول (ساعات)')
+    avg_time_to_appointment = models.PositiveIntegerField(default=0, verbose_name='متوسط الوقت للموعد (أيام)')
+    avg_time_to_sale = models.PositiveIntegerField(default=0, verbose_name='متوسط الوقت للبيع (أيام)')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'إحصائيات التحويل'
+        verbose_name_plural = 'إحصائيات التحويل'
+        ordering = ['-updated_at']
+    
+    def __str__(self):
+        return f'إحصائيات تحويل {self.property.display_title}'
+
+
+class LiveStream(models.Model):
+    """Live streaming for properties"""
+    
+    STATUS_CHOICES = [
+        ('scheduled', 'مجدول'),
+        ('live', 'مباشر'),
+        ('ended', 'منتهي'),
+        ('cancelled', 'ملغي'),
+    ]
+    
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='live_streams',
+        verbose_name='العقار'
+    )
+    broker = models.ForeignKey(
+        'Broker', on_delete=models.CASCADE, related_name='live_streams',
+        verbose_name='الدلال'
+    )
+    
+    title = models.CharField(max_length=200, verbose_name='عنوان البث')
+    description = models.TextField(blank=True, verbose_name='وصف البث')
+    
+    # Stream details
+    stream_url = models.URLField(verbose_name='رابط البث')
+    stream_key = models.CharField(max_length=200, blank=True, verbose_name='مفتاح البث')
+    platform = models.CharField(
+        max_length=20,
+        choices=[
+            ('youtube', 'يوتيوب'),
+            ('facebook', 'فيسبوك'),
+            ('instagram', 'إنستغرام'),
+            ('tiktok', 'تيك توك'),
+            ('twitch', 'توتش'),
+            ('custom', 'مخصص'),
+        ],
+        default='youtube',
+        verbose_name='منصة البث'
+    )
+    
+    # Scheduling
+    scheduled_start = models.DateTimeField(verbose_name='موعد البدء المجدول')
+    scheduled_end = models.DateTimeField(null=True, blank=True, verbose_name='موعد الانتهاء المجدول')
+    actual_start = models.DateTimeField(null=True, blank=True, verbose_name='وقت البدء الفعلي')
+    actual_end = models.DateTimeField(null=True, blank=True, verbose_name='وقت الانتهاء الفعلي')
+    
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled', verbose_name='الحالة')
+    is_active = models.BooleanField(default=False, verbose_name='نشط')
+    
+    # Statistics
+    viewers_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدين')
+    peak_viewers = models.PositiveIntegerField(default=0, verbose_name='أقصى عدد مشاهدين')
+    comments_count = models.PositiveIntegerField(default=0, verbose_name='عدد التعليقات')
+    shares_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاركات')
+    
+    # Recording
+    is_recorded = models.BooleanField(default=False, verbose_name='تم التسجيل')
+    recording_url = models.URLField(blank=True, verbose_name='رابط التسجيل')
+    thumbnail = models.ImageField(upload_to='live_streams/', null=True, blank=True, verbose_name='صورة مصغرة')
+    
+    # Notifications
+    notify_subscribers = models.BooleanField(default=True, verbose_name='إشعار المشتركين')
+    notification_sent = models.BooleanField(default=False, verbose_name='تم إرسال الإشعار')
+    notification_time = models.DateTimeField(null=True, blank=True, verbose_name='وقت الإشعار')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'بث مباشر'
+        verbose_name_plural = 'البثوث المباشرة'
+        ordering = ['-scheduled_start']
+    
+    def __str__(self):
+        return f'{self.title} - {self.property.display_title}'
+    
+    def start_stream(self):
+        """Start the live stream"""
+        from django.utils import timezone
+        self.status = 'live'
+        self.is_active = True
+        self.actual_start = timezone.now()
+        self.save()
+    
+    def end_stream(self):
+        """End the live stream"""
+        from django.utils import timezone
+        self.status = 'ended'
+        self.is_active = False
+        self.actual_end = timezone.now()
+        self.save()
+    
+    def cancel_stream(self):
+        """Cancel the live stream"""
+        self.status = 'cancelled'
+        self.is_active = False
+        self.save()
+    
+    def get_duration(self):
+        """Get stream duration in minutes"""
+        if self.actual_start and self.actual_end:
+            duration = self.actual_end - self.actual_start
+            return int(duration.total_seconds() / 60)
+        return 0
+
+
+class LiveStreamComment(models.Model):
+    """Comments on live streams"""
+    
+    live_stream = models.ForeignKey(
+        LiveStream, on_delete=models.CASCADE, related_name='comments',
+        verbose_name='البث المباشر'
+    )
+    user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name='المستخدم'
+    )
+    author_name = models.CharField(max_length=100, verbose_name='اسم الكاتب')
+    author_phone = models.CharField(max_length=20, blank=True, verbose_name='رقم الهاتف')
+    comment = models.TextField(verbose_name='التعليق')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإضافة')
+    
+    class Meta:
+        verbose_name = 'تعليق بث مباشر'
+        verbose_name_plural = 'تعليقات البث المباشر'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.author_name}: {self.comment[:50]}'
+
+
+class WhatsAppMessage(models.Model):
+    """نموذج رسائل الواتساب"""
+    
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='whatsapp_messages',
+        verbose_name='العقار'
+    )
+    sender_name = models.CharField(max_length=100, verbose_name='اسم المرسل')
+    sender_phone = models.CharField(max_length=20, verbose_name='رقم هاتف المرسل')
+    message = models.TextField(verbose_name='الرسالة')
+    sent_at = models.DateTimeField(auto_now_add=True, verbose_name='وقت الإرسال')
+    is_read = models.BooleanField(default=False, verbose_name='تمت القراءة')
+    
+    class Meta:
+        verbose_name = 'رسالة واتساب'
+        verbose_name_plural = 'رسائل الواتساب'
+        ordering = ['-sent_at']
+    
+    def __str__(self):
+        return f'واتساب من {self.sender_name} - {self.property.display_title}'
+
+
+class TelegramMessage(models.Model):
+    """نموذج رسائل تيليجرام"""
+    
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='telegram_messages',
+        verbose_name='العقار'
+    )
+    sender_name = models.CharField(max_length=100, verbose_name='اسم المرسل')
+    sender_username = models.CharField(max_length=100, blank=True, verbose_name='اسم المستخدم')
+    message = models.TextField(verbose_name='الرسالة')
+    sent_at = models.DateTimeField(auto_now_add=True, verbose_name='وقت الإرسال')
+    is_read = models.BooleanField(default=False, verbose_name='تمت القراءة')
+    
+    class Meta:
+        verbose_name = 'رسالة تيليجرام'
+        verbose_name_plural = 'رسائل تيليجرام'
+        ordering = ['-sent_at']
+    
+    def __str__(self):
+        return f'تيليجرام من {self.sender_name} - {self.property.display_title}'
+
+
+class AppointmentBooking(models.Model):
+    """نموذج حجز المواعيد"""
+    
+    STATUS_CHOICES = [
+        ('pending', 'قيد الانتظار'),
+        ('confirmed', 'مؤكد'),
+        ('completed', 'مكتمل'),
+        ('cancelled', 'ملغي'),
+    ]
+    
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='appointments',
+        verbose_name='العقار'
+    )
+    client_name = models.CharField(max_length=100, verbose_name='اسم العميل')
+    client_phone = models.CharField(max_length=20, verbose_name='رقم هاتف العميل')
+    client_email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    appointment_date = models.DateTimeField(verbose_name='تاريخ الموعد')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='الحالة')
+    notes = models.TextField(blank=True, verbose_name='ملاحظات')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الحجز')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='آخر تحديث')
+    
+    class Meta:
+        verbose_name = 'حجز موعد'
+        verbose_name_plural = 'حجوز المواعيد'
+        ordering = ['-appointment_date']
+    
+    def __str__(self):
+        return f'موعد {self.client_name} - {self.appointment_date.strftime("%Y-%m-%d %H:%M")}'
+
+
+class PropertyInquiry(models.Model):
+    """نموذج الاستفسارات المتقدمة"""
+    
+    INQUIRY_TYPES = [
+        ('general', 'استفسار عام'),
+        ('price', 'استفسار عن السعر'),
+        ('viewing', 'طلب مشاهدة'),
+        ('financing', 'استفسار عن التمويل'),
+        ('documents', 'طلب مستندات'),
+        ('other', 'أخرى'),
+    ]
+    
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='inquiries',
+        verbose_name='العقار'
+    )
+    inquiry_type = models.CharField(max_length=20, choices=INQUIRY_TYPES, verbose_name='نوع الاستفسار')
+    name = models.CharField(max_length=100, verbose_name='الاسم')
+    email = models.EmailField(verbose_name='البريد الإلكتروني')
+    phone = models.CharField(max_length=20, verbose_name='رقم الهاتف')
+    subject = models.CharField(max_length=200, verbose_name='الموضوع')
+    message = models.TextField(verbose_name='الرسالة')
+    preferred_contact_method = models.CharField(
+        max_length=20,
+        choices=[('email', 'البريد الإلكتروني'), ('phone', 'الهاتف'), ('whatsapp', 'واتساب')],
+        default='email',
+        verbose_name='طريقة التواصل المفضلة'
+    )
+    is_resolved = models.BooleanField(default=False, verbose_name='تم الحل')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإرسال')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='آخر تحديث')
+    
+    class Meta:
+        verbose_name = 'استفسار'
+        verbose_name_plural = 'الاستفسارات'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.get_inquiry_type_display()} من {self.name} - {self.property.display_title}'
+
+
+class Message(models.Model):
+    """نموذج الرسائل المحسّن"""
+    
+    # أنواع الرسائل
+    TYPE_TEXT = 'text'
+    TYPE_IMAGE = 'image'
+    TYPE_VIDEO = 'video'
+    TYPE_AUDIO = 'audio'
+    TYPE_FILE = 'file'
+    TYPE_LOCATION = 'location'
+    TYPE_LINK = 'link'
+    TYPE_PROPERTY_CARD = 'property_card'
+    TYPE_BROKER_MESSAGE = 'broker_message'
+    TYPE_SYSTEM = 'system'
+    
+    TYPE_CHOICES = [
+        (TYPE_TEXT, 'نص'),
+        (TYPE_IMAGE, 'صورة'),
+        (TYPE_VIDEO, 'فيديو'),
+        (TYPE_AUDIO, 'صوت'),
+        (TYPE_FILE, 'ملف'),
+        (TYPE_LOCATION, 'موقع'),
+        (TYPE_LINK, 'رابط'),
+        (TYPE_PROPERTY_CARD, 'بطاقة عقار'),
+        (TYPE_BROKER_MESSAGE, 'رسالة دلال'),
+        (TYPE_SYSTEM, 'نظام'),
+    ]
+    
+    # حالة الرسالة
+    STATUS_SENT = 'sent'
+    STATUS_DELIVERED = 'delivered'
+    STATUS_READ = 'read'
+    STATUS_FAILED = 'failed'
+    
+    STATUS_CHOICES = [
+        (STATUS_SENT, 'مرسلة'),
+        (STATUS_DELIVERED, 'مستلمة'),
+        (STATUS_READ, 'مقروءة'),
+        (STATUS_FAILED, 'فشلت'),
+    ]
+    
+    conversation = models.ForeignKey(
+        'Conversation', on_delete=models.CASCADE, related_name='messages',
+        null=True, blank=True, verbose_name='المحادثة'
+    )
+    
     sender = models.ForeignKey(
         'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='sent_messages', verbose_name='المرسل'
     )
+    
     recipient = models.ForeignKey(
         'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='received_messages', verbose_name='المستلم'
     )
     
-    broker = models.ForeignKey(
-        'Broker', on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='inquiries', verbose_name='الدلال'
+    message_type = models.CharField(
+        max_length=20, choices=TYPE_CHOICES, default=TYPE_TEXT,
+        verbose_name='نوع الرسالة'
     )
-    reply = models.TextField(blank=True, verbose_name='الرد')
-    replied_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الرد')
-    replied_by = models.ForeignKey(
-        'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='message_replies', verbose_name='رد بواسطة'
+    
+    content = models.TextField(blank=True, verbose_name='المحتوى')
+    
+    # للموقع الجغرافي
+    latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True,
+        verbose_name='خط العرض'
     )
-    is_archived = models.BooleanField(default=False, verbose_name='مؤرشف')
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_read = models.BooleanField(default=False, verbose_name='مقروء')
+    longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True,
+        verbose_name='خط الطول'
+    )
+    location_name = models.CharField(max_length=255, blank=True, verbose_name='اسم الموقع')
+    
+    # للروابط
+    link_url = models.URLField(blank=True, verbose_name='رابط')
+    link_title = models.CharField(max_length=255, blank=True, verbose_name='عنوان الرابط')
+    link_description = models.TextField(blank=True, verbose_name='وصف الرابط')
+    link_image = models.URLField(blank=True, verbose_name='صورة الرابط')
+    
+    # حالة الرسالة
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_SENT,
+        verbose_name='الحالة'
+    )
+    
+    # الرد على رسالة
+    reply_to = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='replies', verbose_name='رد على'
+    )
+    
+    # حذف الرسالة
     is_deleted_by_sender = models.BooleanField(default=False, verbose_name='محذوف من المرسل')
     is_deleted_by_recipient = models.BooleanField(default=False, verbose_name='محذوف من المستلم')
-
+    
+    # وقت الحذف (للسماح بالحذف خلال فترة معينة)
+    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الحذف')
+    
+    # قراءة الرسالة
+    is_read = models.BooleanField(default=False, verbose_name='مقروء')
+    read_at = models.DateTimeField(null=True, blank=True, verbose_name='وقت القراءة')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
     class Meta:
         verbose_name = 'رسالة'
         verbose_name_plural = 'الرسائل'
         ordering = ['-created_at']
-
-    def __str__(self):
-        if self.message_type == self.TYPE_BROKER_MESSAGE:
-            return f'رسالة من {self.sender.username if self.sender else self.name}'
-        elif self.message_type == self.TYPE_USER_BROKER:
-            return f'رسالة من {self.sender.username if self.sender else self.name}'
-        return f'رسالة من {self.name}'
     
-    def get_other_user(self, user):
-        """Get the other user in the conversation."""
-        if self.sender == user:
-            return self.recipient
-        return self.sender
+    def __str__(self):
+        return f'رسالة {self.id} من {self.sender.username if self.sender else "مجهول"}'
+    
+    def mark_as_delivered(self):
+        """تحديد الرسالة كمستلمة"""
+        self.status = self.STATUS_DELIVERED
+        self.save(update_fields=['status'])
     
     def mark_as_read(self):
-        """Mark message as read."""
+        """تحديد الرسالة كمقروءة"""
+        self.status = self.STATUS_READ
         self.is_read = True
-        self.save(update_fields=['is_read'])
-    
-    def archive(self):
-        """Archive message."""
-        self.is_archived = True
-        self.save(update_fields=['is_archived'])
+        self.read_at = timezone.now()
+        self.save(update_fields=['status', 'is_read', 'read_at'])
     
     def delete_for_user(self, user):
-        """Soft delete message for a specific user."""
+        """حذف الرسالة من جانب مستخدم معين"""
         if self.sender == user:
             self.is_deleted_by_sender = True
         elif self.recipient == user:
             self.is_deleted_by_recipient = True
-        self.save(update_fields=['is_deleted_by_sender', 'is_deleted_by_recipient'])
+        self.deleted_at = timezone.now()
+        self.save(update_fields=['is_deleted_by_sender', 'is_deleted_by_recipient', 'deleted_at'])
+    
+    def can_delete(self, user):
+        """التحقق مما إذا كان يمكن للمستخدم حذف الرسالة"""
+        time_since_creation = timezone.now() - self.created_at
+        # يمكن الحذف خلال 24 ساعة
+        return time_since_creation.total_seconds() < 86400
+
+
+class MessageAttachment(models.Model):
+    """مرفقات الرسائل"""
+    
+    ATTACHMENT_IMAGE = 'image'
+    ATTACHMENT_VIDEO = 'video'
+    ATTACHMENT_AUDIO = 'audio'
+    ATTACHMENT_FILE = 'file'
+    ATTACHMENT_DOCUMENT = 'document'
+    
+    ATTACHMENT_TYPE_CHOICES = [
+        (ATTACHMENT_IMAGE, 'صورة'),
+        (ATTACHMENT_VIDEO, 'فيديو'),
+        (ATTACHMENT_AUDIO, 'صوت'),
+        (ATTACHMENT_FILE, 'ملف'),
+        (ATTACHMENT_DOCUMENT, 'مستند'),
+    ]
+    
+    message = models.ForeignKey(
+        Message, on_delete=models.CASCADE, related_name='attachments',
+        verbose_name='الرسالة'
+    )
+    
+    attachment_type = models.CharField(
+        max_length=20, choices=ATTACHMENT_TYPE_CHOICES,
+        verbose_name='نوع المرفق'
+    )
+    
+    file = models.FileField(
+        upload_to='message_attachments/%Y/%m/%d/',
+        verbose_name='الملف'
+    )
+    
+    file_name = models.CharField(max_length=255, verbose_name='اسم الملف')
+    file_size = models.BigIntegerField(verbose_name='حجم الملف (بايت)')
+    file_type = models.CharField(max_length=100, blank=True, verbose_name='نوع الملف')
+    
+    # للصور والفيديو
+    thumbnail = models.ImageField(
+        upload_to='message_attachments/thumbnails/%Y/%m/%d/',
+        null=True, blank=True, verbose_name='الصورة المصغرة'
+    )
+    
+    # للمستندات
+    page_count = models.IntegerField(null=True, blank=True, verbose_name='عدد الصفحات')
+    
+    created_at = models.DateTimeField(default=timezone.now, verbose_name='تاريخ الرفع')
+    
+    class Meta:
+        verbose_name = 'مرفق رسالة'
+        verbose_name_plural = 'مرفقات الرسائل'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.file_name}'
+    
+    def get_file_size_display(self):
+        """عرض حجم الملف بشكل مقروء"""
+        size = self.file_size
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024:
+                return f'{size:.1f} {unit}'
+            size /= 1024
+        return f'{size:.1f} TB'
+
+
+class MessageReaction(models.Model):
+    """ردود فعل على الرسائل"""
+    
+    REACTION_LIKE = 'like'
+    REACTION_LOVE = 'love'
+    REACTION_HAHA = 'haha'
+    REACTION_WOW = 'wow'
+    REACTION_SAD = 'sad'
+    REACTION_ANGRY = 'angry'
+    REACTION_THUMBS_UP = 'thumbs_up'
+    REACTION_THUMBS_DOWN = 'thumbs_down'
+    
+    REACTION_CHOICES = [
+        (REACTION_LIKE, 'إعجاب'),
+        (REACTION_LOVE, 'حب'),
+        (REACTION_HAHA, 'ضحك'),
+        (REACTION_WOW, 'دهشة'),
+        (REACTION_SAD, 'حزن'),
+        (REACTION_ANGRY, 'غضب'),
+        (REACTION_THUMBS_UP, 'إبهام للأعلى'),
+        (REACTION_THUMBS_DOWN, 'إبهام للأسفل'),
+    ]
+    
+    REACTION_EMOJIS = {
+        REACTION_LIKE: '👍',
+        REACTION_LOVE: '❤️',
+        REACTION_HAHA: '😂',
+        REACTION_WOW: '😮',
+        REACTION_SAD: '😢',
+        REACTION_ANGRY: '😡',
+        REACTION_THUMBS_UP: '👍',
+        REACTION_THUMBS_DOWN: '👎',
+    }
+    
+    message = models.ForeignKey(
+        Message, on_delete=models.CASCADE, related_name='reactions',
+        verbose_name='الرسالة'
+    )
+    
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='message_reactions',
+        verbose_name='المستخدم'
+    )
+    
+    reaction_type = models.CharField(
+        max_length=20, choices=REACTION_CHOICES,
+        verbose_name='نوع الرد'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الرد')
+    
+    class Meta:
+        verbose_name = 'رد فعل'
+        verbose_name_plural = 'ردود الفعل'
+        unique_together = ['message', 'user']
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.reaction_type}'
+    
+    def get_emoji(self):
+        """الحصول على الرموز التعبيرية للرد"""
+        return self.REACTION_EMOJIS.get(self.reaction_type, '')
+
+
+class MessageReport(models.Model):
+    """بلاغ عن رسالة"""
+    
+    REPORT_TYPE_SPAM = 'spam'
+    REPORT_TYPE_INAPPROPRIATE = 'inappropriate'
+    REPORT_TYPE_HARASSMENT = 'harassment'
+    REPORT_TYPE_SCAM = 'scam'
+    REPORT_TYPE_OTHER = 'other'
+    
+    REPORT_TYPE_CHOICES = [
+        (REPORT_TYPE_SPAM, 'رسائل مزعجة'),
+        (REPORT_TYPE_INAPPROPRIATE, 'محتوى غير لائق'),
+        (REPORT_TYPE_HARASSMENT, 'مضايقة'),
+        (REPORT_TYPE_SCAM, 'احتيال'),
+        (REPORT_TYPE_OTHER, 'أخرى'),
+    ]
+    
+    STATUS_PENDING = 'pending'
+    STATUS_REVIEWED = 'reviewed'
+    STATUS_RESOLVED = 'resolved'
+    STATUS_DISMISSED = 'dismissed'
+    
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'قيد المراجعة'),
+        (STATUS_REVIEWED, 'تمت المراجعة'),
+        (STATUS_RESOLVED, 'تم الحل'),
+        (STATUS_DISMISSED, 'تم الرفض'),
+    ]
+    
+    message = models.ForeignKey(
+        Message, on_delete=models.CASCADE, related_name='reports',
+        null=True, blank=True, verbose_name='الرسالة'
+    )
+    
+    reporter = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='message_reports',
+        null=True, blank=True, verbose_name='المبلغ'
+    )
+    
+    report_type = models.CharField(
+        max_length=20, choices=REPORT_TYPE_CHOICES,
+        verbose_name='نوع البلاغ'
+    )
+    
+    description = models.TextField(verbose_name='وصف البلاغ')
+    
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING,
+        verbose_name='الحالة'
+    )
+    
+    reviewed_by = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='reviewed_reports', verbose_name='راجع بواسطة'
+    )
+    
+    reviewed_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ المراجعة')
+    
+    resolution_notes = models.TextField(blank=True, verbose_name='ملاحظات الحل')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ البلاغ')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'بلاغ رسالة'
+        verbose_name_plural = 'بلاغات الرسائل'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'بلاغ {self.id} - {self.report_type}'
 
 
 class PropertyNote(models.Model):
@@ -1396,12 +2838,25 @@ class Auction(models.Model):
         ('cancelled', 'ملغي'),
     ]
     
+    APPROVAL_STATUS_CHOICES = [
+        ('pending', 'قيد المراجعة'),
+        ('approved', 'موافق عليه'),
+        ('rejected', 'مرفوض'),
+        ('needs_revision', 'يحتاج تعديل'),
+    ]
+    
     AUCTION_TYPES = [
         ('home', 'مزاد بيع منزل'),
         ('land', 'مزاد بيع أرض'),
         ('shop', 'مزاد بيع محل تجاري'),
         ('building', 'مزاد بيع عمارة'),
         ('investment', 'مزاد استثماري'),
+    ]
+    
+    ACCESS_TYPE_CHOICES = [
+        ('public', 'عام'),
+        ('private', 'خاص برقم'),
+        ('invitation_only', 'بدعوة فقط'),
     ]
     
     property = models.ForeignKey(
@@ -1419,6 +2874,7 @@ class Auction(models.Model):
     auto_extend_minutes = models.PositiveSmallIntegerField(default=5, verbose_name='تمديد تلقائي (دقائق)')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='upcoming', verbose_name='الحالة')
     deposit_amount = models.DecimalField(max_digits=15, decimal_places=0, default=0, verbose_name='مبلغ التأمين للدخول')
+    access_type = models.CharField(max_length=20, choices=ACCESS_TYPE_CHOICES, default='public', verbose_name='نوع الوصول')
     access_code = models.CharField(max_length=20, blank=True, verbose_name='كود الدخول')
     is_closed = models.BooleanField(default=False, verbose_name='مزاد مغلق')
     is_featured = models.BooleanField(default=False, verbose_name='مزاد مميز')
@@ -1429,6 +2885,12 @@ class Auction(models.Model):
     contact_email = models.EmailField(blank=True, verbose_name='بريد التواصل')
     max_participants = models.IntegerField(null=True, blank=True, verbose_name='الحد الأقصى للمشاركين')
     winner_announced = models.BooleanField(default=False, verbose_name='تم الإعلان عن الفائز')
+    winner = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='won_auctions', verbose_name='الفائز')
+    winning_bid = models.ForeignKey('Bid', on_delete=models.SET_NULL, null=True, blank=True, related_name='winning_auction', verbose_name='المزايدة الفائزة')
+    approval_status = models.CharField(max_length=20, choices=APPROVAL_STATUS_CHOICES, default='pending', verbose_name='حالة الموافقة')
+    rejection_reason = models.TextField(blank=True, verbose_name='سبب الرفض')
+    approved_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_auctions', verbose_name='تمت الموافقة بواسطة')
+    approved_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الموافقة')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
 
@@ -1494,6 +2956,65 @@ class Auction(models.Model):
             return True
         return False
 
+    def generate_access_code(self):
+        """Generate a random access code for the auction"""
+        import random
+        import string
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        self.access_code = code
+        self.save()
+        return code
+
+
+class AuctionInvitation(models.Model):
+    """دعوات المزاد للمزادات الخاصة"""
+    
+    auction = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name='invitations', verbose_name='المزاد')
+    invited_user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='auction_invitations', null=True, blank=True, verbose_name='المستخدم المدعو')
+    invited_broker = models.ForeignKey('Broker', on_delete=models.CASCADE, related_name='auction_invitations', null=True, blank=True, verbose_name='الدلال المدعو')
+    
+    # معلومات الدعوة
+    invitation_code = models.CharField(max_length=20, unique=True, verbose_name='كود الدعوة')
+    email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    phone = models.CharField(max_length=20, blank=True, verbose_name='رقم الهاتف')
+    
+    # الحالة
+    STATUS_CHOICES = [
+        ('pending', 'قيد الانتظار'),
+        ('accepted', 'مقبول'),
+        ('declined', 'مرفوض'),
+        ('used', 'تم الاستخدام'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='الحالة')
+    
+    # التواريخ
+    sent_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإرسال')
+    accepted_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ القبول')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    
+    class Meta:
+        verbose_name = 'دعوة مزاد'
+        verbose_name_plural = 'دعوات المزادات'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['invitation_code']),
+            models.Index(fields=['status']),
+        ]
+    
+    def __str__(self):
+        recipient = self.invited_user.username if self.invited_user else (self.invited_broker.display_name if self.invited_broker else self.email)
+        return f'{self.auction.title} - {recipient}'
+    
+    def generate_code(self):
+        """Generate a unique invitation code"""
+        import random
+        import string
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+        self.invitation_code = code
+        self.save()
+        return code
+
 
 class AuctionParticipant(models.Model):
     """Track auction participants with verification"""
@@ -1505,6 +3026,12 @@ class AuctionParticipant(models.Model):
         ('failed', 'فشل'),
     ]
     
+    APPROVAL_STATUS_CHOICES = [
+        ('pending', 'قيد المراجعة'),
+        ('approved', 'موافق عليه'),
+        ('rejected', 'مرفوض'),
+    ]
+    
     auction = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name='participants')
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='auction_participations')
     phone = models.CharField(max_length=20, verbose_name='رقم الهاتف')
@@ -1514,6 +3041,10 @@ class AuctionParticipant(models.Model):
     deposit_amount = models.DecimalField(max_digits=15, decimal_places=0, default=0, verbose_name='مبلغ التأمين المدفوع')
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default='pending', verbose_name='حالة الدفع')
     payment_reference = models.CharField(max_length=100, blank=True, verbose_name='رقم مرجع الدفع')
+    approval_status = models.CharField(max_length=20, choices=APPROVAL_STATUS_CHOICES, default='pending', verbose_name='حالة الموافقة')
+    approved_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_participants', verbose_name='تمت الموافقة بواسطة')
+    approved_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الموافقة')
+    rejection_reason = models.TextField(blank=True, verbose_name='سبب الرفض')
     joined_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الانضمام')
 
     class Meta:
@@ -1930,6 +3461,12 @@ class Hotel(models.Model):
     # Media
     image = models.ImageField(upload_to='hotels/', verbose_name='الصورة الرئيسية')
     
+    # Link to HotelPage
+    page = models.ForeignKey(
+        'HotelPage', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='hotel_listings', verbose_name='الصفحة'
+    )
+    
     # Status
     is_active = models.BooleanField(default=True, verbose_name='نشط')
     is_featured = models.BooleanField(default=False, verbose_name='مميز')
@@ -1963,95 +3500,6 @@ class HotelImage(models.Model):
         return f'صورة {self.hotel.name}'
 
 
-class Resort(models.Model):
-    """نموذج المنتجعات"""
-    
-    RESORT_TYPES = [
-        ('beach', 'منتجع شاطئي'),
-        ('mountain', 'منتجع جبلي'),
-        ('desert', 'منتجع صحراوي'),
-        ('rural', 'منتجع ريفي'),
-        ('spa', 'منتجع صحي (Spa Resort)'),
-        ('family', 'منتجع عائلي'),
-        ('luxury', 'منتجع فاخر'),
-        ('eco', 'منتجع بيئي'),
-    ]
-    
-    ACCOMMODATION_TYPES = [
-        ('room', 'غرفة'),
-        ('suite', 'جناح'),
-        ('villa', 'فيلا'),
-        ('chalet', 'شاليه'),
-        ('cottage', 'كوخ'),
-        ('bungalow', 'بنغلو'),
-    ]
-    
-    SUITABLE_FOR = [
-        ('families', 'العائلات'),
-        ('honeymoon', 'شهر العسل'),
-        ('events', 'المناسبات'),
-        ('relaxation', 'الاسترخاء'),
-        ('summer', 'الإجازات الصيفية'),
-    ]
-    
-    name = models.CharField(max_length=200, verbose_name='اسم المنتجع')
-    description = models.TextField(verbose_name='الوصف')
-    resort_type = models.CharField(max_length=20, choices=RESORT_TYPES, verbose_name='نوع المنتجع')
-    facilities = models.JSONField(default=list, verbose_name='المرافق')
-    accommodation_types = models.JSONField(default=list, verbose_name='أنواع الإقامة')
-    suitable_for = models.JSONField(default=list, verbose_name='مناسب لـ')
-    
-    # Location
-    governorate = models.CharField(max_length=50, choices=IRAQ_GOVERNORATES, verbose_name='المحافظة')
-    city = models.CharField(max_length=100, verbose_name='المدينة')
-    address = models.TextField(verbose_name='العنوان')
-    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط العرض')
-    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط الطول')
-    
-    # Pricing
-    price_range = models.CharField(max_length=20, choices=Hotel.PRICE_RANGES, verbose_name='السعر')
-    
-    # Contact
-    phone = models.CharField(max_length=20, verbose_name='رقم الهاتف')
-    email = models.EmailField(verbose_name='البريد الإلكتروني')
-    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
-    
-    # Media
-    image = models.ImageField(upload_to='resorts/', verbose_name='الصورة الرئيسية')
-    
-    # Status
-    is_active = models.BooleanField(default=True, verbose_name='نشط')
-    is_featured = models.BooleanField(default=False, verbose_name='مميز')
-    
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
-    
-    class Meta:
-        verbose_name = 'منتجع'
-        verbose_name_plural = 'المنتجعات'
-        ordering = ['-is_featured', 'name']
-    
-    def __str__(self):
-        return f'{self.name} - {self.get_resort_type_display()}'
-
-
-class ResortImage(models.Model):
-    """صور المنتجعات"""
-    resort = models.ForeignKey(Resort, on_delete=models.CASCADE, related_name='images', verbose_name='المنتجع')
-    image = models.ImageField(upload_to='resorts/gallery/', verbose_name='الصورة')
-    caption = models.CharField(max_length=200, blank=True, verbose_name='التعليق')
-    is_primary = models.BooleanField(default=False, verbose_name='رئيسية')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الرفع')
-    
-    class Meta:
-        verbose_name = 'صورة منتجع'
-        verbose_name_plural = 'صور المنتجعات'
-        ordering = ['-is_primary', 'id']
-    
-    def __str__(self):
-        return f'صورة {self.resort.name}'
-
-
 class BuildingRequest(models.Model):
     """نظام طلبات بناء حسب المحافظة"""
     
@@ -2072,10 +3520,28 @@ class BuildingRequest(models.Model):
     ]
     
     # معلومات العميل
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='building_requests', verbose_name='المستخدم')
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='building_requests', verbose_name='المستخدم', null=True, blank=True)
+    broker = models.ForeignKey('Broker', on_delete=models.CASCADE, related_name='building_requests', verbose_name='الدلال', null=True, blank=True)
     full_name = models.CharField(max_length=200, blank=True, verbose_name='الاسم الكامل')
     phone = models.CharField(max_length=20, blank=True, verbose_name='رقم الهاتف')
     email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    
+    # نوع الناشر
+    publisher_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('user', 'مستخدم'),
+            ('broker', 'دلال'),
+            ('admin', 'إدارة'),
+        ],
+        default='user',
+        verbose_name='نوع الناشر'
+    )
+    
+    # حالة العرض للجمهور
+    is_public = models.BooleanField(default=False, verbose_name='عرض للجمهور')
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    featured_until = models.DateTimeField(null=True, blank=True, verbose_name='نهاية التمييز')
     
     # معلومات المشروع
     governorate = models.CharField(max_length=100, choices=IRAQ_GOVERNORATES, blank=True, verbose_name='المحافظة')
@@ -2532,6 +3998,212 @@ class ContractorBid(models.Model):
         return f'{self.contractor_name} - {self.bid_amount:,}'
 
 
+class ServiceProvider(models.Model):
+    """نموذج مقدمي الخدمات (مقاولين، كهربائيين، سباكين، إلخ)"""
+    
+    SERVICE_TYPE_CHOICES = [
+        ('construction', 'بناء وتشطيب'),
+        ('electricity', 'كهرباء'),
+        ('plumbing', 'سباكة'),
+        ('carpentry', 'نجارة'),
+        ('painting', 'دهان'),
+        ('hvac', 'تكييف وتبريد'),
+        ('landscaping', 'تنسيق حدائق'),
+        ('security', 'أمن وحراسة'),
+        ('cleaning', 'تنظيف'),
+        ('moving', 'نقل عفش'),
+        ('other', 'خدمات أخرى'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'نشط'),
+        ('inactive', 'غير نشط'),
+        ('suspended', 'موقوف'),
+    ]
+    
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='service_provider', verbose_name='المستخدم')
+    business_name = models.CharField(max_length=200, verbose_name='اسم العمل/الشركة')
+    service_type = models.CharField(max_length=20, choices=SERVICE_TYPE_CHOICES, verbose_name='نوع الخدمة')
+    description = models.TextField(verbose_name='وصف الخدمات', blank=True)
+    
+    # معلومات التواصل
+    phone = models.CharField(max_length=20, verbose_name='رقم الهاتف')
+    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
+    email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    address = models.CharField(max_length=300, blank=True, verbose_name='العنوان')
+    governorate = models.CharField(max_length=100, choices=IRAQ_GOVERNORATES, blank=True, verbose_name='المحافظة')
+    
+    # معلومات العمل
+    years_experience = models.IntegerField(default=0, verbose_name='سنوات الخبرة')
+    team_size = models.IntegerField(default=1, verbose_name='حجم الفريق')
+    working_hours = models.CharField(max_length=100, blank=True, verbose_name='ساعات العمل')
+    
+    # الأسعار
+    min_price = models.DecimalField(max_digits=15, decimal_places=0, null=True, blank=True, verbose_name='أقل سعر')
+    max_price = models.DecimalField(max_digits=15, decimal_places=0, null=True, blank=True, verbose_name='أعلى سعر')
+    price_unit = models.CharField(max_length=50, blank=True, verbose_name='وحدة السعر (متر مربع، مشروع، إلخ)')
+    
+    # الشهادات والتراخيص
+    licenses = models.TextField(blank=True, verbose_name='التراخيص والشهادات')
+    
+    # الوسائط
+    logo = models.ImageField(upload_to='service_providers/logos/', blank=True, null=True, verbose_name='الشعار')
+    cover_image = models.ImageField(upload_to='service_providers/covers/', blank=True, null=True, verbose_name='صورة الغلاف')
+    
+    # التقييم
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.0, verbose_name='التقييم')
+    reviews_count = models.IntegerField(default=0, verbose_name='عدد التقييمات')
+    completed_projects = models.IntegerField(default=0, verbose_name='المشاريع المكتملة')
+    
+    # الحالة
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', verbose_name='الحالة')
+    is_verified = models.BooleanField(default=False, verbose_name='موثق')
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'مقدم خدمة'
+        verbose_name_plural = 'مقدمو الخدمات'
+        ordering = ['-is_featured', '-rating', '-created_at']
+        indexes = [
+            models.Index(fields=['service_type']),
+            models.Index(fields=['governorate']),
+            models.Index(fields=['status']),
+            models.Index(fields=['-rating']),
+        ]
+    
+    def __str__(self):
+        return f'{self.business_name} - {self.get_service_type_display()}'
+
+
+class ServiceAdvertisement(models.Model):
+    """إعلانات الخدمات لمقدمي الخدمات"""
+    
+    STATUS_CHOICES = [
+        ('draft', 'مسودة'),
+        ('active', 'نشط'),
+        ('paused', 'متوقف'),
+        ('expired', 'منتهي'),
+    ]
+    
+    service_provider = models.ForeignKey(ServiceProvider, on_delete=models.CASCADE, related_name='advertisements', verbose_name='مقدم الخدمة')
+    title = models.CharField(max_length=200, verbose_name='عنوان الإعلان')
+    description = models.TextField(verbose_name='وصف الإعلان')
+    service_type = models.CharField(max_length=20, choices=ServiceProvider.SERVICE_TYPE_CHOICES, verbose_name='نوع الخدمة')
+    
+    # معلومات المشروع
+    project_type = models.CharField(max_length=100, blank=True, verbose_name='نوع المشروع')
+    location = models.CharField(max_length=200, blank=True, verbose_name='الموقع')
+    governorate = models.CharField(max_length=100, choices=IRAQ_GOVERNORATES, blank=True, verbose_name='المحافظة')
+    
+    # الأسعار
+    price = models.DecimalField(max_digits=15, decimal_places=0, null=True, blank=True, verbose_name='السعر')
+    price_description = models.CharField(max_length=200, blank=True, verbose_name='وصف السعر')
+    
+    # التفاصيل
+    completion_time = models.CharField(max_length=100, blank=True, verbose_name='وقت الإنجاز')
+    includes = models.TextField(blank=True, verbose_name='ما يشمله العرض')
+    requirements = models.TextField(blank=True, verbose_name='المتطلبات')
+    
+    # الوسائط
+    cover_image = models.ImageField(upload_to='service_ads/covers/', blank=True, null=True, verbose_name='صورة الغلاف')
+    
+    # الحالة
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='الحالة')
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    featured_until = models.DateTimeField(null=True, blank=True, verbose_name='نهاية التمييز')
+    
+    # الإحصائيات
+    views_count = models.IntegerField(default=0, verbose_name='عدد المشاهدات')
+    inquiries_count = models.IntegerField(default=0, verbose_name='عدد الاستفسارات')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    expires_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الانتهاء')
+    
+    class Meta:
+        verbose_name = 'إعلان خدمة'
+        verbose_name_plural = 'إعلانات الخدمات'
+        ordering = ['-is_featured', '-created_at']
+        indexes = [
+            models.Index(fields=['service_type']),
+            models.Index(fields=['governorate']),
+            models.Index(fields=['status']),
+            models.Index(fields=['-created_at']),
+        ]
+    
+    def __str__(self):
+        return f'{self.title} - {self.service_provider.business_name}'
+
+
+class ServiceAdvertisementImage(models.Model):
+    """صور إعلانات الخدمات"""
+    advertisement = models.ForeignKey(ServiceAdvertisement, on_delete=models.CASCADE, related_name='images', verbose_name='الإعلان')
+    image = models.ImageField(upload_to='service_ads/images/', verbose_name='الصورة')
+    caption = models.CharField(max_length=200, blank=True, verbose_name='التعليق')
+    is_cover = models.BooleanField(default=False, verbose_name='صورة الغلاف')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الرفع')
+    
+    class Meta:
+        verbose_name = 'صورة إعلان'
+        verbose_name_plural = 'صور الإعلانات'
+        ordering = ['order', '-created_at']
+    
+    def __str__(self):
+        return f'{self.advertisement.title} - صورة {self.order}'
+
+
+class ServiceAdvertisementVideo(models.Model):
+    """فيديوهات إعلانات الخدمات"""
+    advertisement = models.ForeignKey(ServiceAdvertisement, on_delete=models.CASCADE, related_name='videos', verbose_name='الإعلان')
+    video = models.FileField(upload_to='service_ads/videos/', verbose_name='الفيديو')
+    thumbnail = models.ImageField(upload_to='service_ads/thumbnails/', blank=True, null=True, verbose_name='الصورة المصغرة')
+    caption = models.CharField(max_length=200, blank=True, verbose_name='التعليق')
+    duration = models.IntegerField(null=True, blank=True, verbose_name='المدة (ثواني)')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الرفع')
+    
+    class Meta:
+        verbose_name = 'فيديو إعلان'
+        verbose_name_plural = 'فيديوهات الإعلانات'
+        ordering = ['order', '-created_at']
+    
+    def __str__(self):
+        return f'{self.advertisement.title} - فيديو {self.order}'
+
+
+class BrokerServicePromotion(models.Model):
+    """ترقية إعلانات الخدمات من قبل الدلال"""
+    
+    broker = models.ForeignKey('Broker', on_delete=models.CASCADE, related_name='service_promotions', verbose_name='الدلال')
+    advertisement = models.ForeignKey(ServiceAdvertisement, on_delete=models.CASCADE, related_name='broker_promotions', verbose_name='الإعلان')
+    
+    # تفاصيل الترقية
+    posts_count = models.IntegerField(default=1, verbose_name='عدد المنشورات')
+    duration_days = models.IntegerField(default=7, verbose_name='عدد الأيام')
+    
+    # التواريخ
+    start_date = models.DateTimeField(verbose_name='تاريخ البدء')
+    end_date = models.DateTimeField(verbose_name='تاريخ الانتهاء')
+    
+    # الحالة
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    posts_published = models.IntegerField(default=0, verbose_name='المنشورات المنشورة')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    
+    class Meta:
+        verbose_name = 'ترقية خدمة'
+        verbose_name_plural = 'ترقيات الخدمات'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.broker.display_name} - {self.advertisement.title}'
+
+
 class Office(models.Model):
     name = models.CharField(max_length=200, verbose_name='اسم المكتب')
     address = models.CharField(max_length=300, blank=True, verbose_name='العنوان')
@@ -2659,113 +4331,6 @@ class SubscriptionPlan(models.Model):
         return self.get_yearly_cost(property_count) * 5
 
 
-class SubscriptionRequest(models.Model):
-    """نموذج طلبات الاشتراك"""
-    
-    REQUEST_TYPE_UPGRADE = 'upgrade'
-    REQUEST_TYPE_REACTIVATE = 'reactivate'
-    
-    REQUEST_TYPE_CHOICES = [
-        (REQUEST_TYPE_UPGRADE, 'تطوير خطة الاشتراك'),
-        (REQUEST_TYPE_REACTIVATE, 'تفعيل اشتراك معطل'),
-    ]
-    
-    STATUS_PENDING = 'pending'
-    STATUS_APPROVED = 'approved'
-    STATUS_REJECTED = 'rejected'
-    
-    STATUS_CHOICES = [
-        (STATUS_PENDING, 'قيد الانتظار'),
-        (STATUS_APPROVED, 'موافق عليه'),
-        (STATUS_REJECTED, 'مرفوض'),
-    ]
-    
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='المستخدم')
-    request_type = models.CharField(
-        max_length=20,
-        choices=REQUEST_TYPE_CHOICES,
-        verbose_name='نوع الطلب'
-    )
-    current_plan = models.ForeignKey(
-        SubscriptionPlan,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='upgrade_requests',
-        verbose_name='الخطة الحالية'
-    )
-    requested_plan = models.ForeignKey(
-        SubscriptionPlan,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='requested_by',
-        verbose_name='الخطة المطلوبة'
-    )
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING,
-        verbose_name='الحالة'
-    )
-    notes = models.TextField(blank=True, verbose_name='ملاحظات')
-    admin_notes = models.TextField(blank=True, verbose_name='ملاحظات الإدارة')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
-    processed_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ المعالجة')
-    processed_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='processed_requests',
-        verbose_name='تمت المعالجة بواسطة'
-    )
-    
-    class Meta:
-        verbose_name = 'طلب اشتراك'
-        verbose_name_plural = 'طلبات الاشتراك'
-        ordering = ['-created_at']
-    
-    def __str__(self):
-        return f'{self.get_request_type_display()} - {self.user.username}'
-    
-    def approve(self, admin_user):
-        """موافقة على الطلب"""
-        self.status = self.STATUS_APPROVED
-        self.processed_by = admin_user
-        self.processed_at = timezone.now()
-        self.save()
-        
-        # تنفيذ الإجراء بناءً على نوع الطلب
-        if self.request_type == self.REQUEST_TYPE_UPGRADE and self.requested_plan:
-            # تطوير الخطة
-            from .models import Broker
-            try:
-                broker = self.user.broker
-                broker.subscription_plan = self.requested_plan
-                broker.save()
-            except Broker.DoesNotExist:
-                pass
-        elif self.request_type == self.REQUEST_TYPE_REACTIVATE:
-            # تفعيل اشتراك معطل
-            from .models import Broker
-            try:
-                broker = self.user.broker
-                broker.is_suspended = False
-                broker.save()
-            except Broker.DoesNotExist:
-                pass
-    
-    def reject(self, admin_user, notes=''):
-        """رفض الطلب"""
-        self.status = self.STATUS_REJECTED
-        self.admin_notes = notes
-        self.processed_by = admin_user
-        self.processed_at = timezone.now()
-        self.save()
-
-
 class UserProfile(models.Model):
     """نموذج المستخدم العادي"""
     user = models.OneToOneField(
@@ -2773,6 +4338,8 @@ class UserProfile(models.Model):
     )
     phone = models.CharField(max_length=20, blank=True, verbose_name='الهاتف')
     governorate = models.CharField(max_length=100, blank=True, verbose_name='المحافظة')
+    profile_image = models.ImageField(upload_to='user_profiles/', blank=True, null=True, verbose_name='الصورة الشخصية')
+    cover_image = models.ImageField(upload_to='user_covers/', blank=True, null=True, verbose_name='غلاف الصفحة')
     is_active = models.BooleanField(default=True, verbose_name='نشط')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -2872,6 +4439,8 @@ class Broker(models.Model):
         related_name='brokers', verbose_name='المكتب العقاري'
     )
     governorate = models.CharField(max_length=100, blank=True, verbose_name='المحافظة')
+    profile_image = models.ImageField(upload_to='broker_profiles/', blank=True, null=True, verbose_name='الصورة الشخصية')
+    cover_image = models.ImageField(upload_to='broker_covers/', blank=True, null=True, verbose_name='غلاف الصفحة')
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=ROLE_SUB, verbose_name='الدور')
     parent = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True,
@@ -2879,19 +4448,22 @@ class Broker(models.Model):
     )
     is_verified = models.BooleanField(default=False, verbose_name='دلال موثق')
     is_active = models.BooleanField(default=True, verbose_name='نشط')
+    
+    # Subscription plan (for chat-based subscriptions only)
     subscription_plan = models.ForeignKey(
         SubscriptionPlan,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='brokers',
-        verbose_name='خطة الاشتراك'
+        verbose_name='خطة الاشتراك',
+        help_text='يتم تفعيل الاشتراك فقط بعد المحادثة مع الإدارة'
     )
-    custom_ads_limit = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='عدد العقارات المخصص',
-        help_text='عدد العقارات المسموح به (يستخدم بدلاً من خطة الاشتراك إذا تم تحديده)'
+    subscription_start_date = models.DateField(
+        null=True, blank=True, verbose_name='تاريخ بداية الاشتراك'
+    )
+    subscription_end_date = models.DateField(
+        null=True, blank=True, verbose_name='تاريخ انتهاء الاشتراك'
     )
     # Sub-broker specific fields
     commission_rate = models.DecimalField(
@@ -2941,15 +4513,6 @@ class Broker(models.Model):
     )
     can_delete_properties = models.BooleanField(
         default=False, verbose_name='يمكن حذف عقارات'
-    )
-    max_properties = models.PositiveIntegerField(
-        null=True, blank=True, verbose_name='الحد الأقصى للعقارات'
-    )
-    subscription_start_date = models.DateField(
-        null=True, blank=True, verbose_name='تاريخ بداية الاشتراك'
-    )
-    subscription_end_date = models.DateField(
-        null=True, blank=True, verbose_name='تاريخ انتهاء الاشتراك'
     )
     is_suspended = models.BooleanField(
         default=False, verbose_name='مجمد'
@@ -3048,11 +4611,14 @@ class Broker(models.Model):
             # Create notification for user
             try:
                 from .models import Notification
-                Notification.objects.create(
+                Notification.create_for_user(
                     user=self.user,
+                    notification_type='subscription',
                     title='انتهاء الاشتراك',
-                    message=f'انتهى اشتراكك في {self.subscription_end_date}. تم تعطيل حسابك مؤقتاً. يرجى تجديد الاشتراك للاستمرار.',
-                    type='subscription'
+                    message=(
+                        f'انتهى اشتراكك في {self.subscription_end_date}. '
+                        'تم تعطيل حسابك مؤقتاً. يرجى تجديد الاشتراك للاستمرار.'
+                    ),
                 )
             except Exception:
                 pass
@@ -3612,17 +5178,33 @@ class PropertyRating(models.Model):
 class BrokerChannel(models.Model):
     """قناة الدلال - لعرض جميع عقارات الدلال في مكان واحد"""
     
+    STATUS_ACTIVE = 'active'
+    STATUS_INACTIVE = 'inactive'
+    STATUS_SUSPENDED = 'suspended'
+    STATUS_PENDING = 'pending'
+    
     STATUS_CHOICES = [
-        ('active', 'نشط'),
-        ('inactive', 'غير نشط'),
-        ('suspended', 'موقوف'),
-        ('pending', 'بانتظار الموافقة'),
+        (STATUS_ACTIVE, 'نشط'),
+        (STATUS_INACTIVE, 'غير نشط'),
+        (STATUS_SUSPENDED, 'موقوف'),
+        (STATUS_PENDING, 'بانتظار الموافقة'),
+    ]
+    
+    CHANNEL_TYPE_BASIC = 'basic'
+    CHANNEL_TYPE_PREMIUM = 'premium'
+    CHANNEL_TYPE_ELITE = 'elite'
+    
+    CHANNEL_TYPE_CHOICES = [
+        (CHANNEL_TYPE_BASIC, 'أساسي'),
+        (CHANNEL_TYPE_PREMIUM, 'مميز'),
+        (CHANNEL_TYPE_ELITE, 'نخبوي'),
     ]
     
     broker = models.OneToOneField(
         Broker, on_delete=models.CASCADE, related_name='channel', verbose_name='الدلال'
     )
     name = models.CharField(max_length=200, verbose_name='اسم القناة')
+    slug = models.SlugField(max_length=250, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
     description = models.TextField(blank=True, verbose_name='وصف القناة')
     logo = models.ImageField(
         upload_to='channels/logos/', null=True, blank=True, verbose_name='شعار القناة'
@@ -3631,34 +5213,147 @@ class BrokerChannel(models.Model):
         upload_to='channels/covers/', null=True, blank=True, verbose_name='صورة الغلاف'
     )
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='الحالة'
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, verbose_name='الحالة'
     )
     is_verified = models.BooleanField(default=False, verbose_name='موثق')
+    channel_type = models.CharField(
+        max_length=20, choices=CHANNEL_TYPE_CHOICES, default=CHANNEL_TYPE_BASIC, verbose_name='نوع القناة'
+    )
+    
+    # Stats - Basic
     followers_count = models.PositiveIntegerField(default=0, verbose_name='عدد المتابعين')
     views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    properties_count = models.PositiveIntegerField(default=0, verbose_name='عدد العقارات')
+    
+    # Stats - Advanced
+    profile_views = models.PositiveIntegerField(default=0, verbose_name='مشاهدات الملف الشخصي')
+    contact_clicks = models.PositiveIntegerField(default=0, verbose_name='نقرات التواصل')
+    whatsapp_clicks = models.PositiveIntegerField(default=0, verbose_name='نقرات واتساب')
+    phone_clicks = models.PositiveIntegerField(default=0, verbose_name='نقرات الهاتف')
+    property_inquiries = models.PositiveIntegerField(default=0, verbose_name='استفسارات العقارات')
+    shares_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاركات')
+    saves_count = models.PositiveIntegerField(default=0, verbose_name='عدد الحفظ')
+    
+    # Engagement metrics
+    engagement_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, verbose_name='معدل التفاعل')
+    average_session_duration = models.PositiveIntegerField(default=0, verbose_name='متوسط مدة الجلسة (ثانية)')
+    
+    # Rating
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00, verbose_name='التقييم')
+    rating_count = models.PositiveIntegerField(default=0, verbose_name='عدد التقييمات')
+    
+    # Social links
+    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
+    facebook = models.URLField(blank=True, verbose_name='فيسبوك')
+    instagram = models.URLField(blank=True, verbose_name='انستغرام')
+    telegram = models.CharField(max_length=50, blank=True, verbose_name='تيليجرام')
+    youtube = models.URLField(blank=True, verbose_name='يوتيوب')
+    tiktok = models.URLField(blank=True, verbose_name='تيك توك')
+    
+    # Personal Information
+    phone = models.CharField(max_length=20, blank=True, verbose_name='رقم الهاتف')
+    email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    address = models.TextField(blank=True, verbose_name='العنوان')
+    work_area = models.CharField(max_length=200, blank=True, verbose_name='منطقة العمل')
+    governorate = models.CharField(max_length=100, choices=IRAQ_GOVERNORATES, blank=True, verbose_name='المحافظة')
+    city = models.CharField(max_length=100, blank=True, verbose_name='المدينة')
+    office_name = models.CharField(max_length=200, blank=True, verbose_name='المكتب العقاري')
+    experience_years = models.IntegerField(null=True, blank=True, verbose_name='سنوات الخبرة')
+    specialization = models.CharField(max_length=200, blank=True, verbose_name='التخصص')
+    working_hours = models.CharField(max_length=100, blank=True, verbose_name='ساعات العمل')
+    languages = models.CharField(max_length=200, blank=True, verbose_name='اللغات')
+    about_me = models.TextField(blank=True, verbose_name='عني')
+    achievements = models.TextField(blank=True, verbose_name='الإنجازات')
+    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    
+    # Online status
+    is_online = models.BooleanField(default=False, verbose_name='متصل الآن')
+    last_seen = models.DateTimeField(null=True, blank=True, verbose_name='آخر ظهور')
+    
+    # Stats - Sales and Rentals
+    sales_count = models.PositiveIntegerField(default=0, verbose_name='عدد المبيعات')
+    rentals_count = models.PositiveIntegerField(default=0, verbose_name='عدد التأجيرات')
+    deals_count = models.PositiveIntegerField(default=0, verbose_name='عدد الصفقات')
+    clients_count = models.PositiveIntegerField(default=0, verbose_name='عدد العملاء')
+    
+    # SEO
+    meta_title = models.CharField(max_length=70, blank=True, verbose_name='عنوان SEO')
+    meta_description = models.CharField(max_length=160, blank=True, verbose_name='وصف SEO')
+    keywords = models.CharField(max_length=255, blank=True, verbose_name='كلمات مفتاحية')
+    
+    # Subscription
+    subscription_expires_at = models.DateTimeField(null=True, blank=True, verbose_name='انتهاء الاشتراك')
+    is_featured = models.BooleanField(default=False, verbose_name='قناة مميزة')
+    featured_until = models.DateTimeField(null=True, blank=True, verbose_name='تمييز حتى')
+    
+    # Analytics
+    last_analytics_update = models.DateTimeField(null=True, blank=True, verbose_name='آخر تحليل')
+    
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
     
     class Meta:
         verbose_name = 'قناة دلال'
         verbose_name_plural = 'قنوات الدلالين'
-        ordering = ['-created_at']
+        ordering = ['-is_featured', '-followers_count', '-created_at']
+        indexes = [
+            models.Index(fields=['slug']),
+            models.Index(fields=['status']),
+            models.Index(fields=['channel_type']),
+            models.Index(fields=['is_verified']),
+            models.Index(fields=['-followers_count']),
+            models.Index(fields=['-rating']),
+        ]
     
     def __str__(self):
         return f'{self.name} - {self.broker.display_name}'
     
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        return reverse('broker_channel_detail', kwargs={'pk': self.pk})
+    
     @property
-    def properties_count(self):
+    def display_name(self):
+        """اسم العرض للقناة"""
+        return self.name or f'{self.broker.display_name} - قناة'
+    
+    @property
+    def active_properties_count(self):
         """عدد العقارات النشطة في القناة"""
         return Property.objects.filter(
             broker=self.broker,
-            status__in=['ready', 'rent']
+            status__in=['ready', 'rent', 'published']
         ).count()
     
     @property
     def ads_count(self):
         """عدد الإعلانات في القناة"""
-        return self.properties_count
+        return self.active_properties_count
+    
+    @property
+    def is_premium(self):
+        """هل القناة مميزة"""
+        return self.channel_type in [self.CHANNEL_TYPE_PREMIUM, self.CHANNEL_TYPE_ELITE]
+    
+    @property
+    def is_subscription_active(self):
+        """هل الاشتراك نشط"""
+        if not self.subscription_expires_at:
+            return False
+        return self.subscription_expires_at > timezone.now()
+    
+    @property
+    def is_featured_active(self):
+        """هل التمييز نشط"""
+        if not self.is_featured:
+            return False
+        if not self.featured_until:
+            return True
+        return self.featured_until > timezone.now()
     
     def increment_views(self):
         """زيادة عدد المشاهدات"""
@@ -3675,6 +5370,150 @@ class BrokerChannel(models.Model):
         if self.followers_count > 0:
             self.followers_count -= 1
             self.save(update_fields=['followers_count'])
+    
+    def increment_profile_views(self):
+        """زيادة مشاهدات الملف الشخصي"""
+        self.profile_views += 1
+        self.save(update_fields=['profile_views'])
+    
+    def increment_contact_clicks(self):
+        """زيادة نقرات التواصل"""
+        self.contact_clicks += 1
+        self.save(update_fields=['contact_clicks'])
+    
+    def increment_whatsapp_clicks(self):
+        """زيادة نقرات واتساب"""
+        self.whatsapp_clicks += 1
+        self.save(update_fields=['whatsapp_clicks'])
+    
+    def increment_phone_clicks(self):
+        """زيادة نقرات الهاتف"""
+        self.phone_clicks += 1
+        self.save(update_fields=['phone_clicks'])
+    
+    def increment_property_inquiries(self):
+        """زيادة استفسارات العقارات"""
+        self.property_inquiries += 1
+        self.save(update_fields=['property_inquiries'])
+    
+    def increment_shares(self):
+        """زيادة المشاركات"""
+        self.shares_count += 1
+        self.save(update_fields=['shares_count'])
+    
+    def increment_saves(self):
+        """زيادة الحفظ"""
+        self.saves_count += 1
+        self.save(update_fields=['saves_count'])
+    
+    def notify_followers(self, title, message, link=None):
+        """إرسال إشعار لجميع متابعي القناة"""
+        from properties.models import Notification, NotificationRecipient
+        
+        # إنشاء الإشعار
+        notification = Notification.objects.create(
+            title=title,
+            description=message,
+            notification_type='info',
+            priority='normal',
+            status='sent',
+            delivery_type='in_app',
+            icon='📢',
+            button_link=link or f'/channel/{self.id}/',
+        )
+        
+        # إرسال لجميع المتابعين
+        for follow in self.followers.all():
+            NotificationRecipient.objects.create(
+                notification=notification,
+                user=follow.user,
+                is_read=False
+            )
+    
+    def update_stats(self):
+        """تحديث إحصائيات القناة"""
+        self.properties_count = self.active_properties_count
+        
+        # حساب معدل التفاعل
+        total_interactions = self.followers_count + self.shares_count + self.saves_count
+        if self.views_count > 0:
+            self.engagement_rate = (total_interactions / self.views_count) * 100
+        else:
+            self.engagement_rate = 0.00
+        
+        self.save(update_fields=['properties_count', 'engagement_rate'])
+        self.last_analytics_update = timezone.now()
+    
+    def calculate_engagement_rate(self):
+        """حساب معدل التفاعل المتقدم"""
+        if self.views_count == 0:
+            return 0.00
+        
+        interactions = (
+            self.followers_count * 0.1 +
+            self.shares_count * 0.3 +
+            self.saves_count * 0.2 +
+            self.contact_clicks * 0.2 +
+            self.property_inquiries * 0.2
+        )
+        
+        return round((interactions / self.views_count) * 100, 2)
+    
+    def get_weekly_stats(self):
+        """الحصول على إحصائيات أسبوعية"""
+        week_ago = timezone.now() - timezone.timedelta(days=7)
+        
+        return {
+            'new_followers': self.followers.filter(followed_at__gte=week_ago).count(),
+            'new_views': self.views_count,  # يمكن تحسين هذا باستخدام Analytics model
+            'new_inquiries': self.property_inquiries,
+            'new_shares': self.shares.filter(created_at__gte=week_ago).count(),
+        }
+    
+    def get_monthly_stats(self):
+        """الحصول على إحصائيات شهرية"""
+        month_ago = timezone.now() - timezone.timedelta(days=30)
+        
+        return {
+            'new_followers': self.followers.filter(followed_at__gte=month_ago).count(),
+            'new_views': self.views_count,
+            'new_inquiries': self.property_inquiries,
+            'new_shares': self.shares.filter(created_at__gte=month_ago).count(),
+        }
+
+
+class ChannelFollow(models.Model):
+    """Channel followers"""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='channel_follows', verbose_name='المستخدم')
+    channel = models.ForeignKey(BrokerChannel, on_delete=models.CASCADE, related_name='followers', verbose_name='القناة')
+    followed_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ المتابعة')
+    
+    class Meta:
+        verbose_name = 'متابعة قناة'
+        verbose_name_plural = 'متابعات القنوات'
+        unique_together = ['user', 'channel']
+        ordering = ['-followed_at']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.channel.name}'
+
+
+class ChannelSave(models.Model):
+    """Saved channels by users"""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_channels', verbose_name='المستخدم')
+    channel = models.ForeignKey(BrokerChannel, on_delete=models.CASCADE, related_name='saved_by', verbose_name='القناة')
+    saved_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الحفظ')
+    
+    class Meta:
+        verbose_name = 'قناة محفوظة'
+        verbose_name_plural = 'القنوات المحفوظة'
+        unique_together = ['user', 'channel']
+        ordering = ['-saved_at']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.channel.name}'
 
 
 class BrokerRating(models.Model):
@@ -3749,6 +5588,374 @@ class BrokerRating(models.Model):
         if valid_ratings:
             return sum(valid_ratings) / len(valid_ratings)
         return None
+
+
+class ChannelRating(models.Model):
+    """نظام تقييم قنوات الدلالين"""
+    
+    RATING_CHOICES = [
+        (1, '⭐'),
+        (2, '⭐⭐'),
+        (3, '⭐⭐⭐'),
+        (4, '⭐⭐⭐⭐'),
+        (5, '⭐⭐⭐⭐⭐'),
+    ]
+    
+    channel = models.ForeignKey(
+        BrokerChannel, on_delete=models.CASCADE, related_name='ratings', verbose_name='القناة'
+    )
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='channel_ratings', verbose_name='المستخدم'
+    )
+    rating = models.PositiveSmallIntegerField(
+        choices=RATING_CHOICES, verbose_name='التقييم العام'
+    )
+    
+    # تقييمات مفصلة للقناة
+    content_quality_rating = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name='جودة المحتوى',
+        help_text='1-5'
+    )
+    response_speed_rating = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name='سرعة الرد',
+        help_text='1-5'
+    )
+    trust_rating = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name='الثقة',
+        help_text='1-5'
+    )
+    variety_rating = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name='تنوع العقارات',
+        help_text='1-5'
+    )
+    
+    review = models.TextField(blank=True, verbose_name='مراجعة مفصلة')
+    is_verified = models.BooleanField(default=False, verbose_name='مراجعة موثقة')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ التقييم')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'تقييم قناة'
+        verbose_name_plural = 'تقييمات القنوات'
+        unique_together = ('channel', 'user')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['channel', 'rating']),
+            models.Index(fields=['-rating']),
+            models.Index(fields=['is_verified']),
+        ]
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.channel.name} - {self.rating}⭐'
+    
+    @property
+    def average_detailed_rating(self):
+        """حساب متوسط التقييمات المفصلة"""
+        ratings = [
+            self.content_quality_rating, self.response_speed_rating,
+            self.trust_rating, self.variety_rating
+        ]
+        valid_ratings = [r for r in ratings if r is not None]
+        if valid_ratings:
+            return sum(valid_ratings) / len(valid_ratings)
+        return None
+
+
+class ChannelReview(models.Model):
+    """مراجعات مفصلة للقنوات"""
+    
+    channel = models.ForeignKey(
+        BrokerChannel, on_delete=models.CASCADE, related_name='reviews', verbose_name='القناة'
+    )
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='channel_reviews', verbose_name='المستخدم'
+    )
+    
+    title = models.CharField(max_length=200, verbose_name='عنوان المراجعة')
+    content = models.TextField(verbose_name='محتوى المراجعة')
+    
+    # صور المراجعة
+    images = models.JSONField(default=list, blank=True, verbose_name='صور المراجعة')
+    
+    # هل يوصي بالقناة
+    would_recommend = models.BooleanField(default=True, verbose_name='يوصي بالقناة')
+    
+    # التقييم العام
+    overall_rating = models.PositiveSmallIntegerField(
+        choices=BrokerRating.RATING_CHOICES, verbose_name='التقييم العام'
+    )
+    
+    # الإحصائيات
+    helpful_count = models.PositiveIntegerField(default=0, verbose_name='عدد الإعجابات')
+    reply_count = models.PositiveIntegerField(default=0, verbose_name='عدد الردود')
+    
+    # الحالة
+    is_approved = models.BooleanField(default=False, verbose_name='موافق عليه')
+    is_featured = models.BooleanField(default=False, verbose_name='مراجعة مميزة')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'مراجعة قناة'
+        verbose_name_plural = 'مراجعات القنوات'
+        ordering = ['-is_featured', '-helpful_count', '-created_at']
+        indexes = [
+            models.Index(fields=['channel', '-created_at']),
+            models.Index(fields=['is_approved']),
+            models.Index(fields=['is_featured']),
+        ]
+    
+    def __str__(self):
+        return f'{self.title} - {self.channel.name}'
+    
+    def increment_helpful(self):
+        """زيادة عدد الإعجابات"""
+        self.helpful_count += 1
+        self.save(update_fields=['helpful_count'])
+    
+    def decrement_helpful(self):
+        """تقليل عدد الإعجابات"""
+        if self.helpful_count > 0:
+            self.helpful_count -= 1
+            self.save(update_fields=['helpful_count'])
+
+
+class ChannelReviewReply(models.Model):
+    """ردود على مراجعات القنوات"""
+    
+    review = models.ForeignKey(
+        ChannelReview, on_delete=models.CASCADE, related_name='replies', verbose_name='المراجعة'
+    )
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='review_replies', verbose_name='المستخدم'
+    )
+    content = models.TextField(verbose_name='محتوى الرد')
+    
+    # هل الرد من صاحب القناة
+    is_channel_owner = models.BooleanField(default=False, verbose_name='رد من صاحب القناة')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'رد مراجعة'
+        verbose_name_plural = 'ردود المراجعات'
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f'رد على {self.review.title}'
+
+
+class ChannelShare(models.Model):
+    """مشاركة القنوات"""
+    
+    SHARE_PLATFORM_CHOICES = [
+        ('whatsapp', 'واتساب'),
+        ('facebook', 'فيسبوك'),
+        ('twitter', 'تويتر'),
+        ('telegram', 'تيليجرام'),
+        ('email', 'بريد إلكتروني'),
+        ('link', 'نسخ الرابط'),
+    ]
+    
+    channel = models.ForeignKey(
+        BrokerChannel, on_delete=models.CASCADE, related_name='shares', verbose_name='القناة'
+    )
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='channel_shares', verbose_name='المستخدم'
+    )
+    platform = models.CharField(
+        max_length=20, choices=SHARE_PLATFORM_CHOICES, verbose_name='منصة المشاركة'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ المشاركة')
+    
+    class Meta:
+        verbose_name = 'مشاركة قناة'
+        verbose_name_plural = 'مشاركات القنوات'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['channel', '-created_at']),
+            models.Index(fields=['platform']),
+        ]
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.channel.name} - {self.get_platform_display()}'
+
+
+class ChannelNotification(models.Model):
+    """إشعارات القنوات"""
+    
+    NOTIFICATION_TYPE_CHOICES = [
+        ('new_property', 'عقار جديد'),
+        ('price_drop', 'انخفاض السعر'),
+        ('featured_property', 'عقار مميز'),
+        ('channel_update', 'تحديث القناة'),
+        ('new_review', 'مراجعة جديدة'),
+        ('reply_to_review', 'رد على مراجعة'),
+        ('milestone', 'إنجاز'),
+    ]
+    
+    channel = models.ForeignKey(
+        BrokerChannel, on_delete=models.CASCADE, related_name='notifications', verbose_name='القناة'
+    )
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='channel_notifications', verbose_name='المستخدم'
+    )
+    notification_type = models.CharField(
+        max_length=30, choices=NOTIFICATION_TYPE_CHOICES, verbose_name='نوع الإشعار'
+    )
+    title = models.CharField(max_length=200, verbose_name='العنوان')
+    message = models.TextField(verbose_name='الرسالة')
+    
+    # رابط ذو صلة
+    link = models.URLField(blank=True, verbose_name='رابط')
+    
+    # البيانات الإضافية
+    metadata = models.JSONField(default=dict, blank=True, verbose_name='بيانات إضافية')
+    
+    is_read = models.BooleanField(default=False, verbose_name='تمت القراءة')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    
+    class Meta:
+        verbose_name = 'إشعار قناة'
+        verbose_name_plural = 'إشعارات القنوات'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['channel', '-created_at']),
+            models.Index(fields=['is_read']),
+        ]
+    
+    def __str__(self):
+        return f'{self.title} - {self.user.username}'
+
+
+class ChannelAnalytics(models.Model):
+    """إحصائيات متقدمة للقنوات"""
+    
+    channel = models.OneToOneField(
+        BrokerChannel, on_delete=models.CASCADE, related_name='analytics', verbose_name='القناة'
+    )
+    
+    # إحصائيات الزيارات
+    daily_views = models.JSONField(default=dict, blank=True, verbose_name='المشاهدات اليومية')
+    weekly_views = models.JSONField(default=dict, blank=True, verbose_name='المشاهدات الأسبوعية')
+    monthly_views = models.JSONField(default=dict, blank=True, verbose_name='المشاهدات الشهرية')
+    
+    # إحصائيات المتابعين
+    daily_followers = models.JSONField(default=dict, blank=True, verbose_name='المتابعين اليوميين')
+    weekly_followers = models.JSONField(default=dict, blank=True, verbose_name='المتابعين الأسبوعيين')
+    monthly_followers = models.JSONField(default=dict, blank=True, verbose_name='المتابعين الشهريين')
+    
+    # إحصائيات التفاعل
+    total_shares = models.PositiveIntegerField(default=0, verbose_name='إجمالي المشاركات')
+    total_saves = models.PositiveIntegerField(default=0, verbose_name='إجمالي الحفظ')
+    total_reviews = models.PositiveIntegerField(default=0, verbose_name='إجمالي المراجعات')
+    
+    # إحصائيات الأداء
+    average_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00, verbose_name='متوسط التقييم')
+    response_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, verbose_name='نسبة الرد')
+    average_response_time = models.PositiveIntegerField(default=0, verbose_name='متوسط وقت الرد (دقيقة)')
+    
+    # إحصائيات العقارات
+    properties_viewed = models.PositiveIntegerField(default=0, verbose_name='عقارات تمت مشاهدتها')
+    properties_contacted = models.PositiveIntegerField(default=0, verbose_name='عقارات تم التواصل بشأنها')
+    conversion_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, verbose_name='نسبة التحويل')
+    
+    # التواريخ
+    last_updated = models.DateTimeField(auto_now=True, verbose_name='آخر تحديث')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    
+    class Meta:
+        verbose_name = 'إحصائيات قناة'
+        verbose_name_plural = 'إحصائيات القنوات'
+    
+    def __str__(self):
+        return f'إحصائيات {self.channel.name}'
+    
+    def update_daily_views(self, date=None):
+        """تحديث المشاهدات اليومية"""
+        from django.utils import timezone
+        if not date:
+            date = timezone.now().date()
+        date_str = date.isoformat()
+        self.daily_views[date_str] = self.daily_views.get(date_str, 0) + 1
+        self.save(update_fields=['daily_views', 'last_updated'])
+    
+    def update_daily_followers(self, date=None):
+        """تحديث المتابعين اليوميين"""
+        from django.utils import timezone
+        if not date:
+            date = timezone.now().date()
+        date_str = date.isoformat()
+        self.daily_followers[date_str] = self.daily_followers.get(date_str, 0) + 1
+        self.save(update_fields=['daily_followers', 'last_updated'])
+    
+    def calculate_conversion_rate(self):
+        """حساب نسبة التحويل"""
+        if self.properties_viewed > 0:
+            self.conversion_rate = (self.properties_contacted / self.properties_viewed) * 100
+            self.save(update_fields=['conversion_rate'])
+
+
+class ChannelMilestone(models.Model):
+    """إنجازات القنوات"""
+    
+    MILESTONE_TYPE_CHOICES = [
+        ('followers', 'عدد المتابعين'),
+        ('views', 'عدد المشاهدات'),
+        ('properties', 'عدد العقارات'),
+        ('reviews', 'عدد المراجعات'),
+        ('rating', 'التقييم'),
+        ('years', 'سنوات النشاط'),
+    ]
+    
+    channel = models.ForeignKey(
+        BrokerChannel, on_delete=models.CASCADE, related_name='milestones', verbose_name='القناة'
+    )
+    milestone_type = models.CharField(
+        max_length=20, choices=MILESTONE_TYPE_CHOICES, verbose_name='نوع الإنجاز'
+    )
+    target_value = models.PositiveIntegerField(verbose_name='القيمة المستهدفة')
+    current_value = models.PositiveIntegerField(default=0, verbose_name='القيمة الحالية')
+    
+    is_achieved = models.BooleanField(default=False, verbose_name='تم تحقيقه')
+    achieved_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الإنجاز')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    
+    class Meta:
+        verbose_name = 'إنجاز قناة'
+        verbose_name_plural = 'إنجازات القنوات'
+        ordering = ['-achieved_at', '-created_at']
+        unique_together = ['channel', 'milestone_type', 'target_value']
+    
+    def __str__(self):
+        status = '✓' if self.is_achieved else '○'
+        return f'{status} {self.channel.name} - {self.get_milestone_type_display()}: {self.current_value}/{self.target_value}'
+    
+    def check_achievement(self):
+        """التحقق من تحقيق الإنجاز"""
+        if self.current_value >= self.target_value and not self.is_achieved:
+            self.is_achieved = True
+            from django.utils import timezone
+            self.achieved_at = timezone.now()
+            self.save(update_fields=['is_achieved', 'achieved_at'])
+            
+            # إنشاء إشعار للقناة
+            ChannelNotification.objects.create(
+                channel=self.channel,
+                user=self.channel.broker.user,
+                notification_type='milestone',
+                title=f'🎉 إنجاز جديد!',
+                message=f'حققت قناتك إنجازاً جديداً: {self.get_milestone_type_display()} {self.target_value}',
+                link=self.channel.get_absolute_url()
+            )
+            return True
+        return False
 
 
 class TwoFactorAuth(models.Model):
@@ -4224,91 +6431,416 @@ class ActivityLog(models.Model):
         )
 
 
-class Notification(models.Model):
-    """نظام الإشعارات والتنبيهات"""
+# ==================== Resort & Tourism Models ====================
+
+def resort_cover_path(instance, filename):
+    """Path for resort cover image"""
+    return f'resorts/covers/{instance.id}/{filename}'
+
+
+def resort_logo_path(instance, filename):
+    """Path for resort logo"""
+    return f'resorts/logos/{instance.id}/{filename}'
+
+
+def resort_gallery_path(instance, filename):
+    """Path for resort gallery images"""
+    return f'resorts/gallery/{instance.resort.id}/{filename}'
+
+
+class Resort(models.Model):
+    """المنتجعات والأماكن السياحية"""
     
-    TYPE_CHOICES = [
-        ('info', 'معلومة'),
-        ('success', 'نجاح'),
-        ('warning', 'تحذير'),
-        ('error', 'خطأ'),
-        ('broker_created', 'إنشاء دلال'),
-        ('broker_updated', 'تعديل دلال'),
-        ('broker_deleted', 'حذف دلال'),
-        ('broker_suspended', 'إيقاف دلال'),
-        ('broker_activated', 'تفعيل دلال'),
-        ('subscription_expiring', 'اشتراك منتهي قريباً'),
-        ('subscription_expired', 'اشتراك منتهي'),
-        ('property_limit_reached', 'وصول لحد العقارات'),
-        ('message_received', 'رسالة جديدة'),
+    RESORT_TYPE_CHOICES = [
+        ('resort', 'منتجع سياحي'),
+        ('hotel', 'فندق'),
+        ('chalet', 'شاليه'),
+        ('cabin', 'كوخ'),
+        ('camp', 'مخيم سياحي'),
+        ('amusement_park', 'مدينة ألعاب'),
+        ('park', 'منتزه'),
+        ('public_garden', 'حديقة عامة'),
+        ('pool', 'مسبح'),
+        ('rest_house', 'استراحة'),
+        ('tourist_farm', 'مزرعة سياحية'),
+        ('tourist_island', 'جزيرة سياحية'),
+        ('archaeological_site', 'موقع أثري'),
+        ('tourist_restaurant', 'مطعم سياحي'),
+        ('tourist_cafe', 'مقهى سياحي'),
     ]
     
+    STATUS_CHOICES = [
+        ('pending', 'بانتظار الموافقة'),
+        ('active', 'نشط'),
+        ('inactive', 'غير نشط'),
+        ('rejected', 'مرفوض'),
+        ('suspended', 'موقوف'),
+    ]
+    
+    # Owner - يمكن أن يكون دلال، مكتب، شركة، أو مالك
+    broker = models.ForeignKey(
+        Broker, on_delete=models.CASCADE, related_name='resorts',
+        null=True, blank=True, verbose_name='الدلال'
+    )
     user = models.ForeignKey(
-        'auth.User',
-        on_delete=models.CASCADE,
-        related_name='notifications',
-        verbose_name='المستخدم'
-    )
-    notification_type = models.CharField(
-        max_length=30,
-        choices=TYPE_CHOICES,
-        verbose_name='نوع الإشعار'
-    )
-    title = models.CharField(
-        max_length=200,
-        verbose_name='العنوان'
-    )
-    message = models.TextField(
-        verbose_name='الرسالة'
-    )
-    link = models.CharField(
-        max_length=500,
-        blank=True,
-        verbose_name='رابط'
-    )
-    is_read = models.BooleanField(
-        default=False,
-        verbose_name='مقروء'
-    )
-    metadata = models.JSONField(
-        default=dict,
-        blank=True,
-        verbose_name='بيانات إضافية'
-    )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='التاريخ والوقت'
+        'auth.User', on_delete=models.CASCADE, related_name='resorts',
+        null=True, blank=True, verbose_name='المستخدم المالك'
     )
     
+    # Basic Information
+    name = models.CharField(max_length=200, verbose_name='الاسم')
+    slug = models.SlugField(max_length=250, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
+    resort_type = models.CharField(
+        max_length=50, choices=RESORT_TYPE_CHOICES, verbose_name='نوع المكان'
+    )
+    description = models.TextField(verbose_name='الوصف')
+    
+    # Location
+    governorate = models.CharField(max_length=100, blank=True, verbose_name='المحافظة')
+    city = models.CharField(max_length=100, blank=True, verbose_name='المدينة')
+    district = models.CharField(max_length=100, blank=True, verbose_name='المنطقة')
+    full_address = models.TextField(blank=True, verbose_name='العنوان الكامل')
+    latitude = models.DecimalField(
+        max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط العرض'
+    )
+    longitude = models.DecimalField(
+        max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط الطول'
+    )
+    
+    # Contact Information
+    phone = models.CharField(max_length=20, blank=True, verbose_name='رقم الهاتف')
+    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
+    email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    
+    # Media
+    cover_image = models.ImageField(
+        upload_to=resort_cover_path, null=True, blank=True, verbose_name='صورة الغلاف'
+    )
+    logo = models.ImageField(
+        upload_to=resort_logo_path, null=True, blank=True, verbose_name='الشعار'
+    )
+    video_url = models.URLField(blank=True, verbose_name='رابط الفيديو')
+    
+    # Working Hours
+    working_hours = models.CharField(max_length=100, blank=True, verbose_name='ساعات العمل')
+    working_days = models.CharField(max_length=100, blank=True, verbose_name='أيام العمل')
+    
+    # Pricing
+    min_price = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='أقل سعر'
+    )
+    max_price = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='أعلى سعر'
+    )
+    currency = models.CharField(max_length=10, default='د.ع', verbose_name='العملة')
+    advance_booking = models.BooleanField(default=True, verbose_name='الحجز المسبق')
+    
+    # Status & Verification
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='الحالة'
+    )
+    is_verified = models.BooleanField(default=False, verbose_name='موثق')
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    featured_until = models.DateTimeField(null=True, blank=True, verbose_name='تمييز حتى')
+    
+    # Statistics
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    bookings_count = models.PositiveIntegerField(default=0, verbose_name='عدد الحجوزات')
+    likes_count = models.PositiveIntegerField(default=0, verbose_name='عدد الإعجابات')
+    shares_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاركات')
+    reviews_count = models.PositiveIntegerField(default=0, verbose_name='عدد التقييمات')
+    
+    # Rating
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00, verbose_name='التقييم')
+    rating_count = models.PositiveIntegerField(default=0, verbose_name='عدد التقييمات')
+    
+    # SEO
+    meta_title = models.CharField(max_length=70, blank=True, verbose_name='عنوان SEO')
+    meta_description = models.CharField(max_length=160, blank=True, verbose_name='وصف SEO')
+    keywords = models.CharField(max_length=255, blank=True, verbose_name='كلمات مفتاحية')
+    
+    # Link to HotelPage
+    page = models.ForeignKey(
+        'HotelPage', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='resort_listings', verbose_name='الصفحة'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
     class Meta:
-        verbose_name = 'إشعار'
-        verbose_name_plural = 'الإشعارات'
-        ordering = ['-created_at']
+        verbose_name = 'منتجع سياحي'
+        verbose_name_plural = 'المنتجعات السياحية'
+        ordering = ['-is_verified', '-rating', '-created_at']
         indexes = [
-            models.Index(fields=['user', '-created_at']),
-            models.Index(fields=['is_read', '-created_at']),
-            models.Index(fields=['notification_type', '-created_at']),
+            models.Index(fields=['resort_type', '-created_at']),
+            models.Index(fields=['governorate', 'city']),
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['is_verified', '-rating']),
+            models.Index(fields=['-rating', '-created_at']),
         ]
     
     def __str__(self):
-        return f'{self.title} - {self.user.username}'
+        return self.name
     
-    @classmethod
-    def create(cls, user, notification_type, title, message, link='', metadata=None):
-        """إنشاء إشعار جديد"""
-        return cls.objects.create(
-            user=user,
-            notification_type=notification_type,
-            title=title,
-            message=message,
-            link=link,
-            metadata=metadata or {}
-        )
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
     
-    def mark_as_read(self):
-        """تعليم الإشعار كمقروء"""
-        self.is_read = True
-        self.save(update_fields=['is_read'])
+    def get_absolute_url(self):
+        return reverse('resort_detail', kwargs={'slug': self.slug})
+    
+    def increment_views(self):
+        self.views_count += 1
+        self.save(update_fields=['views_count'])
+    
+    def increment_bookings(self):
+        self.bookings_count += 1
+        self.save(update_fields=['bookings_count'])
+    
+    def increment_likes(self):
+        self.likes_count += 1
+        self.save(update_fields=['likes_count'])
+    
+    def increment_shares(self):
+        self.shares_count += 1
+        self.save(update_fields=['shares_count'])
+    
+    def update_rating(self):
+        reviews = self.reviews.all()
+        if reviews.exists():
+            avg_rating = reviews.aggregate(models.Avg('rating'))['rating__avg']
+            self.rating = round(avg_rating, 2)
+            self.rating_count = reviews.count()
+            self.save(update_fields=['rating', 'rating_count'])
+
+
+class ResortGallery(models.Model):
+    """صور المنتجع"""
+    
+    resort = models.ForeignKey(
+        Resort, on_delete=models.CASCADE, related_name='gallery', verbose_name='المنتجع'
+    )
+    image = models.ImageField(upload_to=resort_gallery_path, verbose_name='الصورة')
+    caption = models.CharField(max_length=200, blank=True, verbose_name='الوصف')
+    is_primary = models.BooleanField(default=False, verbose_name='صورة رئيسية')
+    order = models.PositiveIntegerField(default=0, verbose_name='الترتيب')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإضافة')
+    
+    class Meta:
+        verbose_name = 'صورة منتجع'
+        verbose_name_plural = 'صور المنتجع'
+        ordering = ['order', '-created_at']
+    
+    def __str__(self):
+        return f'{self.resort.name} - {self.caption or "صورة"}'
+
+
+class ResortAmenity(models.Model):
+    """مرافق المنتجع"""
+    
+    AMENITY_CHOICES = [
+        ('parking', 'موقف سيارات'),
+        ('wifi', 'واي فاي'),
+        ('pool', 'مسبح'),
+        ('playground', 'ألعاب أطفال'),
+        ('restaurant', 'مطعم'),
+        ('cafeteria', 'كافتيريا'),
+        ('family_seating', 'جلسات عائلية'),
+        ('private_seating', 'جلسات خاصة'),
+        ('ac', 'تكييف'),
+        ('elevator', 'مصعد'),
+        ('event_hall', 'قاعة مناسبات'),
+        ('conference_hall', 'قاعة مؤتمرات'),
+        ('beach', 'شاطئ'),
+        ('gym', 'صالة رياضية'),
+        ('spa', 'سبا'),
+        ('sauna', 'ساونا'),
+        ('jacuzzi', 'جاكوزي'),
+        ('security', 'أمن وحراسة'),
+        ('cctv', 'كاميرات مراقبة'),
+        ('generator', 'مولد كهرباء'),
+        ('disability_access', 'خدمات لذوي الإعاقة'),
+    ]
+    
+    resort = models.ForeignKey(
+        Resort, on_delete=models.CASCADE, related_name='amenities', verbose_name='المنتجع'
+    )
+    amenity_type = models.CharField(
+        max_length=50, choices=AMENITY_CHOICES, verbose_name='نوع المرفق'
+    )
+    is_available = models.BooleanField(default=True, verbose_name='متوفر')
+    description = models.TextField(blank=True, verbose_name='وصف المرفق')
+    
+    class Meta:
+        verbose_name = 'مرفق منتجع'
+        verbose_name_plural = 'مرافق المنتجع'
+        unique_together = ['resort', 'amenity_type']
+    
+    def __str__(self):
+        return f'{self.resort.name} - {self.get_amenity_type_display()}'
+
+
+class ResortService(models.Model):
+    """خدمات المنتجع"""
+    
+    SERVICE_CHOICES = [
+        ('online_booking', 'الحجز الإلكتروني'),
+        ('online_payment', 'الدفع الإلكتروني'),
+        ('offers_discounts', 'العروض والخصومات'),
+        ('events', 'الفعاليات'),
+        ('trips', 'الرحلات'),
+        ('hall_rental', 'تأجير القاعات'),
+        ('cabin_rental', 'تأجير الأكواخ'),
+        ('chalet_rental', 'تأجير الشاليهات'),
+    ]
+    
+    resort = models.ForeignKey(
+        Resort, on_delete=models.CASCADE, related_name='services', verbose_name='المنتجع'
+    )
+    service_type = models.CharField(
+        max_length=50, choices=SERVICE_CHOICES, verbose_name='نوع الخدمة'
+    )
+    is_available = models.BooleanField(default=True, verbose_name='متوفر')
+    description = models.TextField(blank=True, verbose_name='وصف الخدمة')
+    price = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='السعر'
+    )
+    
+    class Meta:
+        verbose_name = 'خدمة منتجع'
+        verbose_name_plural = 'خدمات المنتجع'
+        unique_together = ['resort', 'service_type']
+    
+    def __str__(self):
+        return f'{self.resort.name} - {self.get_service_type_display()}'
+
+
+class ResortReview(models.Model):
+    """تقييمات المنتجع"""
+    
+    resort = models.ForeignKey(
+        Resort, on_delete=models.CASCADE, related_name='reviews', verbose_name='المنتجع'
+    )
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='resort_reviews', verbose_name='المستخدم'
+    )
+    rating = models.PositiveIntegerField(verbose_name='التقييم بالنجوم')
+    comment = models.TextField(verbose_name='التعليق')
+    images = models.JSONField(default=list, blank=True, verbose_name='صور من الزائر')
+    is_approved = models.BooleanField(default=False, verbose_name='موافق عليه')
+    owner_reply = models.TextField(blank=True, verbose_name='رد المالك')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ التقييم')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'تقييم منتجع'
+        verbose_name_plural = 'تقييمات المنتجع'
+        ordering = ['-created_at']
+        unique_together = ['resort', 'user']
+    
+    def __str__(self):
+        return f'{self.resort.name} - {self.user.username} - {self.rating}⭐'
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.resort.update_rating()
+
+
+class ResortBooking(models.Model):
+    """حجوزات المنتجع"""
+    
+    STATUS_CHOICES = [
+        ('pending', 'بانتظار الموافقة'),
+        ('confirmed', 'مؤكد'),
+        ('rejected', 'مرفوض'),
+        ('cancelled', 'ملغي'),
+        ('completed', 'مكتمل'),
+    ]
+    
+    resort = models.ForeignKey(
+        Resort, on_delete=models.CASCADE, related_name='bookings', verbose_name='المنتجع'
+    )
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='resort_bookings', verbose_name='المستخدم'
+    )
+    check_in = models.DateField(verbose_name='تاريخ الوصول')
+    check_out = models.DateField(verbose_name='تاريخ المغادرة')
+    guests = models.PositiveIntegerField(default=1, verbose_name='عدد الضيوف')
+    total_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='السعر الإجمالي')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='الحالة')
+    special_requests = models.TextField(blank=True, verbose_name='طلبات خاصة')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الحجز')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'حجز منتجع'
+        verbose_name_plural = 'حجوزات المنتجع'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.resort.name} - {self.user.username} - {self.check_in}'
+    
+    def save(self, *args, **kwargs):
+        if self.status == 'confirmed' and not self.pk:
+            self.resort.increment_bookings()
+        super().save(*args, **kwargs)
+
+
+class ResortOffer(models.Model):
+    """عروض المنتجع"""
+    
+    resort = models.ForeignKey(
+        Resort, on_delete=models.CASCADE, related_name='offers', verbose_name='المنتجع'
+    )
+    title = models.CharField(max_length=200, verbose_name='عنوان العرض')
+    description = models.TextField(verbose_name='وصف العرض')
+    discount_percentage = models.PositiveIntegerField(verbose_name='نسبة الخصم')
+    original_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='السعر الأصلي')
+    discounted_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='السعر بعد الخصم')
+    valid_from = models.DateTimeField(verbose_name='صالح من')
+    valid_until = models.DateTimeField(verbose_name='صالح حتى')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإضافة')
+    
+    class Meta:
+        verbose_name = 'عرض منتجع'
+        verbose_name_plural = 'عروض المنتجع'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.resort.name} - {self.title}'
+    
+    def is_valid(self):
+        from django.utils import timezone
+        now = timezone.now()
+        return self.is_active and self.valid_from <= now <= self.valid_until
+
+
+class ResortLike(models.Model):
+    """إعجابات المنتجع"""
+    
+    resort = models.ForeignKey(
+        Resort, on_delete=models.CASCADE, related_name='likes', verbose_name='المنتجع'
+    )
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='resort_likes', verbose_name='المستخدم'
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإعجاب')
+    
+    class Meta:
+        verbose_name = 'إعجاب منتجع'
+        verbose_name_plural = 'إعجابات المنتجع'
+        unique_together = ['resort', 'user']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.resort.name}'
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.resort.increment_likes()
 
 
 # ==================== Chat System Models ====================
@@ -4741,285 +7273,6 @@ class MessageReadStatus(models.Model):
         return f'{self.user.username} قرأ {self.message}'
 
 
-class MessageAttachment(models.Model):
-    """مرفقات الرسالة"""
-    
-    ATTACHMENT_IMAGE = 'image'
-    ATTACHMENT_VIDEO = 'video'
-    ATTACHMENT_AUDIO = 'audio'
-    ATTACHMENT_FILE = 'file'
-    
-    ATTACHMENT_TYPE_CHOICES = [
-        (ATTACHMENT_IMAGE, 'صورة'),
-        (ATTACHMENT_VIDEO, 'فيديو'),
-        (ATTACHMENT_AUDIO, 'صوت'),
-        (ATTACHMENT_FILE, 'ملف'),
-    ]
-    
-    message = models.ForeignKey(
-        ChatMessage,
-        on_delete=models.CASCADE,
-        related_name='attachments',
-        verbose_name='الرسالة'
-    )
-    attachment_type = models.CharField(
-        max_length=20,
-        choices=ATTACHMENT_TYPE_CHOICES,
-        verbose_name='نوع المرفق'
-    )
-    file = models.FileField(
-        upload_to=chat_attachment_path,
-        verbose_name='الملف'
-    )
-    thumbnail = models.ImageField(
-        upload_to=chat_image_path,
-        blank=True,
-        null=True,
-        verbose_name='الصورة المصغرة'
-    )
-    file_name = models.CharField(
-        max_length=255,
-        verbose_name='اسم الملف'
-    )
-    file_size = models.PositiveIntegerField(
-        verbose_name='حجم الملف (بايت)'
-    )
-    mime_type = models.CharField(
-        max_length=100,
-        verbose_name='نوع MIME'
-    )
-    width = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='العرض'
-    )
-    height = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='الارتفاع'
-    )
-    duration = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='المدة (ثواني)'
-    )
-    uploaded_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='تاريخ الرفع'
-    )
-    
-    class Meta:
-        verbose_name = 'مرفق الرسالة'
-        verbose_name_plural = 'مرفقات الرسائل'
-        indexes = [
-            models.Index(fields=['message', 'attachment_type']),
-        ]
-    
-    def __str__(self):
-        return f'{self.file_name} - {self.message}'
-    
-    def get_file_size_display(self):
-        """Get human-readable file size"""
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if self.file_size < 1024:
-                return f'{self.file_size:.1f} {unit}'
-            self.file_size /= 1024
-        return f'{self.file_size:.1f} TB'
-
-
-class MessageReaction(models.Model):
-    """رد فعل على رسالة"""
-    
-    REACTION_LIKE = 'like'
-    REACTION_LOVE = 'love'
-    REACTION_LAUGH = 'laugh'
-    REACTION_SAD = 'sad'
-    REACTION_ANGRY = 'angry'
-    REACTION_THUMBS_UP = 'thumbs_up'
-    REACTION_THUMBS_DOWN = 'thumbs_down'
-    REACTION_CLAP = 'clap'
-    
-    REACTION_CHOICES = [
-        (REACTION_LIKE, '👍'),
-        (REACTION_LOVE, '❤️'),
-        (REACTION_LAUGH, '😂'),
-        (REACTION_SAD, '😢'),
-        (REACTION_ANGRY, '😠'),
-        (REACTION_THUMBS_UP, '👍'),
-        (REACTION_THUMBS_DOWN, '👎'),
-        (REACTION_CLAP, '👏'),
-    ]
-    
-    REACTION_EMOJIS = {
-        REACTION_LIKE: '👍',
-        REACTION_LOVE: '❤️',
-        REACTION_LAUGH: '😂',
-        REACTION_SAD: '😢',
-        REACTION_ANGRY: '😠',
-        REACTION_THUMBS_UP: '👍',
-        REACTION_THUMBS_DOWN: '👎',
-        REACTION_CLAP: '👏',
-    }
-    
-    message = models.ForeignKey(
-        ChatMessage,
-        on_delete=models.CASCADE,
-        related_name='reactions',
-        verbose_name='الرسالة'
-    )
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='message_reactions',
-        verbose_name='المستخدم'
-    )
-    reaction_type = models.CharField(
-        max_length=20,
-        choices=REACTION_CHOICES,
-        verbose_name='نوع الرد'
-    )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='تاريخ الإضافة'
-    )
-    
-    class Meta:
-        verbose_name = 'رد فعل'
-        verbose_name_plural = 'ردود الفعل'
-        unique_together = ['message', 'user', 'reaction_type']
-        indexes = [
-            models.Index(fields=['message', 'reaction_type']),
-        ]
-    
-    def __str__(self):
-        return f'{self.user.username} {self.get_reaction_emoji()} على {self.message}'
-    
-    def get_reaction_emoji(self):
-        return self.REACTION_EMOJIS.get(self.reaction_type, '')
-
-
-class MessageReport(models.Model):
-    """بلاغ عن رسالة"""
-    
-    REPORT_TYPE_SPAM = 'spam'
-    REPORT_TYPE_HARASSMENT = 'harassment'
-    REPORT_TYPE_INAPPROPRIATE = 'inappropriate'
-    REPORT_TYPE_SCAM = 'scam'
-    REPORT_TYPE_OTHER = 'other'
-    
-    REPORT_TYPE_CHOICES = [
-        (REPORT_TYPE_SPAM, 'رسائل مزعجة'),
-        (REPORT_TYPE_HARASSMENT, 'مضايقة'),
-        (REPORT_TYPE_INAPPROPRIATE, 'محتوى غير لائق'),
-        (REPORT_TYPE_SCAM, 'احتيال'),
-        (REPORT_TYPE_OTHER, 'أخرى'),
-    ]
-    
-    STATUS_PENDING = 'pending'
-    STATUS_REVIEWED = 'reviewed'
-    STATUS_RESOLVED = 'resolved'
-    STATUS_DISMISSED = 'dismissed'
-    
-    STATUS_CHOICES = [
-        (STATUS_PENDING, 'قيد المراجعة'),
-        (STATUS_REVIEWED, 'تمت المراجعة'),
-        (STATUS_RESOLVED, 'تم الحل'),
-        (STATUS_DISMISSED, 'مرفوض'),
-    ]
-    
-    reporter = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='message_reports',
-        verbose_name='المبلغ'
-    )
-    message = models.ForeignKey(
-        ChatMessage,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='reports',
-        verbose_name='الرسالة'
-    )
-    reported_user = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='reports_against',
-        verbose_name='المستخدم المبلغ ضده'
-    )
-    report_type = models.CharField(
-        max_length=20,
-        choices=REPORT_TYPE_CHOICES,
-        verbose_name='نوع البلاغ'
-    )
-    description = models.TextField(
-        verbose_name='الوصف'
-    )
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING,
-        verbose_name='الحالة'
-    )
-    admin_notes = models.TextField(
-        blank=True,
-        verbose_name='ملاحظات المسؤول'
-    )
-    reviewed_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='reviewed_reports',
-        verbose_name='راجع بواسطة'
-    )
-    reviewed_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name='تاريخ المراجعة'
-    )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='تاريخ البلاغ'
-    )
-    
-    class Meta:
-        verbose_name = 'بلاغ عن رسالة'
-        verbose_name_plural = 'البلاغات عن الرسائل'
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['status', '-created_at']),
-            models.Index(fields=['reporter', '-created_at']),
-            models.Index(fields=['reported_user', '-created_at']),
-        ]
-    
-    def __str__(self):
-        return f'بلاغ #{self.id} - {self.get_report_type_display()}'
-    
-    def mark_as_reviewed(self, admin, notes=''):
-        """Mark report as reviewed"""
-        self.status = self.STATUS_REVIEWED
-        self.reviewed_by = admin
-        self.reviewed_at = timezone.now()
-        self.admin_notes = notes
-        self.save()
-    
-    def resolve(self, admin, notes=''):
-        """Resolve report"""
-        self.status = self.STATUS_RESOLVED
-        self.reviewed_by = admin
-        self.reviewed_at = timezone.now()
-        self.admin_notes = notes
-        self.save()
-    
-    def dismiss(self, admin, notes=''):
-        """Dismiss report"""
-        self.status = self.STATUS_DISMISSED
-        self.reviewed_by = admin
-        self.reviewed_at = timezone.now()
-        self.admin_notes = notes
-        self.save()
 
 
 class ChatSettings(models.Model):
@@ -5201,170 +7454,355 @@ OUTSIDE_IRAQ_PROPERTY_TYPES = [
 ]
 
 
-class BrokerChannel(models.Model):
-    """Broker's personal channel for their listings"""
+# ==================== Payment System Models ====================
+
+class PaymentMethod(models.Model):
+    """طرق الدفع المتاحة في النظام"""
     
-    broker = models.OneToOneField('Broker', on_delete=models.CASCADE, related_name='channel', verbose_name='الدلال')
-    name = models.CharField(max_length=200, verbose_name='اسم القناة')
-    slug = models.SlugField(max_length=220, unique=True, allow_unicode=True, null=True, blank=True, verbose_name='الرابط')
-    description = models.TextField(blank=True, verbose_name='نبذة تعريفية')
+    METHOD_VISA = 'visa'
+    METHOD_MASTERCARD = 'mastercard'
+    METHOD_PAYPAL = 'paypal'
+    METHOD_ZAIN_CASH = 'zain_cash'
+    METHOD_QI_CARD = 'qi_card'
+    METHOD_ASIA_HAWALA = 'asia_hawala'
+    METHOD_BANK_TRANSFER = 'bank_transfer'
+    METHOD_CASH = 'cash'
     
-    # Images
-    logo = models.ImageField(upload_to='channels/logos/', null=True, blank=True, verbose_name='شعار القناة')
-    cover_image = models.ImageField(upload_to='channels/covers/', null=True, blank=True, verbose_name='صورة الغلاف')
+    METHOD_CHOICES = [
+        (METHOD_VISA, 'Visa'),
+        (METHOD_MASTERCARD, 'Mastercard'),
+        (METHOD_PAYPAL, 'PayPal'),
+        (METHOD_ZAIN_CASH, 'Zain Cash'),
+        (METHOD_QI_CARD, 'Qi Card'),
+        (METHOD_ASIA_HAWALA, 'Asia Hawala'),
+        (METHOD_BANK_TRANSFER, 'التحويل البنكي'),
+        (METHOD_CASH, 'نقداً'),
+    ]
     
-    # Contact info
-    phone = models.CharField(max_length=20, blank=True, verbose_name='رقم الهاتف')
-    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
-    email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
-    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
-    
-    # Location
-    city = models.CharField(max_length=100, blank=True, verbose_name='المدينة')
-    country = models.CharField(max_length=100, blank=True, verbose_name='الدولة')
-    
-    # Status
-    is_verified = models.BooleanField(default=False, verbose_name='موثقة')
-    is_active = models.BooleanField(default=True, verbose_name='نشطة')
-    is_archived = models.BooleanField(default=False, verbose_name='مؤرشفة')
-    
-    # Statistics
-    followers_count = models.PositiveIntegerField(default=0, verbose_name='عدد المتابعين')
-    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    name = models.CharField(max_length=50, choices=METHOD_CHOICES, unique=True, verbose_name='طريقة الدفع')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    icon = models.CharField(max_length=50, blank=True, verbose_name='أيقونة')
+    description = models.TextField(blank=True, verbose_name='الوصف')
+    created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        verbose_name = 'قناة دلال'
-        verbose_name_plural = 'قنوات الدلالين'
-        ordering = ['-is_verified', '-followers_count', '-created_at']
+        verbose_name = 'طريقة دفع'
+        verbose_name_plural = 'طرق الدفع'
+        ordering = ['name']
     
     def __str__(self):
-        return f'{self.name} - {self.broker.display_name}'
-    
-    @property
-    def properties_count(self):
-        """Count of all properties by this broker"""
-        return Property.objects.filter(broker=self.broker).count()
-    
-    @property
-    def properties_iraq_count(self):
-        """Count of properties inside Iraq"""
-        return Property.objects.filter(
-            broker=self.broker,
-            country__code='IQ'
-        ).count()
-    
-    @property
-    def properties_outside_count(self):
-        """Count of properties outside Iraq"""
-        return Property.objects.filter(
-            broker=self.broker
-        ).exclude(country__code='IQ').count()
-    
-    @property
-    def hotels_count(self):
-        """Count of hotels by this broker"""
-        from properties.models import Hotel
-        return Hotel.objects.filter(broker=self.broker).count()
-    
-    @property
-    def resorts_count(self):
-        """Count of resorts by this broker"""
-        from properties.models import Resort
-        return Resort.objects.filter(broker=self.broker).count()
-    
-    def get_all_listings(self):
-        """Get all listings (properties, hotels, resorts) for this channel"""
-        from properties.models import Hotel, Resort
-        
-        listings = []
-        listings.extend(list(Property.objects.filter(broker=self.broker)))
-        listings.extend(list(Hotel.objects.filter(broker=self.broker)))
-        listings.extend(list(Resort.objects.filter(broker=self.broker)))
-        
-        return sorted(listings, key=lambda x: x.created_at, reverse=True)
-    
-    def get_properties_iraq(self):
-        """Get properties inside Iraq"""
-        return Property.objects.filter(
-            broker=self.broker,
-            country__code='IQ'
-        ).order_by('-created_at')
-    
-    def get_properties_outside(self):
-        """Get properties outside Iraq"""
-        return Property.objects.filter(
-            broker=self.broker
-        ).exclude(country__code='IQ').order_by('-created_at')
-    
-    def get_hotels(self):
-        """Get hotels"""
-        from properties.models import Hotel
-        return Hotel.objects.filter(broker=self.broker).order_by('-created_at')
-    
-    def get_resorts(self):
-        """Get resorts"""
-        from properties.models import Resort
-        return Resort.objects.filter(broker=self.broker).order_by('-created_at')
-    
-    def get_featured_listings(self):
-        """Get featured listings"""
-        from properties.models import Hotel, Resort
-        
-        featured = []
-        featured.extend(list(Property.objects.filter(broker=self.broker, is_featured=True)))
-        featured.extend(list(Hotel.objects.filter(broker=self.broker, is_featured=True)))
-        featured.extend(list(Resort.objects.filter(broker=self.broker, is_featured=True)))
-        
-        return sorted(featured, key=lambda x: x.created_at, reverse=True)
-    
-    def get_most_viewed(self):
-        """Get most viewed listings"""
-        from properties.models import Hotel, Resort
-        
-        listings = []
-        listings.extend(list(Property.objects.filter(broker=self.broker).order_by('-views_count')[:10]))
-        listings.extend(list(Hotel.objects.filter(broker=self.broker).order_by('-views_count')[:10]))
-        listings.extend(list(Resort.objects.filter(broker=self.broker).order_by('-views_count')[:10]))
-        
-        return sorted(listings, key=lambda x: x.views_count, reverse=True)[:10]
+        return self.get_name_display()
 
 
-class ChannelFollow(models.Model):
-    """Channel followers"""
+class PropertyPayment(models.Model):
+    """مدفوعات نشر العقارات"""
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='channel_follows', verbose_name='المستخدم')
-    channel = models.ForeignKey(BrokerChannel, on_delete=models.CASCADE, related_name='followers', verbose_name='القناة')
-    followed_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ المتابعة')
+    STATUS_PENDING = 'pending'
+    STATUS_COMPLETED = 'completed'
+    STATUS_FAILED = 'failed'
+    STATUS_REFUNDED = 'refunded'
+    
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'قيد الانتظار'),
+        (STATUS_COMPLETED, 'مكتمل'),
+        (STATUS_FAILED, 'فشل'),
+        (STATUS_REFUNDED, 'مسترد'),
+    ]
+    
+    PUBLICATION_TYPE_NORMAL = 'normal'
+    PUBLICATION_TYPE_FEATURED = 'featured'
+    
+    PUBLICATION_TYPE_CHOICES = [
+        (PUBLICATION_TYPE_NORMAL, 'نشر عادي'),
+        (PUBLICATION_TYPE_FEATURED, 'نشر مميز'),
+    ]
+    
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='payments', verbose_name='العقار'
+    )
+    broker = models.ForeignKey(
+        Broker, on_delete=models.CASCADE, related_name='property_payments', verbose_name='الدلال'
+    )
+    payment_method = models.ForeignKey(
+        PaymentMethod, on_delete=models.SET_NULL, null=True, verbose_name='طريقة الدفع'
+    )
+    
+    # Publication details
+    publication_type = models.CharField(
+        max_length=20, choices=PUBLICATION_TYPE_CHOICES, default=PUBLICATION_TYPE_NORMAL,
+        verbose_name='نوع النشر'
+    )
+    days = models.PositiveIntegerField(verbose_name='عدد الأيام')
+    daily_price = models.DecimalField(max_digits=10, decimal_places=2, default=50.00, verbose_name='سعر اليوم (د.ع)')
+    featured_price = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.00, verbose_name='سعر المميز (د.ع)'
+    )
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='المبلغ الإجمالي (د.ع)')
+    
+    # Payment status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, verbose_name='الحالة')
+    transaction_id = models.CharField(max_length=200, blank=True, verbose_name='رقم العملية')
+    payment_proof = models.ImageField(upload_to='payment_proofs/', null=True, blank=True, verbose_name='إيصال الدفع')
+    
+    # Dates
+    payment_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الدفع')
+    publication_start_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ بدء النشر')
+    publication_end_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ انتهاء النشر')
+    
+    # Admin actions
+    approved_by = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='approved_payments', verbose_name='وافق عليه'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الموافقة')
+    rejection_reason = models.TextField(blank=True, verbose_name='سبب الرفض')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        verbose_name = 'متابعة قناة'
-        verbose_name_plural = 'متابعات القنوات'
-        unique_together = ['user', 'channel']
-        ordering = ['-followed_at']
+        verbose_name = 'دفع نشر عقار'
+        verbose_name_plural = 'مدفوعات نشر العقارات'
+        ordering = ['-created_at']
     
     def __str__(self):
-        return f'{self.user.username} - {self.channel.name}'
-
-
-class ChannelSave(models.Model):
-    """Saved channels by users"""
+        return f'دفع {self.property.display_title} - {self.total_amount:,} د.ع'
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_channels', verbose_name='المستخدم')
-    channel = models.ForeignKey(BrokerChannel, on_delete=models.CASCADE, related_name='saved_by', verbose_name='القناة')
-    saved_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الحفظ')
+    def calculate_total(self):
+        """حساب المبلغ الإجمالي"""
+        base_amount = self.days * self.daily_price
+        if self.publication_type == self.PUBLICATION_TYPE_FEATURED:
+            base_amount += self.featured_price
+        return base_amount
+    
+    def save(self, *args, **kwargs):
+        if not self.total_amount:
+            self.total_amount = self.calculate_total()
+        super().save(*args, **kwargs)
+    
+    def is_publication_active(self):
+        """التحقق من أن النشر لا يزال نشطاً"""
+        if not self.publication_end_date:
+            return False
+        from django.utils import timezone
+        return timezone.now() < self.publication_end_date
+    
+    def get_days_remaining(self):
+        """حساب الأيام المتبقية للنشر"""
+        if not self.publication_end_date:
+            return 0
+        from django.utils import timezone
+        remaining = self.publication_end_date - timezone.now()
+        return max(0, remaining.days)
+
+
+class PropertyNotification(models.Model):
+    """إشعارات العقارات"""
+    
+    TYPE_PROPERTY_ADDED = 'property_added'
+    TYPE_PAYMENT_SUCCESS = 'payment_success'
+    TYPE_PROPERTY_APPROVED = 'property_approved'
+    TYPE_PROPERTY_REJECTED = 'property_rejected'
+    TYPE_PUBLICATION_EXPIRING = 'publication_expiring'
+    TYPE_PUBLICATION_EXPIRED = 'publication_expired'
+    TYPE_PUBLICATION_RENEWED = 'publication_renewed'
+    
+    TYPE_CHOICES = [
+        (TYPE_PROPERTY_ADDED, 'إضافة عقار'),
+        (TYPE_PAYMENT_SUCCESS, 'نجاح الدفع'),
+        (TYPE_PROPERTY_APPROVED, 'قبول العقار'),
+        (TYPE_PROPERTY_REJECTED, 'رفض العقار'),
+        (TYPE_PUBLICATION_EXPIRING, 'قرب انتهاء النشر'),
+        (TYPE_PUBLICATION_EXPIRED, 'انتهاء النشر'),
+        (TYPE_PUBLICATION_RENEWED, 'تجديد النشر'),
+    ]
+    
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='property_notifications', verbose_name='المستخدم')
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='notifications', verbose_name='العقار')
+    notification_type = models.CharField(max_length=50, choices=TYPE_CHOICES, verbose_name='نوع الإشعار')
+    title = models.CharField(max_length=200, verbose_name='العنوان')
+    message = models.TextField(verbose_name='الرسالة')
+    is_read = models.BooleanField(default=False, verbose_name='تمت القراءة')
+    created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        verbose_name = 'قناة محفوظة'
-        verbose_name_plural = 'القنوات المحفوظة'
-        unique_together = ['user', 'channel']
-        ordering = ['-saved_at']
+        verbose_name = 'إشعار عقار'
+        verbose_name_plural = 'إشعارات العقارات'
+        ordering = ['-created_at']
     
     def __str__(self):
-        return f'{self.user.username} - {self.channel.name}'
+        return f'{self.title} - {self.user.username}'
+
+
+# ==================== Admin Chat Model ====================
+
+class AdminChat(models.Model):
+    """محادثة بين الدلال والإدارة"""
+    
+    MESSAGE_TYPE_TEXT = 'text'
+    MESSAGE_TYPE_IMAGE = 'image'
+    MESSAGE_TYPE_FILE = 'file'
+    MESSAGE_TYPE_PAYMENT_PROOF = 'payment_proof'
+    
+    MESSAGE_TYPE_CHOICES = [
+        (MESSAGE_TYPE_TEXT, 'نص'),
+        (MESSAGE_TYPE_IMAGE, 'صورة'),
+        (MESSAGE_TYPE_FILE, 'ملف'),
+        (MESSAGE_TYPE_PAYMENT_PROOF, 'إيصال دفع'),
+    ]
+    
+    broker = models.ForeignKey(Broker, on_delete=models.CASCADE, related_name='admin_chats', verbose_name='الدلال')
+    sender = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='sent_admin_chats', verbose_name='المرسل')
+    message_type = models.CharField(max_length=20, choices=MESSAGE_TYPE_CHOICES, default=MESSAGE_TYPE_TEXT, verbose_name='نوع الرسالة')
+    content = models.TextField(blank=True, verbose_name='المحتوى')
+    file = models.FileField(upload_to='admin_chats/', null=True, blank=True, verbose_name='الملف')
+    image = models.ImageField(upload_to='admin_chats/images/', null=True, blank=True, verbose_name='الصورة')
+    
+    # Read status
+    is_read = models.BooleanField(default=False, verbose_name='تمت القراءة')
+    read_at = models.DateTimeField(null=True, blank=True, verbose_name='وقت القراءة')
+    
+    # Subscription request reference
+    subscription_request = models.ForeignKey(
+        'SubscriptionRequest', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='chat_messages', verbose_name='طلب الاشتراك'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'محادثة إدارة'
+        verbose_name_plural = 'محادثات الإدارة'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.sender.username} - {self.broker.display_name}'
+    
+    def mark_as_read(self):
+        """تحديد الرسالة كمقروءة"""
+        if not self.is_read:
+            self.is_read = True
+            from django.utils import timezone
+            self.read_at = timezone.now()
+            self.save(update_fields=['is_read', 'read_at'])
+
+
+# ==================== Subscription Request (Updated) ====================
+
+class SubscriptionRequest(models.Model):
+    """طلب اشتراك جديد (للمحادثة مع الإدارة)"""
+    
+    STATUS_PENDING = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_REJECTED = 'rejected'
+    STATUS_NEGOTIATING = 'negotiating'
+    
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'قيد الانتظار'),
+        (STATUS_APPROVED, 'موافق عليه'),
+        (STATUS_REJECTED, 'مرفوض'),
+        (STATUS_NEGOTIATING, 'قيد التفاوض'),
+    ]
+    
+    broker = models.ForeignKey(Broker, on_delete=models.CASCADE, related_name='subscription_requests', null=True, blank=True, verbose_name='الدلال')
+    requested_plan = models.ForeignKey(
+        SubscriptionPlan, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='requested_by', verbose_name='الخطة المطلوبة'
+    )
+    custom_plan_name = models.CharField(max_length=200, blank=True, verbose_name='اسم الخطة المخصصة')
+    custom_price = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='السعر المطلوب'
+    )
+    custom_duration = models.CharField(max_length=50, blank=True, verbose_name='المدة المطلوبة')
+    custom_properties_limit = models.PositiveIntegerField(null=True, blank=True, verbose_name='عدد العقارات المطلوب')
+    
+    message = models.TextField(blank=True, verbose_name='الرسالة')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, verbose_name='الحالة')
+    
+    # Admin response
+    admin_response = models.TextField(blank=True, verbose_name='رد الإدارة')
+    admin_price = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='السعر المقترح'
+    )
+    payment_details = models.TextField(blank=True, verbose_name='بيانات الدفع')
+    
+    # Finalization
+    approved_by = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='approved_subscription_requests', verbose_name='وافق عليه'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الموافقة')
+    rejection_reason = models.TextField(blank=True, verbose_name='سبب الرفض')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'طلب اشتراك'
+        verbose_name_plural = 'طلبات الاشتراك'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'طلب اشتراك - {self.broker.display_name}'
+    
+    def approve(self, admin_user, final_price=None):
+        """موافقة على الطلب وتفعيل الاشتراك"""
+        from django.utils import timezone
+        
+        self.status = self.STATUS_APPROVED
+        self.approved_by = admin_user
+        self.approved_at = timezone.now()
+        
+        if final_price:
+            self.admin_price = final_price
+        
+        self.save()
+        
+        # Activate broker subscription
+        if self.requested_plan:
+            self.broker.subscription_plan = self.requested_plan
+        else:
+            # Create custom plan
+            custom_plan = SubscriptionPlan.objects.create(
+                name=self.custom_plan_name or 'خطة مخصصة',
+                period=self.custom_duration or 'month',
+                ads_limit=self.custom_properties_limit or 100,
+                price=self.admin_price or self.custom_price or 0,
+                price_per_property=50.00,
+                color='#FF6B35'
+            )
+            self.broker.subscription_plan = custom_plan
+        
+        from datetime import timedelta
+        self.broker.subscription_start_date = timezone.now().date()
+        
+        # Calculate end date based on duration
+        duration_days = 30  # Default
+        if self.custom_duration:
+            if 'شهر' in self.custom_duration:
+                duration_days = 30
+            elif 'سنة' in self.custom_duration:
+                duration_days = 365
+            elif '3 أشهر' in self.custom_duration:
+                duration_days = 90
+            elif '6 أشهر' in self.custom_duration:
+                duration_days = 180
+            elif '5 سنوات' in self.custom_duration:
+                duration_days = 1825
+        
+        self.broker.subscription_end_date = (timezone.now() + timedelta(days=duration_days)).date()
+        self.broker.save()
+        
+        # Send notification
+        PropertyNotification.objects.create(
+            user=self.broker.user,
+            property=None,
+            notification_type=PropertyNotification.TYPE_PROPERTY_APPROVED,
+            title='تم قبول طلب الاشتراك',
+            message=f'تم قبول طلب اشتراكك. خطة الاشتراك: {self.broker.subscription_plan.name}'
+        )
+
+
 
 
 # Signals for automatic stats updates
@@ -5372,25 +7810,12 @@ class ChannelSave(models.Model):
 def create_broker_channel(sender, instance, created, **kwargs):
     """Create channel automatically when broker is created"""
     if created:
-        from django.utils.text import slugify
         channel_name = f'قناة {instance.display_name}'
-        slug = slugify(channel_name, allow_unicode=True)
-        
-        # Ensure unique slug
-        counter = 1
-        original_slug = slug
-        while BrokerChannel.objects.filter(slug=slug).exists():
-            slug = f'{original_slug}-{counter}'
-            counter += 1
         
         BrokerChannel.objects.create(
             broker=instance,
             name=channel_name,
-            slug=slug,
-            description=f'قناة {instance.display_name} للعقارات',
-            phone=instance.phone,
-            city=instance.city,
-            country='العراق'
+            description=f'قناة {instance.display_name} للعقارات'
         )
 
 
@@ -5426,3 +7851,2117 @@ def update_property_delete_stats(sender, instance, **kwargs):
             stats.save()
         except Broker.DoesNotExist:
             pass
+
+
+class OutsideProperty(models.Model):
+    """نموذج للعقارات خارج العراق"""
+    
+    property = models.OneToOneField(
+        Property, on_delete=models.CASCADE, related_name='outside_details',
+        verbose_name='العقار'
+    )
+    
+    # Location details for outside Iraq
+    state_province = models.CharField(max_length=100, blank=True, null=True, verbose_name='الولاية أو المحافظة')
+    local_currency = models.CharField(max_length=3, blank=True, null=True, verbose_name='العملة المحلية')
+    
+    # Financial details
+    taxes = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='الضرائب')
+    registration_fees = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='رسوم التسجيل')
+    
+    # Ownership laws
+    foreign_ownership_laws = models.TextField(blank=True, verbose_name='قوانين التملك للأجانب')
+    
+    # Additional features
+    hoa_fees = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='رسوم جمعية المالكين')
+    property_tax = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='ضريبة العقار')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'عقار خارج العراق'
+        verbose_name_plural = 'عقارات خارج العراق'
+    
+    def __str__(self):
+        return f'{self.property.display_title} - {self.property.country}'
+
+
+class PropertyHotel(models.Model):
+    """نموذج للفنادق المرتبطة بالعقارات"""
+    
+    property = models.OneToOneField(
+        Property, on_delete=models.CASCADE, related_name='hotel_details',
+        verbose_name='العقار'
+    )
+    
+    # Hotel Information
+    hotel_name = models.CharField(max_length=200, verbose_name='اسم الفندق')
+    star_rating = models.PositiveSmallIntegerField(
+        choices=[(i, f'{i} نجوم') for i in range(1, 6)],
+        verbose_name='عدد النجوم'
+    )
+    classification = models.CharField(max_length=50, blank=True, null=True, verbose_name='التصنيف')
+    
+    # Room Details
+    total_rooms = models.PositiveIntegerField(verbose_name='عدد الغرف')
+    suites = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='الأجنحة')
+    family_rooms = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='الغرف العائلية')
+    
+    # Pricing
+    price_per_night = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='السعر لليلة')
+    currency = models.CharField(max_length=3, default='USD', verbose_name='العملة')
+    
+    # Services
+    has_restaurant = models.BooleanField(default=False, verbose_name='مطاعم')
+    has_cafe = models.BooleanField(default=False, verbose_name='مقاهي')
+    has_pool = models.BooleanField(default=False, verbose_name='مسابح')
+    has_gym = models.BooleanField(default=False, verbose_name='نادي رياضي')
+    has_spa = models.BooleanField(default=False, verbose_name='سبا')
+    has_conference_hall = models.BooleanField(default=False, verbose_name='قاعة مؤتمرات')
+    
+    # Booking
+    direct_booking = models.BooleanField(default=False, verbose_name='الحجز المباشر')
+    booking_url = models.URLField(blank=True, verbose_name='رابط الحجز')
+    
+    # Rating
+    overall_rating = models.DecimalField(max_digits=3, decimal_places=1, default=0, verbose_name='التقييم العام')
+    review_count = models.PositiveIntegerField(default=0, verbose_name='عدد التقييمات')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'فندق عقاري'
+        verbose_name_plural = 'فنادق عقارية'
+    
+    def __str__(self):
+        return f'{self.hotel_name} ({self.get_star_rating_display()})'
+
+
+class PropertyResort(models.Model):
+    """نموذج للمنتجعات والأماكن السياحية المرتبطة بالعقارات"""
+    
+    RESORT_TYPES = [
+        ('resort', 'منتجع'),
+        ('chalet', 'شاليه'),
+        ('cabin', 'كوخ'),
+        ('tourism_farm', 'مزرعة سياحية'),
+        ('beach', 'شاطئ'),
+        ('rest_house', 'استراحة'),
+        ('camp', 'مخيم'),
+        ('tourism_city', 'مدينة سياحية'),
+    ]
+    
+    property = models.OneToOneField(
+        Property, on_delete=models.CASCADE, related_name='resort_details',
+        verbose_name='العقار'
+    )
+    
+    resort_type = models.CharField(max_length=20, choices=RESORT_TYPES, verbose_name='نوع المنتجع')
+    resort_name = models.CharField(max_length=200, verbose_name='اسم المنتجع')
+    
+    # Location
+    governorate = models.CharField(max_length=100, blank=True, verbose_name='المحافظة')
+    city = models.CharField(max_length=100, blank=True, verbose_name='المدينة')
+    district = models.CharField(max_length=100, blank=True, verbose_name='القضاء')
+    address = models.TextField(blank=True, verbose_name='العنوان التفصيلي')
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط العرض')
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط الطول')
+    
+    # Capacity
+    max_guests = models.PositiveIntegerField(verbose_name='عدد الأشخاص الأقصى')
+    min_guests = models.PositiveSmallIntegerField(default=1, verbose_name='عدد الأشخاص الأدنى')
+    max_rooms = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد الغرف')
+    
+    # Pricing
+    price_per_night = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='السعر لليلة')
+    price_per_week = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='السعر للأسبوع')
+    price_per_month = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='السعر للشهر')
+    currency = models.CharField(max_length=3, default='USD', verbose_name='العملة')
+    
+    # Booking
+    min_booking_duration = models.PositiveSmallIntegerField(default=1, verbose_name='مدة الحجز الدنيا (أيام)')
+    max_booking_duration = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='مدة الحجز القصوى (أيام)')
+    check_in_time = models.TimeField(null=True, blank=True, verbose_name='وقت تسجيل الدخول')
+    check_out_time = models.TimeField(null=True, blank=True, verbose_name='وقت تسجيل الخروج')
+    
+    # Services
+    has_wifi = models.BooleanField(default=False, verbose_name='واي فاي')
+    has_kitchen = models.BooleanField(default=False, verbose_name='مطبخ')
+    has_bbq = models.BooleanField(default=False, verbose_name='شواء')
+    has_playground = models.BooleanField(default=False, verbose_name='ملعب أطفال')
+    has_parking = models.BooleanField(default=False, verbose_name='موقف سيارات')
+    has_pool = models.BooleanField(default=False, verbose_name='مسبح')
+    has_gym = models.BooleanField(default=False, verbose_name='نادي رياضي')
+    has_spa = models.BooleanField(default=False, verbose_name='سبا')
+    has_restaurant = models.BooleanField(default=False, verbose_name='مطعم')
+    has_ac = models.BooleanField(default=False, verbose_name='تكييف')
+    has_heating = models.BooleanField(default=False, verbose_name='تدفئة')
+    has_security = models.BooleanField(default=False, verbose_name='أمن وحراسة')
+    has_laundry = models.BooleanField(default=False, verbose_name='خدمة غسيل')
+    has_room_service = models.BooleanField(default=False, verbose_name='خدمة الغرف')
+    has_concierge = models.BooleanField(default=False, verbose_name='خدمة الاستقبال')
+    
+    # Activities
+    activities = models.TextField(blank=True, verbose_name='الأنشطة المتاحة')
+    
+    # Description
+    description = models.TextField(blank=True, verbose_name='الوصف')
+    rules = models.TextField(blank=True, verbose_name='القواعد والشروط')
+    
+    # Contact
+    phone = models.CharField(max_length=20, blank=True, verbose_name='رقم الهاتف')
+    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='رقم الواتساب')
+    email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    
+    # Rating
+    overall_rating = models.DecimalField(max_digits=3, decimal_places=1, default=0, verbose_name='التقييم العام')
+    review_count = models.PositiveIntegerField(default=0, verbose_name='عدد التقييمات')
+    
+    # Status
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    featured = models.BooleanField(default=False, verbose_name='مميز')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'منتجع عقاري'
+        verbose_name_plural = 'المنتجعات العقارية'
+    
+    def __str__(self):
+        return f'{self.resort_name} ({self.get_resort_type_display()})'
+
+
+class ChannelPost(models.Model):
+    """منشورات القناة - مثل فيسبوك"""
+    
+    POST_TYPE_CHOICES = [
+        ('text', 'نص'),
+        ('image', 'صورة'),
+        ('video', 'فيديو'),
+        ('property', 'عقار'),
+        ('ad', 'إعلان'),
+    ]
+    
+    channel = models.ForeignKey(
+        BrokerChannel, on_delete=models.CASCADE, related_name='posts', verbose_name='القناة'
+    )
+    post_type = models.CharField(max_length=20, choices=POST_TYPE_CHOICES, default='text', verbose_name='نوع المنشور')
+    
+    # Content
+    content = models.TextField(verbose_name='المحتوى')
+    image = models.ImageField(upload_to='channel_posts/images/', null=True, blank=True, verbose_name='صورة')
+    video = models.FileField(upload_to='channel_posts/videos/', null=True, blank=True, verbose_name='فيديو')
+    
+    # Property reference
+    property = models.ForeignKey(
+        Property, on_delete=models.SET_NULL, null=True, blank=True, related_name='channel_posts',
+        verbose_name='العقار المرتبط'
+    )
+    
+    # Stats
+    likes_count = models.PositiveIntegerField(default=0, verbose_name='عدد الإعجابات')
+    comments_count = models.PositiveIntegerField(default=0, verbose_name='عدد التعليقات')
+    shares_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاركات')
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    
+    # Status
+    is_published = models.BooleanField(default=True, verbose_name='منشور')
+    is_pinned = models.BooleanField(default=False, verbose_name='مثبت')
+    is_advertisement = models.BooleanField(default=False, verbose_name='إعلان مدفوع')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ النشر')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'منشور قناة'
+        verbose_name_plural = 'منشورات القنوات'
+        ordering = ['-is_pinned', '-created_at']
+    
+    def __str__(self):
+        return f'{self.channel.name} - {self.post_type}'
+    
+    def increment_views(self):
+        """زيادة عدد المشاهدات"""
+        self.views_count += 1
+        self.save(update_fields=['views_count'])
+
+
+class ChannelVideo(models.Model):
+    """فيديوهات قصيرة للقناة - مثل TikTok/Reels"""
+    
+    channel = models.ForeignKey(
+        BrokerChannel, on_delete=models.CASCADE, related_name='videos', verbose_name='القناة'
+    )
+    
+    title = models.CharField(max_length=200, verbose_name='عنوان الفيديو')
+    description = models.TextField(blank=True, verbose_name='وصف الفيديو')
+    video_file = models.FileField(upload_to='channel_videos/', verbose_name='ملف الفيديو')
+    thumbnail = models.ImageField(upload_to='channel_videos/thumbnails/', null=True, blank=True, verbose_name='صورة مصغرة')
+    
+    # Duration in seconds
+    duration = models.PositiveIntegerField(default=0, verbose_name='مدة الفيديو (ثانية)')
+    
+    # Stats
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    likes_count = models.PositiveIntegerField(default=0, verbose_name='عدد الإعجابات')
+    comments_count = models.PositiveIntegerField(default=0, verbose_name='عدد التعليقات')
+    shares_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاركات')
+    
+    # Status
+    is_published = models.BooleanField(default=True, verbose_name='منشور')
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    
+    # Tags
+    tags = models.CharField(max_length=500, blank=True, verbose_name='الوسوم (مفصولة بفاصلة)')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الرفع')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'فيديو قناة'
+        verbose_name_plural = 'فيديوهات القنوات'
+        ordering = ['-is_featured', '-created_at']
+    
+    def __str__(self):
+        return f'{self.channel.name} - {self.title}'
+    
+    def increment_views(self):
+        """زيادة عدد المشاهدات"""
+        self.views_count += 1
+        self.save(update_fields=['views_count'])
+
+
+class ChannelPostLike(models.Model):
+    """إعجابات منشورات القناة"""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='channel_post_likes', verbose_name='المستخدم')
+    post = models.ForeignKey(ChannelPost, on_delete=models.CASCADE, related_name='likes', verbose_name='المنشور')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإعجاب')
+    
+    class Meta:
+        verbose_name = 'إعجاب منشور'
+        verbose_name_plural = 'إعجابات المنشورات'
+        unique_together = ['user', 'post']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.post.id}'
+
+
+class ChannelVideoLike(models.Model):
+    """إعجابات فيديوهات القناة"""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='channel_video_likes', verbose_name='المستخدم')
+    video = models.ForeignKey(ChannelVideo, on_delete=models.CASCADE, related_name='likes', verbose_name='الفيديو')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإعجاب')
+    
+    class Meta:
+        verbose_name = 'إعجاب فيديو'
+        verbose_name_plural = 'إعجابات الفيديوهات'
+        unique_together = ['user', 'video']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.video.title}'
+
+
+class ChannelPostComment(models.Model):
+    """تعليقات منشورات القناة"""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='channel_post_comments', verbose_name='المستخدم')
+    post = models.ForeignKey(ChannelPost, on_delete=models.CASCADE, related_name='comments', verbose_name='المنشور')
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies', verbose_name='الرد على')
+    
+    content = models.TextField(verbose_name='المحتوى')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ التعليق')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'تعليق منشور'
+        verbose_name_plural = 'تعليقات المنشورات'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.post.id}'
+
+
+class ChannelVideoComment(models.Model):
+    """تعليقات فيديوهات القناة"""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='channel_video_comments', verbose_name='المستخدم')
+    video = models.ForeignKey(ChannelVideo, on_delete=models.CASCADE, related_name='comments', verbose_name='الفيديو')
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies', verbose_name='الرد على')
+    
+    content = models.TextField(verbose_name='المحتوى')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ التعليق')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'تعليق فيديو'
+        verbose_name_plural = 'تعليقات الفيديوهات'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.video.title}'
+
+
+class UserWarning(models.Model):
+    """نظام إنذارات المستخدمين"""
+    
+    SEVERITY_CHOICES = [
+        ('low', 'منخفض'),
+        ('medium', 'متوسط'),
+        ('high', 'عالي'),
+        ('critical', 'حرج'),
+    ]
+    
+    TYPE_CHOICES = [
+        ('spam', 'رسائل مزعجة'),
+        ('inappropriate', 'محتوى غير لائق'),
+        ('harassment', 'مضايقة'),
+        ('fraud', 'احتيال'),
+        ('violation', 'انتهاك القواعد'),
+        ('other', 'أخرى'),
+    ]
+    
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='warnings',
+        verbose_name='المستخدم'
+    )
+    issued_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='issued_warnings',
+        verbose_name='صادر من'
+    )
+    warning_type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        verbose_name='نوع الإنذار'
+    )
+    severity = models.CharField(
+        max_length=20,
+        choices=SEVERITY_CHOICES,
+        default='medium',
+        verbose_name='الشدة'
+    )
+    reason = models.TextField(
+        verbose_name='السبب'
+    )
+    related_content_type = models.ForeignKey(
+        'contenttypes.ContentType',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='نوع المحتوى المرتبط'
+    )
+    related_object_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='معرف المحتوى المرتبط'
+    )
+    is_acknowledged = models.BooleanField(
+        default=False,
+        verbose_name='تم الاعتراف'
+    )
+    acknowledged_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ الاعتراف'
+    )
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ الانتهاء'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الإنشاء'
+    )
+    
+    class Meta:
+        verbose_name = 'إنذار مستخدم'
+        verbose_name_plural = 'إنذارات المستخدمين'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['severity', '-created_at']),
+            models.Index(fields=['is_acknowledged']),
+        ]
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.get_warning_type_display()}'
+    
+    def is_active(self):
+        """التحقق إذا كان الإنذار لا يزال نشطاً"""
+        if self.expires_at:
+            from django.utils import timezone
+            return timezone.now() < self.expires_at
+        return not self.is_acknowledged
+
+
+class UserSuspension(models.Model):
+    """نظام تعطيل المستخدمين"""
+    
+    REASON_CHOICES = [
+        ('violation', 'انتهاك القواعد'),
+        ('spam', 'رسائل مزعجة'),
+        ('fraud', 'احتيال'),
+        ('harassment', 'مضايقة'),
+        ('inappropriate', 'محتوى غير لائق'),
+        ('multiple_warnings', 'إنذارات متعددة'),
+        ('admin_decision', 'قرار إداري'),
+        ('other', 'أخرى'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'نشط'),
+        ('expired', 'منتهي'),
+        ('lifted', 'مرفوع'),
+    ]
+    
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='suspensions',
+        verbose_name='المستخدم'
+    )
+    suspended_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='suspended_users',
+        verbose_name='معطل من قبل'
+    )
+    reason = models.CharField(
+        max_length=20,
+        choices=REASON_CHOICES,
+        verbose_name='السبب'
+    )
+    description = models.TextField(
+        verbose_name='الوصف'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='active',
+        verbose_name='الحالة'
+    )
+    start_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ البدء'
+    )
+    end_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ الانتهاء'
+    )
+    lifted_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lifted_suspensions',
+        verbose_name='مرفوع من قبل'
+    )
+    lifted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ الرفع'
+    )
+    lift_reason = models.TextField(
+        blank=True,
+        verbose_name='سبب الرفع'
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='بيانات إضافية'
+    )
+    
+    class Meta:
+        verbose_name = 'تعطيل مستخدم'
+        verbose_name_plural = 'تعطيلات المستخدمين'
+        ordering = ['-start_date']
+        indexes = [
+            models.Index(fields=['user', '-start_date']),
+            models.Index(fields=['status', '-start_date']),
+        ]
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.get_reason_display()}'
+    
+    def is_active(self):
+        """التحقق إذا كان التعطيل لا يزال نشطاً"""
+        if self.status != 'active':
+            return False
+        if self.end_date:
+            from django.utils import timezone
+            return timezone.now() < self.end_date
+        return True
+    
+    def lift(self, lifted_by, reason=''):
+        """رفع التعطيل"""
+        from django.utils import timezone
+        self.status = 'lifted'
+        self.lifted_by = lifted_by
+        self.lifted_at = timezone.now()
+        self.lift_reason = reason
+        self.save()
+
+
+class UserModerationAction(models.Model):
+    """سجل إجراءات المراقبة"""
+    
+    ACTION_CHOICES = [
+        ('warning', 'إنذار'),
+        ('suspend', 'تعطيل'),
+        ('unsuspend', 'رفع التعطيل'),
+        ('delete', 'حذف'),
+        ('ban', 'حظر'),
+        ('unban', 'رفع الحظر'),
+        ('mute', 'كتم'),
+        ('unmute', 'رفع الكتم'),
+        ('flag', 'إشارة'),
+        ('unflag', 'إزالة الإشارة'),
+    ]
+    
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='moderation_actions',
+        verbose_name='المستخدم'
+    )
+    moderator = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='moderation_actions_taken',
+        verbose_name='المشرف'
+    )
+    action = models.CharField(
+        max_length=20,
+        choices=ACTION_CHOICES,
+        verbose_name='الإجراء'
+    )
+    reason = models.TextField(
+        verbose_name='السبب'
+    )
+    related_content_type = models.ForeignKey(
+        'contenttypes.ContentType',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='نوع المحتوى المرتبط'
+    )
+    related_object_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='معرف المحتوى المرتبط'
+    )
+    duration = models.DurationField(
+        null=True,
+        blank=True,
+        verbose_name='المدة'
+    )
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name='عنوان IP'
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='بيانات إضافية'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الإجراء'
+    )
+    
+    class Meta:
+        verbose_name = 'إجراء مراقبة'
+        verbose_name_plural = 'إجراءات المراقبة'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['action', '-created_at']),
+            models.Index(fields=['moderator', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.get_action_display()}'
+
+
+# ==================== NOTIFICATIONS SYSTEM ====================
+
+class Notification(models.Model):
+    """نموذج الإشعارات الرئيسي"""
+    
+    TYPE_CHOICES = [
+        ('info', 'معلومة'),
+        ('success', 'نجاح'),
+        ('warning', 'تحذير'),
+        ('error', 'خطأ'),
+        ('property', 'عقار'),
+        ('message', 'رسالة'),
+        ('rating', 'تقييم'),
+        ('subscription', 'اشتراك'),
+        ('auction', 'مزاد'),
+        ('building', 'بناء'),
+        ('system', 'نظام'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('low', 'منخفضة'),
+        ('normal', 'عادية'),
+        ('high', 'عالية'),
+        ('urgent', 'عاجلة'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('draft', 'مسودة'),
+        ('scheduled', 'مجدولة'),
+        ('sent', 'مرسلة'),
+        ('failed', 'فشلت'),
+    ]
+    
+    DELIVERY_TYPE_CHOICES = [
+        ('in_app', 'داخلي فقط'),
+        ('push', 'Push Notification فقط'),
+        ('both', 'كلاهما'),
+    ]
+    
+    # Basic Info
+    title = models.CharField(max_length=200, verbose_name='العنوان')
+    description = models.TextField(default='', verbose_name='الوصف')
+    notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='info', verbose_name='النوع')
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='normal', verbose_name='الأولوية')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='الحالة')
+    delivery_type = models.CharField(max_length=20, choices=DELIVERY_TYPE_CHOICES, default='in_app', verbose_name='نوع الإرسال')
+    
+    # Visual Elements
+    icon = models.CharField(max_length=50, blank=True, verbose_name='الأيقونة')
+    image = models.ImageField(upload_to='notifications/', blank=True, verbose_name='الصورة')
+    color = models.CharField(max_length=7, default='#0d9488', verbose_name='اللون')
+    
+    # Action Elements
+    button_text = models.CharField(max_length=50, blank=True, verbose_name='نص الزر')
+    button_link = models.URLField(blank=True, verbose_name='رابط الزر')
+    
+    # Targeting
+    target_all_users = models.BooleanField(default=False, verbose_name='جميع المستخدمين')
+    target_all_brokers = models.BooleanField(default=False, verbose_name='جميع الدلالين')
+    target_all_admins = models.BooleanField(default=False, verbose_name='جميع المشرفين')
+    target_office_owners = models.BooleanField(default=False, verbose_name='أصحاب المكاتب')
+    target_managers = models.BooleanField(default=False, verbose_name='المدراء')
+    target_active_users = models.BooleanField(default=False, verbose_name='المستخدمين النشطين')
+    target_new_users = models.BooleanField(default=False, verbose_name='المستخدمين الجدد')
+    target_inactive_users = models.BooleanField(default=False, verbose_name='المستخدمين غير النشطين')
+    
+    # Account Type Targeting
+    target_account_type = models.CharField(max_length=50, blank=True, verbose_name='نوع الحساب')
+    target_subscription_type = models.CharField(max_length=50, blank=True, verbose_name='نوع الاشتراك')
+    target_account_status = models.CharField(max_length=50, blank=True, verbose_name='حالة الحساب')
+    target_has_properties = models.BooleanField(null=True, blank=True, verbose_name='لديه عقارات')
+    
+    # Location Targeting
+    target_governorate = models.CharField(max_length=100, blank=True, verbose_name='المحافظة')
+    target_city = models.CharField(max_length=100, blank=True, verbose_name='المدينة')
+    target_area = models.CharField(max_length=100, blank=True, verbose_name='المنطقة')
+    
+    # Property Type Targeting
+    target_property_type = models.CharField(max_length=50, blank=True, verbose_name='نوع العقار')
+    
+    # Broker Targeting
+    target_premium_brokers = models.BooleanField(default=False, verbose_name='الدلالين المميزين')
+    target_min_properties = models.IntegerField(null=True, blank=True, verbose_name='أقل عدد عقارات')
+    target_min_rating = models.DecimalField(max_digits=3, decimal_places=1, null=True, blank=True, verbose_name='أقل تقييم')
+    
+    # Scheduling
+    scheduled_for = models.DateTimeField(null=True, blank=True, verbose_name='مجدولة للإرسال في')
+    expires_at = models.DateTimeField(null=True, blank=True, verbose_name='تنتهي في')
+    
+    # Tags
+    tags = models.JSONField(default=list, blank=True, verbose_name='الوسوم')
+    
+    # Metadata
+    metadata = models.JSONField(default=dict, blank=True, verbose_name='بيانات إضافية')
+    
+    # Tracking
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_notifications', verbose_name='أنشأ بواسطة')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    sent_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الإرسال')
+    
+    # Related Object
+    related_content_type = models.ForeignKey('contenttypes.ContentType', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='نوع المحتوى المرتبط')
+    related_object_id = models.PositiveIntegerField(null=True, blank=True, verbose_name='معرف المحتوى المرتبط')
+    
+    class Meta:
+        verbose_name = 'إشعار'
+        verbose_name_plural = 'الإشعارات'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['notification_type', '-created_at']),
+            models.Index(fields=['priority', '-created_at']),
+            models.Index(fields=['scheduled_for']),
+        ]
+    
+    def __str__(self):
+        return self.title
+    
+    def get_recipients_count(self):
+        """عدد المستلمين"""
+        return self.recipients.count()
+    
+    def get_read_count(self):
+        """عدد المقروءة"""
+        return self.recipients.filter(is_read=True).count()
+    
+    def get_clicked_count(self):
+        """عدد النقرات"""
+        return self.recipients.filter(is_clicked=True).count()
+    
+    def mark_as_sent(self):
+        """تعليم كمرسلة"""
+        from django.utils import timezone
+        self.status = 'sent'
+        self.sent_at = timezone.now()
+        self.save()
+
+    @classmethod
+    def _normalize_notification_type(cls, notification_type):
+        valid_types = {choice[0] for choice in cls.TYPE_CHOICES}
+        if notification_type in valid_types:
+            return notification_type
+        legacy_map = {
+            'broker_created': 'system',
+            'broker_updated': 'system',
+            'broker_deleted': 'system',
+            'broker_suspended': 'system',
+            'broker_activated': 'system',
+            'subscription_expiring': 'subscription',
+            'subscription_expired': 'subscription',
+            'property_limit_reached': 'property',
+            'message_received': 'message',
+            'new_property': 'property',
+            'property_update': 'property',
+            'price_change': 'property',
+            'presence': 'info',
+            'subscription': 'subscription',
+        }
+        return legacy_map.get(notification_type, 'info')
+
+    @classmethod
+    def create_for_user(cls, user, notification_type, title, message, link='', metadata=None):
+        """إنشاء إشعار مباشر لمستخدم واحد."""
+        from django.utils import timezone
+
+        notification = cls.objects.create(
+            title=title,
+            description=message,
+            notification_type=cls._normalize_notification_type(notification_type),
+            status='sent',
+            delivery_type='in_app',
+            button_link=link or '',
+            metadata=metadata or {},
+            sent_at=timezone.now(),
+        )
+        recipient = NotificationRecipient.objects.create(
+            notification=notification,
+            user=user,
+        )
+        return recipient
+
+    @classmethod
+    def create(cls, user, notification_type, title, message, link='', metadata=None):
+        return cls.create_for_user(
+            user=user,
+            notification_type=notification_type,
+            title=title,
+            message=message,
+            link=link,
+            metadata=metadata,
+        )
+
+    @classmethod
+    def create_for_users(cls, users, notification_type, title, message, link='', metadata=None):
+        """إنشاء إشعار واحد لعدة مستخدمين."""
+        from django.utils import timezone
+
+        notification = cls.objects.create(
+            title=title,
+            description=message,
+            notification_type=cls._normalize_notification_type(notification_type),
+            status='sent',
+            delivery_type='in_app',
+            button_link=link or '',
+            metadata=metadata or {},
+            sent_at=timezone.now(),
+        )
+        recipients = [
+            NotificationRecipient.objects.create(notification=notification, user=user)
+            for user in users
+        ]
+        return notification, recipients
+
+
+class NotificationRecipient(models.Model):
+    """ربط الإشعارات بالمستلمين"""
+    
+    notification = models.ForeignKey(Notification, on_delete=models.CASCADE, related_name='recipients', verbose_name='الإشعار')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', verbose_name='المستخدم')
+    
+    is_read = models.BooleanField(default=False, verbose_name='مقروءة')
+    is_clicked = models.BooleanField(default=False, verbose_name='تم النقر')
+    is_archived = models.BooleanField(default=False, verbose_name='مؤرشفة')
+    
+    read_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ القراءة')
+    clicked_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ النقر')
+    archived_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الأرشفة')
+    
+    # Delivery Tracking
+    delivery_status = models.CharField(max_length=20, default='pending', verbose_name='حالة التسليم')
+    sent_via_email = models.BooleanField(default=False, verbose_name='أرسلت عبر البريد')
+    sent_via_push = models.BooleanField(default=False, verbose_name='أرسلت كإشعار دفع')
+    sent_via_sms = models.BooleanField(default=False, verbose_name='أرسلت عبر SMS')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    
+    class Meta:
+        verbose_name = 'مستلم إشعار'
+        verbose_name_plural = 'مستلمو الإشعارات'
+        ordering = ['-created_at']
+        unique_together = ['notification', 'user']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['user', 'is_read']),
+            models.Index(fields=['notification', 'is_read']),
+        ]
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.notification.title}'
+
+    @property
+    def title(self):
+        return self.notification.title
+
+    @property
+    def message(self):
+        return self.notification.description
+
+    @property
+    def link(self):
+        return self.notification.button_link or ''
+
+    @property
+    def notification_type(self):
+        return self.notification.notification_type
+
+    def mark_as_read(self):
+        """تعليم كمقروءة"""
+        from django.utils import timezone
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save()
+    
+    def mark_as_clicked(self):
+        """تعليم كتم النقر"""
+        from django.utils import timezone
+        if not self.is_clicked:
+            self.is_clicked = True
+            self.clicked_at = timezone.now()
+            self.save()
+    
+    def archive(self):
+        """أرشفة"""
+        from django.utils import timezone
+        if not self.is_archived:
+            self.is_archived = True
+            self.archived_at = timezone.now()
+            self.save()
+
+
+class NotificationTemplate(models.Model):
+    """قوالب الإشعارات الجاهزة"""
+    
+    name = models.CharField(max_length=100, verbose_name='اسم القالب')
+    title_template = models.CharField(max_length=200, verbose_name='قالب العنوان')
+    description_template = models.TextField(verbose_name='قالب الوصف')
+    notification_type = models.CharField(max_length=20, choices=Notification.TYPE_CHOICES, default='info', verbose_name='النوع')
+    icon = models.CharField(max_length=50, blank=True, verbose_name='الأيقونة')
+    
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'قالب إشعار'
+        verbose_name_plural = 'قوالب الإشعارات'
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+
+
+class NotificationLog(models.Model):
+    """سجل عمليات الإرسال"""
+    
+    notification = models.ForeignKey(Notification, on_delete=models.CASCADE, related_name='logs', verbose_name='الإشعار')
+    
+    # Stats
+    total_sent = models.IntegerField(default=0, verbose_name='العدد المرسل')
+    total_delivered = models.IntegerField(default=0, verbose_name='العدد المستلم')
+    total_read = models.IntegerField(default=0, verbose_name='العدد المقروء')
+    total_clicked = models.IntegerField(default=0, verbose_name='عدد النقرات')
+    total_failed = models.IntegerField(default=0, verbose_name='عدد الفشل')
+    
+    # Rates
+    delivery_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='نسبة التسليم')
+    read_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='نسبة القراءة')
+    click_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='نسبة النقر')
+    
+    # Error Info
+    error_message = models.TextField(blank=True, verbose_name='رسالة الخطأ')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    
+    class Meta:
+        verbose_name = 'سجل إشعار'
+        verbose_name_plural = 'سجلات الإشعارات'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.notification.title} - {self.total_sent} مرسلة'
+
+
+# ==================== نظام الفنادق والمنتجعات الجديد ====================
+
+class HotelPage(models.Model):
+    """صفحة الفندق أو المنتجع - مثل Facebook Page"""
+    
+    PAGE_TYPE_CHOICES = [
+        ('hotel', 'فندق'),
+        ('resort', 'منتجع'),
+        ('chalet', 'شاليه'),
+        ('cabin', 'كوخ'),
+        ('guesthouse', 'بيت ضيافة'),
+        ('inn', 'نُزل'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'بانتظار الموافقة'),
+        ('active', 'نشط'),
+        ('inactive', 'غير نشط'),
+        ('suspended', 'موقوف'),
+    ]
+    
+    # Owner
+    broker = models.ForeignKey(
+        Broker, on_delete=models.CASCADE, related_name='hotel_pages',
+        null=True, blank=True, verbose_name='الدلال المالك'
+    )
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='hotel_pages',
+        null=True, blank=True, verbose_name='المستخدم المالك'
+    )
+    
+    # Basic Information
+    page_type = models.CharField(max_length=20, choices=PAGE_TYPE_CHOICES, verbose_name='نوع الصفحة')
+    name = models.CharField(max_length=200, verbose_name='اسم الصفحة')
+    slug = models.SlugField(max_length=250, unique=True, verbose_name='الرابط المختصر')
+    description = models.TextField(verbose_name='وصف الصفحة')
+    
+    # Branding
+    cover_image = models.ImageField(upload_to='hotel_pages/covers/', verbose_name='صورة الغلاف')
+    logo = models.ImageField(upload_to='hotel_pages/logos/', verbose_name='الشعار')
+    
+    # Location
+    governorate = models.CharField(max_length=50, choices=IRAQ_GOVERNORATES, verbose_name='المحافظة')
+    city = models.CharField(max_length=100, verbose_name='المدينة')
+    district = models.CharField(max_length=100, blank=True, verbose_name='المنطقة')
+    address = models.TextField(verbose_name='العنوان')
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط العرض')
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط الطول')
+    
+    # Contact
+    phone = models.CharField(max_length=20, verbose_name='رقم الهاتف')
+    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
+    email = models.EmailField(verbose_name='البريد الإلكتروني')
+    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    
+    # Working Hours
+    working_hours = models.CharField(max_length=100, blank=True, verbose_name='ساعات العمل')
+    working_days = models.CharField(max_length=100, blank=True, verbose_name='أيام العمل')
+    
+    # Statistics
+    followers_count = models.PositiveIntegerField(default=0, verbose_name='عدد المتابعين')
+    posts_count = models.PositiveIntegerField(default=0, verbose_name='عدد المنشورات')
+    rooms_count = models.PositiveIntegerField(default=0, verbose_name='عدد الغرف')
+    offers_count = models.PositiveIntegerField(default=0, verbose_name='عدد العروض')
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    
+    # Rating
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00, verbose_name='التقييم')
+    rating_count = models.PositiveIntegerField(default=0, verbose_name='عدد التقييمات')
+    
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='الحالة')
+    is_verified = models.BooleanField(default=False, verbose_name='موثق')
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    
+    # SEO
+    meta_title = models.CharField(max_length=70, blank=True, verbose_name='عنوان SEO')
+    meta_description = models.CharField(max_length=160, blank=True, verbose_name='وصف SEO')
+    keywords = models.CharField(max_length=255, blank=True, verbose_name='كلمات مفتاحية')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'صفحة فندق'
+        verbose_name_plural = 'صفحات الفنادق'
+        ordering = ['-is_verified', '-followers_count', '-rating']
+        indexes = [
+            models.Index(fields=['page_type', '-created_at']),
+            models.Index(fields=['governorate', 'city']),
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['is_verified', '-followers_count']),
+        ]
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        return reverse('hotel_page_detail', kwargs={'slug': self.slug})
+    
+    def increment_followers(self):
+        self.followers_count += 1
+        self.save(update_fields=['followers_count'])
+    
+    def decrement_followers(self):
+        if self.followers_count > 0:
+            self.followers_count -= 1
+            self.save(update_fields=['followers_count'])
+    
+    def increment_posts(self):
+        self.posts_count += 1
+        self.save(update_fields=['posts_count'])
+    
+    def increment_views(self):
+        self.views_count += 1
+        self.save(update_fields=['views_count'])
+    
+    def update_rating(self):
+        ratings = self.ratings.all()
+        if ratings.exists():
+            avg_rating = ratings.aggregate(models.Avg('rating'))['rating__avg']
+            self.rating = round(avg_rating, 2)
+            self.rating_count = ratings.count()
+            self.save(update_fields=['rating', 'rating_count'])
+
+
+class HotelPost(models.Model):
+    """منشورات صفحة الفندق"""
+    
+    POST_TYPE_CHOICES = [
+        ('listing', 'إعلان'),
+        ('offer', 'عرض'),
+        ('discount', 'خصم'),
+        ('news', 'خبر'),
+        ('event', 'مناسبة'),
+        ('opening', 'افتتاح'),
+        ('announcement', 'إعلان'),
+        ('gallery', 'معرض صور'),
+        ('video', 'فيديو'),
+        ('tour_360', 'جولة 360°'),
+        ('promotion', 'ترويج'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('draft', 'مسودة'),
+        ('published', 'منشور'),
+        ('archived', 'مؤرشف'),
+    ]
+    
+    page = models.ForeignKey(
+        HotelPage, on_delete=models.CASCADE, related_name='posts', verbose_name='الصفحة'
+    )
+    
+    # Content
+    post_type = models.CharField(max_length=20, choices=POST_TYPE_CHOICES, verbose_name='نوع المنشور')
+    title = models.CharField(max_length=200, verbose_name='العنوان')
+    content = models.TextField(verbose_name='المحتوى')
+    
+    # Media
+    images = models.JSONField(default=list, verbose_name='الصور')
+    video_url = models.URLField(blank=True, verbose_name='رابط الفيديو')
+    tour_360_url = models.URLField(blank=True, verbose_name='رابط جولة 360°')
+    
+    # Pricing (for listings/offers)
+    price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='السعر')
+    currency = models.CharField(max_length=10, default='د.ع', verbose_name='العملة')
+    discount_percentage = models.IntegerField(null=True, blank=True, verbose_name='نسبة الخصم')
+    
+    # Validity (for offers/discounts)
+    valid_from = models.DateTimeField(null=True, blank=True, verbose_name='صالح من')
+    valid_until = models.DateTimeField(null=True, blank=True, verbose_name='صالح حتى')
+    
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='الحالة')
+    is_pinned = models.BooleanField(default=False, verbose_name='مثبت')
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    
+    # Statistics
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    likes_count = models.PositiveIntegerField(default=0, verbose_name='عدد الإعجابات')
+    comments_count = models.PositiveIntegerField(default=0, verbose_name='عدد التعليقات')
+    shares_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاركات')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    published_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ النشر')
+    
+    class Meta:
+        verbose_name = 'منشور فندق'
+        verbose_name_plural = 'منشورات الفنادق'
+        ordering = ['-is_pinned', '-published_at', '-created_at']
+        indexes = [
+            models.Index(fields=['page', '-created_at']),
+            models.Index(fields=['post_type', '-created_at']),
+            models.Index(fields=['status', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f'{self.page.name} - {self.title}'
+    
+    def publish(self):
+        self.status = 'published'
+        self.published_at = timezone.now()
+        self.save(update_fields=['status', 'published_at'])
+        self.page.increment_posts()
+    
+    def increment_views(self):
+        self.views_count += 1
+        self.save(update_fields=['views_count'])
+    
+    def increment_likes(self):
+        self.likes_count += 1
+        self.save(update_fields=['likes_count'])
+    
+    def decrement_likes(self):
+        if self.likes_count > 0:
+            self.likes_count -= 1
+            self.save(update_fields=['likes_count'])
+    
+    def increment_comments(self):
+        self.comments_count += 1
+        self.save(update_fields=['comments_count'])
+    
+    def increment_shares(self):
+        self.shares_count += 1
+        self.save(update_fields=['shares_count'])
+    
+    def is_valid(self):
+        if self.valid_from and self.valid_until:
+            now = timezone.now()
+            return self.valid_from <= now <= self.valid_until
+        return True
+
+
+class HotelRoom(models.Model):
+    """غرف الفندق - كل غرفة تعتبر إعلان مستقل"""
+    
+    ROOM_TYPE_CHOICES = [
+        ('single', 'غرفة مفردة'),
+        ('double', 'غرفة مزدوجة'),
+        ('triple', 'غرفة ثلاثية'),
+        ('family', 'غرفة عائلية'),
+        ('suite', 'جناح'),
+        ('royal_suite', 'جناح ملكي'),
+        ('connecting', 'غرفة متصلة'),
+        ('penthouse', 'بنتهاوس'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('available', 'متاحة'),
+        ('booked', 'محجوزة'),
+        ('maintenance', 'تحت الصيانة'),
+    ]
+    
+    page = models.ForeignKey(
+        HotelPage, on_delete=models.CASCADE, related_name='rooms', verbose_name='الصفحة'
+    )
+    
+    # Basic Information
+    room_type = models.CharField(max_length=20, choices=ROOM_TYPE_CHOICES, verbose_name='نوع الغرفة')
+    room_number = models.CharField(max_length=20, verbose_name='رقم الغرفة')
+    title = models.CharField(max_length=200, verbose_name='العنوان')
+    description = models.TextField(verbose_name='الوصف')
+    
+    # Capacity
+    max_adults = models.IntegerField(default=2, verbose_name='أقصى عدد بالغين')
+    max_children = models.IntegerField(default=0, verbose_name='أقصى عدد أطفال')
+    max_guests = models.IntegerField(default=2, verbose_name='أقصى عدد ضيوف')
+    
+    # Pricing
+    price_per_night = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='السعر لليلة')
+    currency = models.CharField(max_length=10, default='د.ع', verbose_name='العملة')
+    
+    # Amenities
+    amenities = models.JSONField(default=list, verbose_name='المرافق')
+    
+    # Media
+    images = models.JSONField(default=list, verbose_name='الصور')
+    video_url = models.URLField(blank=True, verbose_name='رابط الفيديو')
+    tour_360_url = models.URLField(blank=True, verbose_name='رابط جولة 360°')
+    
+    # Size
+    area = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='المساحة (متر مربع)')
+    floor = models.IntegerField(null=True, blank=True, verbose_name='الطابق')
+    
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available', verbose_name='الحالة')
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    
+    # Statistics
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    bookings_count = models.PositiveIntegerField(default=0, verbose_name='عدد الحجوزات')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'غرفة فندق'
+        verbose_name_plural = 'غرف الفنادق'
+        ordering = ['-is_featured', 'room_number']
+        indexes = [
+            models.Index(fields=['page', 'room_number']),
+            models.Index(fields=['room_type', '-created_at']),
+            models.Index(fields=['status', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f'{self.page.name} - {self.title}'
+    
+    def increment_views(self):
+        self.views_count += 1
+        self.save(update_fields=['views_count'])
+    
+    def increment_bookings(self):
+        self.bookings_count += 1
+        self.save(update_fields=['bookings_count'])
+
+
+class HotelOffer(models.Model):
+    """عروض الفندق"""
+    
+    OFFER_TYPE_CHOICES = [
+        ('discount', 'خصم'),
+        ('package', 'باقة'),
+        ('promotion', 'ترويج'),
+        ('seasonal', 'عرض موسمي'),
+        ('last_minute', 'عرض اللحظة الأخيرة'),
+        ('early_bird', 'عرض الحجز المبكر'),
+    ]
+    
+    page = models.ForeignKey(
+        HotelPage, on_delete=models.CASCADE, related_name='offers', verbose_name='الصفحة'
+    )
+    
+    # Basic Information
+    offer_type = models.CharField(max_length=20, choices=OFFER_TYPE_CHOICES, verbose_name='نوع العرض')
+    title = models.CharField(max_length=200, verbose_name='العنوان')
+    description = models.TextField(verbose_name='الوصف')
+    
+    # Pricing
+    original_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='السعر الأصلي')
+    discounted_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='السعر بعد الخصم')
+    discount_percentage = models.IntegerField(verbose_name='نسبة الخصم')
+    currency = models.CharField(max_length=10, default='د.ع', verbose_name='العملة')
+    
+    # Validity
+    valid_from = models.DateTimeField(verbose_name='صالح من')
+    valid_until = models.DateTimeField(verbose_name='صالح حتى')
+    
+    # Media
+    images = models.JSONField(default=list, verbose_name='الصور')
+    
+    # Terms
+    terms_and_conditions = models.TextField(blank=True, verbose_name='الشروط والأحكام')
+    
+    # Status
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    
+    # Statistics
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    bookings_count = models.PositiveIntegerField(default=0, verbose_name='عدد الحجوزات')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'عرض فندق'
+        verbose_name_plural = 'عروض الفنادق'
+        ordering = ['-is_featured', '-created_at']
+        indexes = [
+            models.Index(fields=['page', '-created_at']),
+            models.Index(fields=['offer_type', '-created_at']),
+            models.Index(fields=['valid_from', 'valid_until']),
+        ]
+    
+    def __str__(self):
+        return f'{self.page.name} - {self.title}'
+    
+    def is_valid(self):
+        now = timezone.now()
+        return self.is_active and self.valid_from <= now <= self.valid_until
+    
+    def increment_views(self):
+        self.views_count += 1
+        self.save(update_fields=['views_count'])
+    
+    def increment_bookings(self):
+        self.bookings_count += 1
+        self.save(update_fields=['bookings_count'])
+
+
+class HotelGallery(models.Model):
+    """معرض صور الفندق"""
+    
+    page = models.ForeignKey(
+        HotelPage, on_delete=models.CASCADE, related_name='gallery', verbose_name='الصفحة'
+    )
+    image = models.ImageField(upload_to='hotel_pages/gallery/', verbose_name='الصورة')
+    caption = models.CharField(max_length=200, blank=True, verbose_name='الوصف')
+    is_primary = models.BooleanField(default=False, verbose_name='صورة رئيسية')
+    order = models.PositiveIntegerField(default=0, verbose_name='الترتيب')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإضافة')
+    
+    class Meta:
+        verbose_name = 'صورة فندق'
+        verbose_name_plural = 'صور الفندق'
+        ordering = ['order', '-created_at']
+    
+    def __str__(self):
+        return f'{self.page.name} - {self.caption or "صورة"}'
+
+
+class HotelVideo(models.Model):
+    """فيديوهات الفندق"""
+    
+    page = models.ForeignKey(
+        HotelPage, on_delete=models.CASCADE, related_name='videos', verbose_name='الصفحة'
+    )
+    title = models.CharField(max_length=200, verbose_name='العنوان')
+    video_url = models.URLField(verbose_name='رابط الفيديو')
+    thumbnail = models.ImageField(upload_to='hotel_pages/videos/thumbnails/', blank=True, verbose_name='الصورة المصغرة')
+    description = models.TextField(blank=True, verbose_name='الوصف')
+    is_primary = models.BooleanField(default=False, verbose_name='رئيسي')
+    order = models.PositiveIntegerField(default=0, verbose_name='الترتيب')
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإضافة')
+    
+    class Meta:
+        verbose_name = 'فيديو فندق'
+        verbose_name_plural = 'فيديوهات الفندق'
+        ordering = ['order', '-created_at']
+    
+    def __str__(self):
+        return f'{self.page.name} - {self.title}'
+    
+    def increment_views(self):
+        self.views_count += 1
+        self.save(update_fields=['views_count'])
+
+
+class Hotel360(models.Model):
+    """جولات 360° للفندق"""
+    
+    page = models.ForeignKey(
+        HotelPage, on_delete=models.CASCADE, related_name='tours_360', verbose_name='الصفحة'
+    )
+    title = models.CharField(max_length=200, verbose_name='العنوان')
+    tour_url = models.URLField(verbose_name='رابط الجولة')
+    thumbnail = models.ImageField(upload_to='hotel_pages/360/thumbnails/', blank=True, verbose_name='الصورة المصغرة')
+    description = models.TextField(blank=True, verbose_name='الوصف')
+    is_primary = models.BooleanField(default=False, verbose_name='رئيسي')
+    order = models.PositiveIntegerField(default=0, verbose_name='الترتيب')
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإضافة')
+    
+    class Meta:
+        verbose_name = 'جولة 360°'
+        verbose_name_plural = 'جولات 360°'
+        ordering = ['order', '-created_at']
+    
+    def __str__(self):
+        return f'{self.page.name} - {self.title}'
+    
+    def increment_views(self):
+        self.views_count += 1
+        self.save(update_fields=['views_count'])
+
+
+class HotelFollower(models.Model):
+    """متابعو صفحة الفندق"""
+    
+    page = models.ForeignKey(
+        HotelPage, on_delete=models.CASCADE, related_name='followers', verbose_name='الصفحة'
+    )
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='followed_hotels', verbose_name='المستخدم'
+    )
+    
+    followed_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ المتابعة')
+    
+    class Meta:
+        verbose_name = 'متابع فندق'
+        verbose_name_plural = 'متابعو الفندق'
+        unique_together = ['page', 'user']
+        ordering = ['-followed_at']
+    
+    def __str__(self):
+        return f'{self.user.username} يتابع {self.page.name}'
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.page.increment_followers()
+    
+    def delete(self, *args, **kwargs):
+        self.page.decrement_followers()
+        super().delete(*args, **kwargs)
+
+
+class HotelComment(models.Model):
+    """التعليقات على منشورات الفندق"""
+    
+    post = models.ForeignKey(
+        HotelPost, on_delete=models.CASCADE, related_name='comments', verbose_name='المنشور'
+    )
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='hotel_comments', verbose_name='المستخدم'
+    )
+    parent = models.ForeignKey(
+        'self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies', verbose_name='رد على'
+    )
+    
+    content = models.TextField(verbose_name='المحتوى')
+    
+    is_approved = models.BooleanField(default=True, verbose_name='موافق عليه')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'تعليق فندق'
+        verbose_name_plural = 'تعليقات الفندق'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.content[:50]}'
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.post.increment_comments()
+
+
+class HotelRating(models.Model):
+    """تقييمات صفحة الفندق"""
+    
+    page = models.ForeignKey(
+        HotelPage, on_delete=models.CASCADE, related_name='ratings', verbose_name='الصفحة'
+    )
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='hotel_ratings', verbose_name='المستخدم'
+    )
+    
+    rating = models.IntegerField(verbose_name='التقييم', validators=[MinValueValidator(1), MaxValueValidator(5)])
+    review = models.TextField(blank=True, verbose_name='المراجعة')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'تقييم فندق'
+        verbose_name_plural = 'تقييمات الفندق'
+        unique_together = ['page', 'user']
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.rating} نجوم'
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.page.update_rating()
+
+
+class HotelBooking(models.Model):
+    """حجوزات الفندق"""
+    
+    STATUS_CHOICES = [
+        ('pending', 'بانتظار التأكيد'),
+        ('confirmed', 'مؤكد'),
+        ('checked_in', 'تم تسجيل الوصول'),
+        ('checked_out', 'تم تسجيل المغادرة'),
+        ('cancelled', 'ملغي'),
+        ('no_show', 'لم يظهر'),
+    ]
+    
+    page = models.ForeignKey(
+        HotelPage, on_delete=models.CASCADE, related_name='bookings', verbose_name='الصفحة'
+    )
+    room = models.ForeignKey(
+        HotelRoom, on_delete=models.SET_NULL, null=True, blank=True, related_name='bookings', verbose_name='الغرفة'
+    )
+    offer = models.ForeignKey(
+        HotelOffer, on_delete=models.SET_NULL, null=True, blank=True, related_name='bookings', verbose_name='العرض'
+    )
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE, related_name='hotel_bookings', verbose_name='المستخدم'
+    )
+    
+    # Booking Details
+    check_in = models.DateField(verbose_name='تاريخ الوصول')
+    check_out = models.DateField(verbose_name='تاريخ المغادرة')
+    guests = models.IntegerField(default=1, verbose_name='عدد الضيوف')
+    
+    # Pricing
+    total_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='السعر الإجمالي')
+    currency = models.CharField(max_length=10, default='د.ع', verbose_name='العملة')
+    
+    # Contact
+    guest_name = models.CharField(max_length=200, verbose_name='اسم الضيف')
+    guest_phone = models.CharField(max_length=20, verbose_name='رقم هاتف الضيف')
+    guest_email = models.EmailField(blank=True, verbose_name='بريد إلكتروني الضيف')
+    
+    # Special Requests
+    special_requests = models.TextField(blank=True, verbose_name='طلبات خاصة')
+    
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='الحالة')
+    
+    # Payment
+    is_paid = models.BooleanField(default=False, verbose_name='مدفوع')
+    payment_method = models.CharField(max_length=50, blank=True, verbose_name='طريقة الدفع')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الحجز')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'حجز فندق'
+        verbose_name_plural = 'حجوزات الفندق'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['page', '-created_at']),
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['check_in', 'check_out']),
+        ]
+    
+    def __str__(self):
+        return f'{self.guest_name} - {self.page.name}'
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.room:
+            self.room.increment_bookings()
+        if self.offer:
+            self.offer.increment_bookings()
+    
+    @property
+    def nights(self):
+        return (self.check_out - self.check_in).days
+
+
+# ==================== Service Provider System ====================
+
+class ServiceProviderCategory(models.Model):
+    """فئات مقدمي الخدمات"""
+    
+    CATEGORY_CHOICES = [
+        ('construction_contractor', '🏗️ مقاول بناء'),
+        ('construction_worker', '👷 عامل بناء'),
+        ('brick_mason', '🧱 معلم طابوق'),
+        ('concrete_contractor', '🏢 مقاول عظم'),
+        ('finishing_contractor', '🏠 مقاول تشطيب'),
+        ('painter', '🎨 صباغ'),
+        ('carpenter', '🧰 نجار'),
+        ('aluminum_blacksmith', '🚪 ألمنيوم وحداد'),
+        ('glass', '🪟 زجاج'),
+        ('decorations', '🪵 ديكورات'),
+        ('electrician', '💡 كهربائي'),
+        ('electrical_installation', '🔌 تأسيس كهرباء'),
+        ('cameras', '📡 كاميرات مراقبة'),
+        ('networks', '🌐 شبكات وإنترنت'),
+        ('plumber', '🚿 سباك'),
+        ('water_installation', '💧 تأسيس ماء'),
+        ('sewage', '🚽 مجاري'),
+        ('heating', '🔥 تدفئة'),
+        ('cooling', '❄️ تبريد'),
+        ('solar_energy', '☀️ طاقة شمسية'),
+        ('stone_marble', '🪨 حجر ومرمر'),
+        ('ceramic', '🧱 سيراميك'),
+        ('gypsum_board', '🪜 جبسن بورد'),
+        ('pools', '🏊 مسابح'),
+        ('gardens', '🌳 حدائق'),
+        ('excavation', '🚜 حفريات'),
+        ('material_transport', '🚛 نقل مواد'),
+        ('cranes', '🏗️ كرينات'),
+        ('cleaning', '🧹 تنظيف'),
+        ('interior_design', '🛋️ تصميم داخلي'),
+        ('architect', '📐 مهندس معماري'),
+        ('civil_engineer', '🏢 مهندس مدني'),
+        ('electrical_engineer', '⚡ مهندس كهرباء'),
+        ('mechanical_engineer', '🚰 مهندس ميكانيك'),
+        ('3d_designer', '🖥️ مصمم ثلاثي الأبعاد'),
+    ]
+    
+    category_id = models.CharField(max_length=50, choices=CATEGORY_CHOICES, unique=True, verbose_name='معرف الفئة')
+    name_ar = models.CharField(max_length=100, verbose_name='الاسم بالعربية')
+    name_en = models.CharField(max_length=100, verbose_name='الاسم بالإنجليزية')
+    icon = models.CharField(max_length=10, verbose_name='الأيقونة')
+    description = models.TextField(blank=True, verbose_name='الوصف')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'فئة مقدم الخدمة'
+        verbose_name_plural = 'فئات مقدمي الخدمات'
+        ordering = ['order', 'name_ar']
+    
+    def __str__(self):
+        return self.name_ar
+
+
+class ServiceProviderPage(models.Model):
+    """صفحة مقدم الخدمة"""
+    
+    PAGE_TYPE_CHOICES = [
+        ('individual', 'فرد'),
+        ('company', 'شركة'),
+        ('freelancer', 'عمل حر'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'بانتظار الموافقة'),
+        ('active', 'نشط'),
+        ('suspended', 'موقوف'),
+        ('inactive', 'غير نشط'),
+    ]
+    
+    AVAILABILITY_CHOICES = [
+        ('available', 'متاح الآن'),
+        ('busy', 'مشغول'),
+        ('on_vacation', 'إجازة'),
+    ]
+    
+    # Basic Information
+    page_type = models.CharField(max_length=20, choices=PAGE_TYPE_CHOICES, default='individual', verbose_name='نوع الصفحة')
+    name = models.CharField(max_length=200, verbose_name='الاسم')
+    slug = models.SlugField(max_length=250, unique=True, verbose_name='الرابط المختصر')
+    description = models.TextField(verbose_name='نبذة')
+    
+    # Branding
+    profile_image = models.ImageField(upload_to='service_providers/profiles/', blank=True, null=True, verbose_name='الصورة الشخصية')
+    cover_image = models.ImageField(upload_to='service_providers/covers/', blank=True, null=True, verbose_name='صورة الغلاف')
+    logo = models.ImageField(upload_to='service_providers/logos/', blank=True, null=True, verbose_name='الشعار')
+    
+    # Professional Info
+    category = models.ForeignKey(ServiceProviderCategory, on_delete=models.SET_NULL, null=True, related_name='providers', verbose_name='الفئة')
+    sub_categories = models.ManyToManyField(ServiceProviderCategory, blank=True, related_name='sub_providers', verbose_name='الفئات الفرعية')
+    years_of_experience = models.IntegerField(default=0, verbose_name='سنوات الخبرة')
+    projects_count = models.IntegerField(default=0, verbose_name='عدد المشاريع')
+    clients_count = models.IntegerField(default=0, verbose_name='عدد العملاء')
+    
+    # Location
+    governorate = models.CharField(max_length=100, verbose_name='المحافظة')
+    city = models.CharField(max_length=100, verbose_name='المدينة')
+    working_areas = models.TextField(blank=True, verbose_name='المناطق التي يعمل بها')
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name='خط العرض')
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name='خط الطول')
+    
+    # Contact
+    phone = models.CharField(max_length=20, blank=True, verbose_name='رقم الهاتف')
+    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
+    telegram = models.CharField(max_length=100, blank=True, verbose_name='تلغرام')
+    facebook = models.URLField(blank=True, verbose_name='فيسبوك')
+    instagram = models.URLField(blank=True, verbose_name='انستغرام')
+    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    
+    # Working Hours
+    working_hours = models.TextField(blank=True, verbose_name='أوقات الدوام')
+    availability = models.CharField(max_length=20, choices=AVAILABILITY_CHOICES, default='available', verbose_name='الحالة')
+    
+    # Statistics
+    views_count = models.IntegerField(default=0, verbose_name='عدد المشاهدات')
+    contacts_count = models.IntegerField(default=0, verbose_name='عدد الاتصالات')
+    quotes_count = models.IntegerField(default=0, verbose_name='عدد طلبات الأسعار')
+    followers_count = models.IntegerField(default=0, verbose_name='عدد المتابعين')
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.0, verbose_name='التقييم')
+    reviews_count = models.IntegerField(default=0, verbose_name='عدد التقييمات')
+    
+    # Status & Verification
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='الحالة')
+    is_verified = models.BooleanField(default=False, verbose_name='موثق')
+    verification_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ التوثيق')
+    
+    # Owner
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='service_provider_pages', verbose_name='المستخدم')
+    broker = models.ForeignKey('Broker', on_delete=models.SET_NULL, null=True, blank=True, related_name='service_provider_pages', verbose_name='الدلال')
+    
+    # SEO
+    meta_title = models.CharField(max_length=200, blank=True, verbose_name='عنوان SEO')
+    meta_description = models.TextField(blank=True, verbose_name='وصف SEO')
+    meta_keywords = models.CharField(max_length=500, blank=True, verbose_name='كلمات مفتاحية SEO')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'صفحة مقدم الخدمة'
+        verbose_name_plural = 'صفحات مقدمي الخدمات'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['slug']),
+            models.Index(fields=['status']),
+            models.Index(fields=['category']),
+            models.Index(fields=['governorate']),
+            models.Index(fields=['rating']),
+        ]
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        return reverse('service_provider_detail', kwargs={'slug': self.slug})
+
+
+class ServiceProviderWork(models.Model):
+    """الأعمال المنجزة لمقدم الخدمة"""
+    
+    page = models.ForeignKey(ServiceProviderPage, on_delete=models.CASCADE, related_name='works', verbose_name='الصفحة')
+    title = models.CharField(max_length=200, verbose_name='العنوان')
+    description = models.TextField(verbose_name='الوصف')
+    location = models.CharField(max_length=200, blank=True, verbose_name='الموقع')
+    
+    # Dates & Duration
+    execution_date = models.DateField(null=True, blank=True, verbose_name='تاريخ التنفيذ')
+    duration = models.CharField(max_length=100, blank=True, verbose_name='المدة')
+    
+    # Pricing
+    estimated_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='السعر التقريبي')
+    
+    # Before/After
+    before_image = models.ImageField(upload_to='service_providers/works/before/', blank=True, null=True, verbose_name='صورة قبل')
+    after_image = models.ImageField(upload_to='service_providers/works/after/', blank=True, null=True, verbose_name='صورة بعد')
+    
+    # Media
+    images = models.ManyToManyField('ServiceProviderGallery', blank=True, related_name='works', verbose_name='الصور')
+    video = models.ForeignKey('ServiceProviderVideo', on_delete=models.SET_NULL, null=True, blank=True, related_name='works', verbose_name='الفيديو')
+    tour_360 = models.ForeignKey('ServiceProvider360', on_delete=models.SET_NULL, null=True, blank=True, related_name='works', verbose_name='جولة 360°')
+    
+    # Status
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    status = models.CharField(max_length=20, choices=[('draft', 'مسودة'), ('published', 'منشور')], default='draft', verbose_name='الحالة')
+    
+    # Statistics
+    views_count = models.IntegerField(default=0, verbose_name='عدد المشاهدات')
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.0, verbose_name='التقييم')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'عمل منجز'
+        verbose_name_plural = 'الأعمال المنجزة'
+        ordering = ['-is_featured', '-created_at']
+    
+    def __str__(self):
+        return f'{self.title} - {self.page.name}'
+
+
+class ServiceProviderService(models.Model):
+    """الخدمات المقدمة من مقدم الخدمة"""
+    
+    page = models.ForeignKey(ServiceProviderPage, on_delete=models.CASCADE, related_name='services', verbose_name='الصفحة')
+    name = models.CharField(max_length=200, verbose_name='اسم الخدمة')
+    description = models.TextField(blank=True, verbose_name='الوصف')
+    price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='السعر')
+    price_unit = models.CharField(max_length=50, blank=True, verbose_name='وحدة السعر')
+    
+    # Status
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'خدمة مقدمة'
+        verbose_name_plural = 'الخدمات المقدمة'
+        ordering = ['order', 'name']
+    
+    def __str__(self):
+        return f'{self.name} - {self.page.name}'
+
+
+class ServiceProviderGallery(models.Model):
+    """معرض صور مقدم الخدمة"""
+    
+    page = models.ForeignKey(ServiceProviderPage, on_delete=models.CASCADE, related_name='gallery', verbose_name='الصفحة')
+    image = models.ImageField(upload_to='service_providers/gallery/', verbose_name='الصورة')
+    caption = models.CharField(max_length=200, blank=True, verbose_name='الوصف')
+    is_primary = models.BooleanField(default=False, verbose_name='صورة رئيسية')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    
+    class Meta:
+        verbose_name = 'صورة معرض'
+        verbose_name_plural = 'معرض الصور'
+        ordering = ['order', '-created_at']
+    
+    def __str__(self):
+        return f'{self.caption or "صورة"} - {self.page.name}'
+
+
+class ServiceProviderVideo(models.Model):
+    """فيديوهات مقدم الخدمة"""
+    
+    page = models.ForeignKey(ServiceProviderPage, on_delete=models.CASCADE, related_name='videos', verbose_name='الصفحة')
+    title = models.CharField(max_length=200, verbose_name='العنوان')
+    video_url = models.URLField(verbose_name='رابط الفيديو')
+    thumbnail = models.ImageField(upload_to='service_providers/videos/thumbnails/', blank=True, null=True, verbose_name='الصورة المصغرة')
+    description = models.TextField(blank=True, verbose_name='الوصف')
+    is_primary = models.BooleanField(default=False, verbose_name='فيديو رئيسي')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    
+    # Statistics
+    views_count = models.IntegerField(default=0, verbose_name='عدد المشاهدات')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    
+    class Meta:
+        verbose_name = 'فيديو'
+        verbose_name_plural = 'الفيديوهات'
+        ordering = ['order', '-created_at']
+    
+    def __str__(self):
+        return f'{self.title} - {self.page.name}'
+
+
+class ServiceProvider360(models.Model):
+    """جولات 360 درجة لمقدم الخدمة"""
+    
+    page = models.ForeignKey(ServiceProviderPage, on_delete=models.CASCADE, related_name='tours_360', verbose_name='الصفحة')
+    title = models.CharField(max_length=200, verbose_name='العنوان')
+    tour_url = models.URLField(verbose_name='رابط الجولة')
+    thumbnail = models.ImageField(upload_to='service_providers/360/thumbnails/', blank=True, null=True, verbose_name='الصورة المصغرة')
+    description = models.TextField(blank=True, verbose_name='الوصف')
+    is_primary = models.BooleanField(default=False, verbose_name='جولة رئيسية')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    
+    # Statistics
+    views_count = models.IntegerField(default=0, verbose_name='عدد المشاهدات')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    
+    class Meta:
+        verbose_name = 'جولة 360°'
+        verbose_name_plural = 'جولات 360°'
+        ordering = ['order', '-created_at']
+    
+    def __str__(self):
+        return f'{self.title} - {self.page.name}'
+
+
+class ServiceProviderFollower(models.Model):
+    """متابعو صفحة مقدم الخدمة"""
+    
+    page = models.ForeignKey(ServiceProviderPage, on_delete=models.CASCADE, related_name='followers', verbose_name='الصفحة')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='followed_providers', verbose_name='المستخدم')
+    
+    # Timestamps
+    followed_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ المتابعة')
+    
+    class Meta:
+        verbose_name = 'متابع'
+        verbose_name_plural = 'المتابعون'
+        unique_together = ['page', 'user']
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.page.name}'
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.page.followers_count = self.page.followers.count()
+        self.page.save()
+    
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        self.page.followers_count = self.page.followers.count()
+        self.page.save()
+
+
+class ServiceProviderRating(models.Model):
+    """تقييمات مقدم الخدمة"""
+    
+    page = models.ForeignKey(ServiceProviderPage, on_delete=models.CASCADE, related_name='ratings', verbose_name='الصفحة')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='provider_ratings', verbose_name='المستخدم')
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)], verbose_name='التقييم')
+    review = models.TextField(blank=True, verbose_name='التعليق')
+    
+    # Customer Photos
+    customer_images = models.ManyToManyField(ServiceProviderGallery, blank=True, related_name='ratings', verbose_name='صور العميل')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ التقييم')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'تقييم'
+        verbose_name_plural = 'التقييمات'
+        unique_together = ['page', 'user']
+    
+    def __str__(self):
+        return f'{self.rating} نجوم - {self.page.name}'
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Update page rating
+        ratings = self.page.ratings.all()
+        if ratings:
+            avg_rating = sum(r.rating for r in ratings) / len(ratings)
+            self.page.rating = round(avg_rating, 2)
+            self.page.reviews_count = ratings.count()
+            self.page.save()
+
+
+class ServiceProviderContact(models.Model):
+    """طلبات التواصل مع مقدم الخدمة"""
+    
+    CONTACT_TYPE_CHOICES = [
+        ('call', 'اتصال'),
+        ('whatsapp', 'واتساب'),
+        ('telegram', 'تلغرام'),
+        ('message', 'مراسلة'),
+        ('quote', 'طلب عرض سعر'),
+        ('visit', 'طلب زيارة'),
+        ('appointment', 'حجز موعد'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'بانتظار الرد'),
+        ('responded', 'تم الرد'),
+        ('completed', 'مكتمل'),
+        ('cancelled', 'ملغي'),
+    ]
+    
+    page = models.ForeignKey(ServiceProviderPage, on_delete=models.CASCADE, related_name='contacts', verbose_name='الصفحة')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='provider_contacts', verbose_name='المستخدم')
+    
+    contact_type = models.CharField(max_length=20, choices=CONTACT_TYPE_CHOICES, verbose_name='نوع التواصل')
+    name = models.CharField(max_length=200, verbose_name='الاسم')
+    email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    phone = models.CharField(max_length=20, verbose_name='رقم الهاتف')
+    message = models.TextField(verbose_name='الرسالة')
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='الحالة')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'طلب تواصل'
+        verbose_name_plural = 'طلبات التواصل'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.name} - {self.page.name}'
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.page.contacts_count = self.page.contacts.count()
+        self.page.save()
+
+
+class ServiceProviderQuote(models.Model):
+    """طلبات عرض السعر"""
+    
+    STATUS_CHOICES = [
+        ('pending', 'بانتظار الرد'),
+        ('sent', 'تم الإرسال'),
+        ('accepted', 'مقبول'),
+        ('rejected', 'مرفوض'),
+        ('expired', 'منتهي'),
+    ]
+    
+    page = models.ForeignKey(ServiceProviderPage, on_delete=models.CASCADE, related_name='quotes', verbose_name='الصفحة')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='provider_quotes', verbose_name='المستخدم')
+    
+    # Project Details
+    project_title = models.CharField(max_length=200, verbose_name='عنوان المشروع')
+    project_description = models.TextField(verbose_name='وصف المشروع')
+    location = models.CharField(max_length=200, verbose_name='الموقع')
+    budget = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='الميزانية المتوقعة')
+    
+    # Contact Info
+    name = models.CharField(max_length=200, verbose_name='الاسم')
+    email = models.EmailField(verbose_name='البريد الإلكتروني')
+    phone = models.CharField(max_length=20, verbose_name='رقم الهاتف')
+    
+    # Quote Details
+    quoted_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='السعر المعروض')
+    quote_notes = models.TextField(blank=True, verbose_name='ملاحظات العرض')
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='الحالة')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'طلب عرض سعر'
+        verbose_name_plural = 'طلبات عروض الأسعار'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.project_title} - {self.page.name}'
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.page.quotes_count = self.page.quotes.count()
+        self.page.save()

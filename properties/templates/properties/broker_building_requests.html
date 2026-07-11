@@ -1,0 +1,240 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}طلبات البناء{% endblock %}
+{% block dashboard_title %}طلبات <span>البناء</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'broker_create_building_request' %}" class="btn btn-primary">+ طلب جديد</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="padding: 28px;">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% if requests %}
+    <div class="requests-grid">
+      {% for request in requests %}
+      <div class="request-card">
+        <div class="request-header">
+          <div class="request-status status-{{ request.status }}">
+            {{ request.get_status_display }}
+          </div>
+          <div class="request-priority priority-{{ request.priority }}">
+            {{ request.get_priority_display }}
+          </div>
+        </div>
+        
+        <div class="request-body">
+          <h3>{{ request.project_type }}</h3>
+          <p class="request-location">
+            <span>📍</span> {{ request.city }} - {{ request.get_governorate_display }}
+          </p>
+          <p class="request-client">
+            <span>👤</span> {{ request.full_name }}
+          </p>
+          <p class="request-phone">
+            <span>📱</span> {{ request.phone }}
+          </p>
+          {% if request.estimated_area %}
+          <p class="request-area">
+            <span>📐</span> {{ request.estimated_area }} م²
+          </p>
+          {% endif %}
+          {% if request.estimated_budget %}
+          <p class="request-budget">
+            <span>💰</span> {{ request.estimated_budget }} د.ع
+          </p>
+          {% endif %}
+          {% if request.description %}
+          <p class="request-description">{{ request.description|truncatewords:20 }}</p>
+          {% endif %}
+        </div>
+        
+        <div class="request-footer">
+          <div class="request-date">
+            <span>📅</span> {{ request.created_at|date:"Y-m-d H:i" }}
+          </div>
+          <a href="{% url 'building_request_detail' request.id %}" class="btn btn-sm btn-outline">عرض التفاصيل</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">🏗️</div>
+      <h3>لا توجد طلبات بناء</h3>
+      <p>ابدأ بإنشاء طلب بناء جديد</p>
+      <a href="{% url 'broker_create_building_request' %}" class="btn btn-primary">إنشاء طلب جديد</a>
+    </div>
+  {% endif %}
+</div>
+
+<style>
+.requests-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.request-card {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.request-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.request-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.request-status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-pending {
+  background: #ffc107;
+  color: #000;
+}
+
+.status-in_review {
+  background: #17a2b8;
+  color: white;
+}
+
+.status-approved {
+  background: #28a745;
+  color: white;
+}
+
+.status-in_progress {
+  background: #007bff;
+  color: white;
+}
+
+.status-completed {
+  background: #6c757d;
+  color: white;
+}
+
+.status-cancelled {
+  background: #dc3545;
+  color: white;
+}
+
+.request-priority {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.priority-low {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.priority-medium {
+  background: #ffc107;
+  color: #000;
+}
+
+.priority-high {
+  background: #fd7e14;
+  color: white;
+}
+
+.priority-urgent {
+  background: #dc3545;
+  color: white;
+}
+
+.request-body {
+  padding: 20px;
+}
+
+.request-body h3 {
+  margin: 0 0 15px 0;
+  color: var(--text);
+  font-size: 1.2rem;
+}
+
+.request-body p {
+  margin: 8px 0;
+  color: var(--text-light);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.request-description {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+}
+
+.request-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.request-date {
+  color: var(--text-light);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.empty-state h3 {
+  color: var(--text);
+  margin: 0 0 10px 0;
+}
+
+.empty-state p {
+  color: var(--text-light);
+  margin: 0 0 20px 0;
+}
+</style>
+{% endblock %}

@@ -6,7 +6,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum
 from django.http import JsonResponse
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -20,8 +20,8 @@ from rest_framework.response import Response
 
 
 from .decorators import broker_required, rate_limit
-from .forms import MessageForm, PropertyForm, PropertySearchForm, SiteSettingsForm, PropertyNoteForm, VirtualTour360Form, AuctionForm, BidForm, BuildingRequestForm, LandInfoForm, BuildingDetailsForm, BudgetForm, QuoteForm, ContractorBidForm, ContractorRatingForm, ReportForm, FinancialTransactionForm, ExpenseForm, ProfitForm, SubscriptionPlanForm, UserProfileForm, UserBasicInfoForm, UserSecurityForm, UserNotificationForm, UserPrivacyForm, UserPreferencesForm, BlockUserForm, SavedSearchForm, AutoBidForm, AuctionRatingForm, AuctionLiveStreamForm, AuctionAdvertisementForm, HotelSearchForm, ResortSearchForm
-from .models import Message, Property, PropertyImage, SiteSettings, PropertyNote, Notification, VirtualTour360, Auction, Bid, BuildingRequest, LandInfo, BuildingDetails, Budget, Blueprint, Quote, ProjectTracking, DeliveryMilestone, ContractorRating, ContractorBid, FinancialTransaction, Expense, Payment, OfficeWallet, WalletTransaction, Broker, Report, ReportAction, PropertyLike, PropertySave, PropertyComment, VirtualTourPoint, VirtualTourConnection, Profit, SubscriptionPlan, ActivityLog, UserSettings, BlockedUser, SavedSearch, AutoBid, AuctionNotification, AuctionRating, AuctionStats, AuctionLiveStream, AuctionAdvertisement, Hotel, Resort, BrokerChannel, ChannelFollow, ChannelSave
+from .forms import MessageForm, PropertyForm, PropertySearchForm, SiteSettingsForm, PropertyNoteForm, VirtualTour360Form, AuctionForm, BidForm, BuildingRequestForm, LandInfoForm, BuildingDetailsForm, BudgetForm, QuoteForm, ContractorBidForm, ContractorRatingForm, ReportForm, FinancialTransactionForm, ExpenseForm, ProfitForm, SubscriptionPlanForm, UserProfileForm, UserBasicInfoForm, UserSecurityForm, UserNotificationForm, UserPrivacyForm, UserPreferencesForm, BlockUserForm, SavedSearchForm, AutoBidForm, AuctionRatingForm, AuctionLiveStreamForm, AuctionAdvertisementForm, HotelSearchForm, ResortSearchForm, PropertyPublicationForm, PropertyPaymentForm, ServiceProviderForm, ServiceAdvertisementForm
+from .models import Message, Property, PropertyImage, SiteSettings, PropertyNote, Notification, VirtualTour360, Auction, Bid, BuildingRequest, LandInfo, BuildingDetails, Budget, Blueprint, Quote, ProjectTracking, DeliveryMilestone, ContractorRating, ContractorBid, FinancialTransaction, Expense, Payment, OfficeWallet, WalletTransaction, Broker, Report, ReportAction, PropertyLike, PropertySave, PropertyComment, VirtualTourPoint, VirtualTourConnection, Profit, SubscriptionPlan, ActivityLog, UserSettings, BlockedUser, SavedSearch, AutoBid, AuctionNotification, AuctionRating, AuctionStats, AuctionLiveStream, AuctionAdvertisement, Hotel, Resort, BrokerChannel, ChannelFollow, ChannelSave, PaymentMethod, PropertyPayment, PropertyNotification, ChannelPost, ChannelVideo, AdvancedSubscriptionPlan, BrokerPlanSubscription, SubscriptionRenewalRequest, ServiceProvider, ServiceAdvertisement, AuctionInvitation
 from .permissions import (
     can_access_dashboard,
     can_add_property,
@@ -279,7 +279,7 @@ def broker_profile(request, username):
 
 
 def login_view(request):
-    from .permissions import get_redirect_after_login, get_user_type, can_access_dashboard
+    from .permissions import get_redirect_after_login, get_user_type, can_access_dashboard, get_broker
 
     if request.user.is_authenticated:
         redirect_url = get_redirect_after_login(request.user)
@@ -288,21 +288,59 @@ def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            user_type = get_user_type(user)
-
-            # Simplified redirect: always go to home first to avoid redirect loops
-            messages.success(request, 'تم تسجيل الدخول بنجاح')
-            return redirect('home')
-        messages.error(request, 'بيانات الدخول غير صحيحة')
-        logger.warning('Failed login attempt for user: %s', username)
+        
+        if not username or not password:
+            messages.error(request, 'يرجى إدخال اسم المستخدم وكلمة المرور')
+        else:
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                # Check if user is active
+                if not user.is_active:
+                    messages.error(request, 'تم تعطيل حسابك. يرجى التواصل مع الإدارة')
+                    logger.warning('Login attempt for inactive user: %s', username)
+                    return render(request, 'properties/login.html')
+                
+                login(request, user)
+                user_type = get_user_type(user)
+                
+                # Log successful login
+                from .models import ActivityLog
+                ActivityLog.log(
+                    user=user,
+                    action='login',
+                    model_type='user',
+                    object_id=user.id,
+                    object_repr=user.username,
+                    description=f'تسجيل دخول ناجح: {user.username}',
+                    ip_address=get_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                    metadata={'user_type': user_type}
+                )
+                
+                # Redirect based on user type
+                if user_type == 'admin':
+                    messages.success(request, 'مرحباً بك في لوحة الإدارة')
+                    return redirect('admin_panel')
+                elif user_type == 'broker':
+                    broker = get_broker(user)
+                    if broker and not broker.is_active:
+                        messages.error(request, 'تم تعطيل حساب الدلال. يرجى التواصل مع الإدارة')
+                        logout(request)
+                        return render(request, 'properties/login.html')
+                    messages.success(request, 'مرحباً بك في لوحة الدلال')
+                    return redirect('dashboard')
+                else:
+                    messages.success(request, 'تم تسجيل الدخول بنجاح')
+                    return redirect('home')
+            else:
+                messages.error(request, 'بيانات الدخول غير صحيحة')
+                logger.warning('Failed login attempt for user: %s', username)
+    
     return render(request, 'properties/login.html')
 
 
 def register_view(request):
-    """Register a new user account."""
+    """Register a new user account (regular users only)."""
     from django.contrib.auth.models import User
     
     if request.user.is_authenticated:
@@ -314,70 +352,91 @@ def register_view(request):
         first_name = request.POST.get('first_name', '').strip()
         last_name = request.POST.get('last_name', '').strip()
         phone = request.POST.get('phone', '').strip()
+        gender = request.POST.get('gender', '').strip()
+        birth_date = request.POST.get('birth_date', '').strip()
+        city = request.POST.get('city', '').strip()
+        governorate = request.POST.get('governorate', '').strip()
+        address = request.POST.get('address', '').strip()
+        profile_image = request.FILES.get('profile_image')
         password = request.POST.get('password', '')
         confirm_password = request.POST.get('confirm_password', '')
         
         # Validation
-        if not username or not email or not password:
+        if not username or not email or not password or not phone:
             messages.error(request, 'يرجى ملء جميع الحقول المطلوبة')
+        elif len(username) < 3:
+            messages.error(request, 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل')
         elif password != confirm_password:
             messages.error(request, 'كلمات المرور غير متطابقة')
-        elif len(password) < 6:
-            messages.error(request, 'كلمة المرور يجب أن تكون 6 أحرف على الأقل')
+        elif len(password) < 8:
+            messages.error(request, 'كلمة المرور يجب أن تكون 8 أحرف على الأقل')
         elif User.objects.filter(username=username).exists():
             messages.error(request, 'اسم المستخدم مستخدم بالفعل')
         elif User.objects.filter(email=email).exists():
             messages.error(request, 'البريد الإلكتروني مستخدم بالفعل')
         else:
-            # Create user
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
-                password=password,
-                is_staff=True  # Brokers need is_staff=True for dashboard access
-            )
-
-            # Create Broker profile automatically
-            from .models import Broker
-            broker = Broker.objects.create(
-                user=user,
-                phone=phone,
-                role=Broker.ROLE_MAIN,
-                is_active=True,
-            )
-
-            # Create notification for admins
-            from .utils import create_notification
-            admins = User.objects.filter(is_superuser=True) | User.objects.filter(is_staff=True)
-            
-            for admin in admins:
-                create_notification(
-                    user=admin,
-                    notification_type='system',
-                    title='مستخدم جديد',
-                    message=f'مستخدم جديد: {user.get_full_name() or user.username}',
-                    link=f'/admin/auth/user/{user.id}/change/',
-                    metadata={'user_id': user.id}
+            # Check for duplicate phone in Broker profiles
+            from .models import Broker, UserProfile
+            if Broker.objects.filter(phone=phone).exists():
+                messages.error(request, 'رقم الهاتف مستخدم بالفعل')
+            else:
+                # Create regular user (no broker profile)
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    password=password,
+                    is_staff=False  # Regular users are not staff
                 )
-            
-            # Log activity
-            from .models import ActivityLog
-            ActivityLog.log(
-                user=user,
-                action='create',
-                model_type='user',
-                object_id=user.id,
-                object_repr=user.username,
-                description=f'إنشاء حساب مستخدم جديد: {user.username}',
-                ip_address=get_client_ip(request),
-                user_agent=request.META.get('HTTP_USER_AGENT', ''),
-                metadata={'account_type': 'user'}
-            )
-            
-            messages.success(request, 'تم إنشاء الحساب بنجاح. يمكنك الآن تسجيل الدخول')
-            return redirect('login')
+                
+                # Create or update UserProfile with additional information
+                user_profile, created = UserProfile.objects.get_or_create(user=user)
+                user_profile.phone = phone
+                if gender:
+                    user_profile.gender = gender
+                if birth_date:
+                    user_profile.birth_date = birth_date
+                if city:
+                    user_profile.city = city
+                if governorate:
+                    user_profile.governorate = governorate
+                if address:
+                    user_profile.address = address
+                if profile_image:
+                    user_profile.profile_image = profile_image
+                user_profile.save()
+
+                # Create notification for admins
+                from .utils import create_notification
+                admins = User.objects.filter(is_superuser=True)
+                
+                for admin in admins:
+                    create_notification(
+                        user=admin,
+                        notification_type='system',
+                        title='مستخدم جديد',
+                        message=f'مستخدم جديد: {user.get_full_name() or user.username}',
+                        link=f'/admin/auth/user/{user.id}/change/',
+                        metadata={'user_id': user.id}
+                    )
+                
+                # Log activity
+                from .models import ActivityLog
+                ActivityLog.log(
+                    user=user,
+                    action='create',
+                    model_type='user',
+                    object_id=user.id,
+                    object_repr=user.username,
+                    description=f'إنشاء حساب مستخدم جديد: {user.username}',
+                    ip_address=get_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                    metadata={'account_type': 'user'}
+                )
+                
+                messages.success(request, 'تم إنشاء الحساب بنجاح. يمكنك الآن تسجيل الدخول')
+                return redirect('login')
     
     return render(request, 'properties/register.html')
 
@@ -388,10 +447,123 @@ def logout_view(request):
     return redirect('home')
 
 
+def password_reset_request(request):
+    """Handle password reset request."""
+    if request.user.is_authenticated:
+        return redirect('home')
+    
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        
+        if not email:
+            messages.error(request, 'يرجى إدخال البريد الإلكتروني')
+        else:
+            from django.contrib.auth.models import User
+            try:
+                user = User.objects.get(email=email)
+                # In a real application, send email with reset link
+                # For now, just show success message
+                messages.success(request, 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني')
+                logger.info('Password reset requested for user: %s', user.username)
+                return redirect('login')
+            except User.DoesNotExist:
+                messages.error(request, 'البريد الإلكتروني غير مسجل في النظام')
+    
+    return render(request, 'properties/password_reset.html')
+
+
 @login_required
-# Temporarily disabled staff_required to prevent redirect loops
-# @staff_required
+def password_change(request):
+    """Handle password change for logged in users."""
+    if request.method == 'POST':
+        old_password = request.POST.get('old_password', '')
+        new_password = request.POST.get('new_password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+        
+        if not old_password or not new_password:
+            messages.error(request, 'يرجى ملء جميع الحقول')
+        elif not request.user.check_password(old_password):
+            messages.error(request, 'كلمة المرور الحالية غير صحيحة')
+        elif new_password != confirm_password:
+            messages.error(request, 'كلمات المرور غير متطابقة')
+        elif len(new_password) < 8:
+            messages.error(request, 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل')
+        else:
+            request.user.set_password(new_password)
+            request.user.save()
+            
+            # Log password change
+            from .models import ActivityLog
+            ActivityLog.log(
+                user=request.user,
+                action='update',
+                model_type='user',
+                object_id=request.user.id,
+                object_repr=request.user.username,
+                description=f'تغيير كلمة المرور: {request.user.username}',
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                metadata={'action': 'password_change'}
+            )
+            
+            messages.success(request, 'تم تغيير كلمة المرور بنجاح')
+            return redirect('login')
+    
+    return render(request, 'properties/password_change.html')
+
+
+@login_required
+def user_dashboard(request):
+    """لوحة تحكم المستخدمين العاديين"""
+    # Get user's saved properties
+    saved_properties = []
+    try:
+        from .models import SavedProperty
+        saved_properties = SavedProperty.objects.filter(user=request.user).select_related('property', 'property__owner', 'property__broker')
+    except Exception:
+        saved_properties = []
+
+    # Get user's notifications
+    notifications = []
+    unread_notifications_count = 0
+    try:
+        notifications = Notification.objects.filter(user=request.user)[:20]
+        unread_notifications_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    except Exception:
+        notifications = []
+        unread_notifications_count = 0
+
+    # Get auctions user has joined
+    user_auctions = []
+    try:
+        from .models import AuctionParticipant
+        user_auctions = AuctionParticipant.objects.filter(user=request.user, verified=True).select_related('auction', 'auction__property')
+    except Exception:
+        user_auctions = []
+
+    # Get user's activity logs
+    activity_logs = []
+    try:
+        activity_logs = ActivityLog.objects.filter(user=request.user).order_by('-created_at')[:20]
+    except Exception:
+        activity_logs = []
+
+    return render(request, 'properties/user_dashboard.html', {
+        'saved_properties': saved_properties,
+        'notifications': notifications,
+        'unread_notifications_count': unread_notifications_count,
+        'user_auctions': user_auctions,
+        'activity_logs': activity_logs,
+    })
+
+
+@login_required
 def dashboard(request):
+    """لوحة تحكم الإدارة والدلال"""
+    # Check if user is admin or broker
+    if not request.user.is_superuser and not request.user.is_staff and not get_broker(request.user):
+        return redirect('user_dashboard')
+    
     properties = get_accessible_properties(request.user).prefetch_related('gallery_images', 'broker', 'owner')
     
     # Add pagination for properties
@@ -400,7 +572,7 @@ def dashboard(request):
     properties = paginator.get_page(page_number)
     
     # Get unread messages with optimized query
-    unread = get_accessible_messages(request.user).filter(is_read=False, is_archived=False).select_related('property')[:20]
+    unread = get_accessible_messages(request.user).filter(is_read=False)[:20]
     broker = get_broker(request.user)
     
     # Try to get notes with optimized query
@@ -462,6 +634,27 @@ def dashboard(request):
     stats['total'] = stats['total_properties']
     stats['featured'] = stats['featured_properties']
     stats['unread_messages'] = stats.get('unread_messages', 0)
+    
+    # Get subscription info for timer
+    subscription_info = None
+    try:
+        from .models import BrokerPlanSubscription
+        subscription = BrokerPlanSubscription.objects.filter(
+            broker=broker,
+            status='active'
+        ).first()
+        if subscription:
+            subscription_info = {
+                'seconds_remaining': subscription.get_seconds_remaining(),
+                'end_date': subscription.end_date,
+                'properties_used': subscription.properties_used,
+                'max_properties': subscription.plan.max_properties,
+                'plan_name': subscription.plan.name
+            }
+    except Exception:
+        subscription_info = None
+    
+    stats['subscription'] = subscription_info
 
     # Admin-only data
     all_conversations = []
@@ -539,7 +732,7 @@ def dashboard(request):
             # Try to get subscription requests
             try:
                 from .models import SubscriptionRequest
-                subscription_requests = SubscriptionRequest.objects.all().select_related('user', 'current_plan', 'requested_plan').order_by('-created_at')[:50]
+                subscription_requests = SubscriptionRequest.objects.all().select_related('broker', 'requested_plan', 'approved_by').order_by('-created_at')[:50]
             except Exception:
                 subscription_requests = []
         except Exception as e:
@@ -745,8 +938,444 @@ def admin_channel_verify(request, channel_id):
     channel.is_verified = True
     channel.save()
     
-    messages.success(request, f'تم توثيق قناة {channel.name} بنجاح')
+    messages.success(request, f'تم توثيق قناة {channel.name}')
     return redirect('admin_channels_list')
+
+
+@login_required
+@staff_required
+def admin_channel_delete(request, channel_id):
+    """Delete a broker channel."""
+    from .models import BrokerChannel
+    
+    if not request.user.is_superuser:
+        messages.error(request, 'ليس لديك صلاحية')
+        return redirect('dashboard')
+    
+    channel = get_object_or_404(BrokerChannel, id=channel_id)
+    channel_name = channel.name
+    channel.delete()
+    
+    messages.success(request, f'تم حذف قناة {channel_name}')
+    return redirect('admin_channels_list')
+
+
+@login_required
+@staff_required
+def admin_channel_activate(request, channel_id):
+    """Activate a suspended broker channel."""
+    from .models import BrokerChannel
+    
+    if not request.user.is_superuser:
+        messages.error(request, 'ليس لديك صلاحية')
+        return redirect('dashboard')
+    
+    channel = get_object_or_404(BrokerChannel, id=channel_id)
+    channel.status = 'active'
+    channel.save()
+    
+    messages.success(request, f'تم تفعيل قناة {channel.name}')
+    return redirect('admin_channels_list')
+
+
+@login_required
+@staff_required
+def admin_channel_properties(request, channel_id):
+    """View and manage properties in a broker channel."""
+    from .models import BrokerChannel, Property
+    
+    if not request.user.is_superuser:
+        messages.error(request, 'ليس لديك صلاحية')
+        return redirect('dashboard')
+    
+    channel = get_object_or_404(BrokerChannel, id=channel_id)
+    properties = Property.objects.filter(broker=channel.broker).select_related('owner', 'broker')
+    
+    status_filter = request.GET.get('status', 'all')
+    if status_filter != 'all':
+        properties = properties.filter(status=status_filter)
+    
+    properties = properties.order_by('-created_at')
+    
+    return render(request, 'properties/admin_channel_properties.html', {
+        'channel': channel,
+        'properties': properties,
+        'status_filter': status_filter,
+    })
+
+
+@login_required
+@staff_required
+def admin_channel_property_delete(request, channel_id, property_id):
+    """Delete a property from a broker channel."""
+    from .models import BrokerChannel, Property
+    
+    if not request.user.is_superuser:
+        messages.error(request, 'ليس لديك صلاحية')
+        return redirect('dashboard')
+    
+    channel = get_object_or_404(BrokerChannel, id=channel_id)
+    property = get_object_or_404(Property, id=property_id, broker=channel.broker)
+    
+    property_title = property.title
+    property.delete()
+    
+    # Update channel stats
+    channel.update_stats()
+    
+    messages.success(request, f'تم حذف عقار {property_title}')
+    return redirect('admin_channel_properties', channel_id=channel.id)
+
+
+@login_required
+def my_channel_view(request):
+    """View for broker's own channel management."""
+    from .models import BrokerChannel, Broker, ChannelPost, ChannelVideo, ChannelFollow, Message
+    
+    broker = get_broker(request.user)
+    
+    if not broker:
+        messages.error(request, 'ليس لديك قناة')
+        return redirect('dashboard')
+    
+    # Get or create channel
+    channel, created = BrokerChannel.objects.get_or_create(
+        broker=broker,
+        defaults={
+            'name': f'قناة {broker.display_name}',
+            'description': f'قناة الدلال {broker.display_name}',
+            'status': 'pending'
+        }
+    )
+    
+    # Get channel properties
+    properties = Property.objects.filter(broker=broker).select_related('owner', 'broker')
+    
+    status_filter = request.GET.get('status', 'all')
+    if status_filter != 'all':
+        properties = properties.filter(status=status_filter)
+    
+    properties = properties.order_by('-created_at')
+    
+    # Get channel posts and videos
+    posts = ChannelPost.objects.filter(channel=channel).order_by('-is_pinned', '-created_at')
+    videos = ChannelVideo.objects.filter(channel=channel).order_by('-is_featured', '-created_at')
+    
+    # Get last activity items
+    last_property = properties.first() if properties.exists() else None
+    last_post = posts.first() if posts.exists() else None
+    
+    # Get last message (if Message model exists)
+    try:
+        last_message = Message.objects.filter(channel=channel).order_by('-created_at').first()
+    except:
+        last_message = None
+    
+    # Get last follower
+    try:
+        last_follower = ChannelFollow.objects.filter(channel=channel).order_by('-created_at').first()
+    except:
+        last_follower = None
+    
+    return render(request, 'properties/my_channel.html', {
+        'channel': channel,
+        'properties': properties,
+        'posts': posts,
+        'videos': videos,
+        'status_filter': status_filter,
+        'broker': broker,
+        'last_property': last_property,
+        'last_post': last_post,
+        'last_message': last_message,
+        'last_follower': last_follower,
+    })
+
+
+@login_required
+def create_channel_post(request):
+    """Create a new post in the channel."""
+    from .models import BrokerChannel, Broker, ChannelPost, Property
+    
+    broker = get_broker(request.user)
+    
+    if not broker:
+        messages.error(request, 'ليس لديك قناة')
+        return redirect('dashboard')
+    
+    channel = get_object_or_404(BrokerChannel, broker=broker)
+    
+    if request.method == 'POST':
+        post_type = request.POST.get('post_type', 'text')
+        content = request.POST.get('content', '')
+        property_id = request.POST.get('property_id')
+        image = request.FILES.get('image')
+        video = request.FILES.get('video')
+        is_pinned = request.POST.get('is_pinned') == 'on'
+        is_advertisement = request.POST.get('is_advertisement') == 'on'
+        
+        post = ChannelPost.objects.create(
+            channel=channel,
+            post_type=post_type,
+            content=content,
+            image=image,
+            video=video,
+            is_pinned=is_pinned,
+            is_advertisement=is_advertisement
+        )
+        
+        if property_id:
+            try:
+                property = Property.objects.get(id=property_id, broker=broker)
+                post.property = property
+                post.save()
+            except Property.DoesNotExist:
+                pass
+        
+        # Notify followers
+        from .utils import create_notification
+        followers = channel.followers.all()
+        for follower in followers:
+            create_notification(
+                user=follower.user,
+                notification_type='channel_post',
+                title='منشور جديد في قناة متابعتك',
+                message=f'نشر {broker.display_name} منشوراً جديداً',
+                link=f'/channel/{channel.id}/'
+            )
+        
+        messages.success(request, 'تم نشر المنشور بنجاح')
+        return redirect('my_channel')
+    
+    # Get broker's properties for selection
+    broker_properties = Property.objects.filter(broker=broker, status='ready')
+    
+    return render(request, 'properties/create_channel_post.html', {
+        'channel': channel,
+        'broker_properties': broker_properties,
+    })
+
+
+@login_required
+def create_channel_video(request):
+    """Create a new short video in the channel."""
+    from .models import BrokerChannel, Broker, ChannelVideo
+    
+    broker = get_broker(request.user)
+    
+    if not broker:
+        messages.error(request, 'ليس لديك قناة')
+        return redirect('dashboard')
+    
+    channel = get_object_or_404(BrokerChannel, broker=broker)
+    
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        description = request.POST.get('description', '')
+        video_file = request.FILES.get('video_file')
+        thumbnail = request.FILES.get('thumbnail')
+        duration = request.POST.get('duration', 0)
+        is_featured = request.POST.get('is_featured') == 'on'
+        tags = request.POST.get('tags', '')
+        
+        video = ChannelVideo.objects.create(
+            channel=channel,
+            title=title,
+            description=description,
+            video_file=video_file,
+            thumbnail=thumbnail,
+            duration=int(duration),
+            is_featured=is_featured,
+            tags=tags
+        )
+        
+        # Notify followers
+        from .utils import create_notification
+        followers = channel.followers.all()
+        for follower in followers:
+            create_notification(
+                user=follower.user,
+                notification_type='channel_video',
+                title='فيديو جديد في قناة متابعتك',
+                message=f'رفع {broker.display_name} فيديو جديداً',
+                link=f'/channel/{channel.id}/videos/'
+            )
+        
+        messages.success(request, 'تم رفع الفيديو بنجاح')
+        return redirect('my_channel')
+    
+    return render(request, 'properties/create_channel_video.html', {
+        'channel': channel,
+    })
+
+
+@login_required
+def toggle_post_like(request, post_id):
+    """Toggle like on a channel post."""
+    from .models import ChannelPost, ChannelPostLike
+    
+    post = get_object_or_404(ChannelPost, id=post_id)
+    like, created = ChannelPostLike.objects.get_or_create(
+        user=request.user,
+        post=post
+    )
+    
+    if not created:
+        like.delete()
+        post.likes_count -= 1
+        post.save(update_fields=['likes_count'])
+        return JsonResponse({'liked': False, 'likes_count': post.likes_count})
+    else:
+        post.likes_count += 1
+        post.save(update_fields=['likes_count'])
+        
+        # Notify post author
+        if post.channel.broker.user != request.user:
+            from .utils import create_notification
+            create_notification(
+                user=post.channel.broker.user,
+                notification_type='post_like',
+                title='إعجاب جديد على منشورك',
+                message=f'أعجب {request.user.get_full_name() or request.user.username} بمنشورك',
+                link=f'/channel/{post.channel.id}/'
+            )
+        
+        return JsonResponse({'liked': True, 'likes_count': post.likes_count})
+
+
+@login_required
+def toggle_video_like(request, video_id):
+    """Toggle like on a channel video."""
+    from .models import ChannelVideo, ChannelVideoLike
+    
+    video = get_object_or_404(ChannelVideo, id=video_id)
+    like, created = ChannelVideoLike.objects.get_or_create(
+        user=request.user,
+        video=video
+    )
+    
+    if not created:
+        like.delete()
+        video.likes_count -= 1
+        video.save(update_fields=['likes_count'])
+        return JsonResponse({'liked': False, 'likes_count': video.likes_count})
+    else:
+        video.likes_count += 1
+        video.save(update_fields=['likes_count'])
+        
+        # Notify video author
+        if video.channel.broker.user != request.user:
+            from .utils import create_notification
+            create_notification(
+                user=video.channel.broker.user,
+                notification_type='video_like',
+                title='إعجاب جديد على فيديوك',
+                message=f'أعجب {request.user.get_full_name() or request.user.username} بفيديوك',
+                link=f'/channel/{video.channel.id}/videos/'
+            )
+        
+        return JsonResponse({'liked': True, 'likes_count': video.likes_count})
+
+
+@login_required
+def channel_public_view(request, channel_id):
+    """Public view of a broker's channel for users."""
+    from .models import BrokerChannel, ChannelPost, ChannelVideo, Property, Auction, Hotel, Resort, ChannelReview, ChannelFollow
+    
+    channel = get_object_or_404(BrokerChannel, id=channel_id, status='active')
+    
+    # Check if user is following
+    is_following = False
+    if request.user.is_authenticated:
+        is_following = ChannelFollow.objects.filter(
+            user=request.user,
+            channel=channel
+        ).exists()
+    
+    # Get filter parameters
+    tab = request.GET.get('tab', 'home')
+    property_type = request.GET.get('type', 'all')
+    sort_by = request.GET.get('sort', 'newest')
+    search_query = request.GET.get('q', '')
+    
+    # Get properties
+    properties = Property.objects.filter(broker=channel.broker)
+    
+    # Apply filters
+    if property_type == 'sale':
+        properties = properties.filter(status='ready')
+    elif property_type == 'rent':
+        properties = properties.filter(status='rent')
+    elif property_type == 'auction':
+        properties = properties.filter(status='auction')
+    
+    # Apply search
+    if search_query:
+        properties = properties.filter(
+            Q(title__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(location__icontains=search_query)
+        )
+    
+    # Apply sorting
+    if sort_by == 'newest':
+        properties = properties.order_by('-created_at')
+    elif sort_by == 'price_high':
+        properties = properties.order_by('-price')
+    elif sort_by == 'price_low':
+        properties = properties.order_by('price')
+    elif sort_by == 'most_viewed':
+        properties = properties.order_by('-views_count')
+    
+    # Get posts and videos
+    posts = ChannelPost.objects.filter(channel=channel, is_published=True).order_by('-is_pinned', '-created_at')
+    videos = ChannelVideo.objects.filter(channel=channel, is_published=True).order_by('-is_featured', '-created_at')
+    
+    # Get auctions
+    auctions = Auction.objects.filter(broker=channel.broker, approval_status='approved').order_by('-created_at')
+    
+    # Get hotels and resorts
+    hotels = Hotel.objects.filter(broker=channel.broker, is_published=True).order_by('-created_at')
+    resorts = Resort.objects.filter(broker=channel.broker, is_published=True).order_by('-created_at')
+    
+    # Get reviews
+    reviews = ChannelReview.objects.filter(channel=channel).order_by('-created_at')
+    
+    # Calculate real stats
+    properties_count = Property.objects.filter(broker=channel.broker).count()
+    posts_count = ChannelPost.objects.filter(channel=channel, is_published=True).count()
+    auctions_count = Auction.objects.filter(broker=channel.broker, approval_status='approved').count()
+    hotels_count = Hotel.objects.filter(broker=channel.broker, is_published=True).count()
+    resorts_count = Resort.objects.filter(broker=channel.broker, is_published=True).count()
+    
+    # Update channel stats
+    channel.properties_count = properties_count
+    channel.save(update_fields=['properties_count'])
+    
+    # Increment channel views
+    channel.increment_views()
+    
+    context = {
+        'channel': channel,
+        'posts': posts,
+        'videos': videos,
+        'properties': properties,
+        'auctions': auctions,
+        'hotels': hotels,
+        'resorts': resorts,
+        'reviews': reviews,
+        'is_following': is_following,
+        'tab': tab,
+        'property_type': property_type,
+        'sort_by': sort_by,
+        'search_query': search_query,
+        'properties_count': properties_count,
+        'posts_count': posts_count,
+        'auctions_count': auctions_count,
+        'hotels_count': hotels_count,
+        'resorts_count': resorts_count,
+    }
+    
+    return render(request, 'properties/channel_public.html', context)
 
 
 @login_required
@@ -1168,6 +1797,73 @@ def settings_security(request):
         return redirect('settings_security')
     
     return render(request, 'properties/settings_security.html', {'settings': settings, 'section': 'security'})
+
+
+@login_required
+@staff_required
+def social_auth_diagnostics(request):
+    """OAuth Diagnostics page for admin."""
+    from django.conf import settings
+    import os
+    
+    # Check environment variables
+    diagnostics = {
+        'google': {
+            'client_id': bool(settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY),
+            'client_secret': bool(settings.SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET),
+            'redirect_uri': settings.SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI,
+            'status': 'configured' if settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY and settings.SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET else 'missing_keys'
+        },
+        'facebook': {
+            'client_id': bool(settings.SOCIAL_AUTH_FACEBOOK_OAUTH2_KEY),
+            'client_secret': bool(settings.SOCIAL_AUTH_FACEBOOK_OAUTH2_SECRET),
+            'redirect_uri': settings.SOCIAL_AUTH_FACEBOOK_OAUTH2_REDIRECT_URI,
+            'status': 'configured' if settings.SOCIAL_AUTH_FACEBOOK_OAUTH2_KEY and settings.SOCIAL_AUTH_FACEBOOK_OAUTH2_SECRET else 'missing_keys'
+        },
+        'environment': {
+            'debug': settings.DEBUG,
+            'railway_domain': os.getenv('RAILWAY_PUBLIC_DOMAIN', 'Not set'),
+            'base_url': getattr(settings, 'BASE_URL', 'Not set'),
+        },
+        'backends': settings.AUTHENTICATION_BACKENDS,
+        'pipeline': settings.SOCIAL_AUTH_PIPELINE,
+    }
+    
+    return render(request, 'properties/social_auth_diagnostics.html', {
+        'diagnostics': diagnostics,
+        'section': 'social_auth',
+    })
+
+
+@login_required
+def social_settings(request):
+    """Social authentication settings page."""
+    from social_django.models import UserSocialAuth
+    
+    google_association = None
+    facebook_association = None
+    
+    try:
+        google_association = UserSocialAuth.objects.get(
+            user=request.user,
+            provider='google-oauth2'
+        )
+    except UserSocialAuth.DoesNotExist:
+        pass
+    
+    try:
+        facebook_association = UserSocialAuth.objects.get(
+            user=request.user,
+            provider='facebook'
+        )
+    except UserSocialAuth.DoesNotExist:
+        pass
+    
+    return render(request, 'properties/social_settings.html', {
+        'google_association': google_association,
+        'facebook_association': facebook_association,
+    })
+
 
 
 @login_required
@@ -1673,7 +2369,7 @@ def unified_search_view(request):
     
     # Search in Resorts
     if category in ['', 'resort']:
-        resort_queryset = Resort.objects.filter(is_active=True)
+        resort_queryset = Resort.objects.filter(status='active')
         
         if q:
             resort_queryset = resort_queryset.filter(
@@ -2013,7 +2709,7 @@ def channels_view(request):
 
 def broker_channel_detail(request, channel_id):
     """Individual broker channel page showing all properties from that broker."""
-    from .models import BrokerChannel
+    from .models import BrokerChannel, ChannelPost
     
     channel = get_object_or_404(BrokerChannel, id=channel_id)
     
@@ -2050,14 +2746,46 @@ def broker_channel_detail(request, channel_id):
     # Get all districts for filter
     districts = Property.objects.filter(broker=channel.broker).values_list('district', flat=True).distinct()
     
+    # Get channel posts
+    channel_posts = ChannelPost.objects.filter(
+        channel=channel,
+        status='published'
+    ).select_related('author').prefetch_related('likes', 'comments').order_by('-is_pinned', '-created_at')[:20]
+    
+    # Get featured properties
+    featured_properties = Property.objects.filter(
+        broker=channel.broker,
+        status__in=['ready', 'rent'],
+        is_featured=True
+    ).select_related('owner', 'broker').prefetch_related('gallery_images')[:6]
+    
+    # Get most viewed properties
+    most_viewed_properties = Property.objects.filter(
+        broker=channel.broker,
+        status__in=['ready', 'rent']
+    ).select_related('owner', 'broker').prefetch_related('gallery_images').order_by('-views_count')[:6]
+    
+    # Get new properties
+    new_properties = Property.objects.filter(
+        broker=channel.broker,
+        status__in=['ready', 'rent']
+    ).select_related('owner', 'broker').prefetch_related('gallery_images').order_by('-created_at')[:6]
+    
     # Get user's likes and saves if authenticated
     user_likes = set()
     user_saves = set()
     is_following = False
+    notifications_enabled = False
     if request.user.is_authenticated:
         user_likes = set(PropertyLike.objects.filter(user=request.user).values_list('property_id', flat=True))
         user_saves = set(PropertySave.objects.filter(user=request.user).values_list('property_id', flat=True))
-        # Check if user is following this channel (you can implement a follow model later)
+        # Check if user is following this channel
+        from .models import BrokerSubscription
+        is_following = BrokerSubscription.objects.filter(
+            user=request.user,
+            broker=channel.broker,
+            is_active=True
+        ).exists()
     
     return render(request, 'properties/broker_channel_detail.html', {
         'channel': channel,
@@ -2069,6 +2797,10 @@ def broker_channel_detail(request, channel_id):
         'user_likes': user_likes,
         'user_saves': user_saves,
         'is_following': is_following,
+        'channel_posts': channel_posts,
+        'featured_properties': featured_properties,
+        'most_viewed_properties': most_viewed_properties,
+        'new_properties': new_properties,
     })
 
 
@@ -2436,6 +3168,19 @@ def edit_property(request, property_id):
         messages.error(request, 'ليس لديك صلاحية تعديل هذا العقار')
         return redirect('dashboard')
     
+    # Check subscription status before editing property
+    broker = get_broker(request.user)
+    if broker:
+        broker.check_subscription_status()
+        if not broker.is_subscription_active() and not broker.can_edit_properties:
+            if broker.is_suspended:
+                messages.error(request, 'تم تعطيل حسابك مؤقتاً بسبب انتهاء الاشتراك. يرجى تجديد الاشتراك للاستمرار.')
+            elif not broker.is_subscription_active():
+                messages.error(request, 'انتهى اشتراكك. يرجى تجديد الاشتراك لتعديل العقارات.')
+            else:
+                messages.error(request, 'ليس لديك صلاحية تعديل العقارات.')
+            return redirect('dashboard')
+    
     # Get virtual tours
     try:
         virtual_tours = prop.virtual_tours.all()
@@ -2572,6 +3317,15 @@ def delete_property(request, property_id):
         if not can_delete_property(request.user, prop):
             messages.error(request, 'ليس لديك صلاحية حذف هذا العقار')
             return redirect('dashboard')
+        
+        # Check subscription status before deleting property
+        broker = get_broker(request.user)
+        if broker:
+            broker.check_subscription_status()
+            if not broker.can_delete_properties and not is_platform_admin(request.user):
+                messages.error(request, 'ليس لديك صلاحية حذف العقارات.')
+                return redirect('dashboard')
+        
         title = prop.display_title
         
         # Log activity before deletion
@@ -2814,35 +3568,6 @@ def auctions_list(request):
     })
 
 
-def auction_detail(request, auction_id):
-    auction = get_object_or_404(Auction, pk=auction_id)
-    bids = auction.bids.select_related('user').all().order_by('-amount', '-created_at')
-    
-    if request.method == 'POST' and request.user.is_authenticated:
-        form = BidForm(request.POST)
-        if form.is_valid():
-            bid = form.save(commit=False)
-            bid.auction = auction
-            bid.user = request.user
-            
-            # Validate bid amount
-            current_highest = auction.get_current_highest_bid()
-            if bid.amount <= current_highest:
-                messages.error(request, f'يجب أن يكون المبلغ أعلى من أعلى مزايدة الحالية: {current_highest:,}')
-            elif bid.amount < auction.starting_price:
-                messages.error(request, f'يجب أن يكون المبلغ أعلى من سعر البداية: {auction.starting_price:,}')
-            else:
-                bid.save()
-                messages.success(request, f'تم إضافة مزايدتك: {bid.amount:,}')
-                return redirect('auction_detail', auction_id=auction_id)
-    else:
-        form = BidForm()
-    
-    return render(request, 'properties/auction_detail.html', {
-        'auction': auction,
-        'bids': bids,
-        'form': form,
-    })
 
 
 def auction_terms(request):
@@ -2856,6 +3581,22 @@ def building_request_create(request):
         if form.is_valid():
             building_request = form.save(commit=False)
             building_request.user = request.user
+            
+            # Set publisher type
+            try:
+                from .models import Broker
+                broker = Broker.objects.get(user=request.user)
+                building_request.broker = broker
+                building_request.publisher_type = 'broker'
+            except Broker.DoesNotExist:
+                building_request.publisher_type = 'user'
+            
+            # Handle featured requests
+            if building_request.is_featured:
+                from datetime import timedelta
+                from django.utils import timezone
+                building_request.featured_until = timezone.now() + timedelta(days=30)
+            
             building_request.save()
             messages.success(request, 'تم إنشاء طلب البناء بنجاح')
             return redirect('building_request_detail', request_id=building_request.id)
@@ -2877,6 +3618,49 @@ def building_request_list(request):
     except Exception:
         building_requests = []
     return render(request, 'properties/building_request_list.html', {'building_requests': building_requests})
+
+
+def public_building_requests(request):
+    """صفحة عرض طلبات البناء العامة للمستخدمين"""
+    from django.db.models import Q
+    
+    # Get only public requests
+    building_requests = BuildingRequest.objects.filter(is_public=True).select_related('broker', 'user').order_by('-is_featured', '-created_at')
+    
+    # Apply filters
+    governorate = request.GET.get('governorate')
+    if governorate:
+        building_requests = building_requests.filter(governorate=governorate)
+    
+    project_type = request.GET.get('project_type')
+    if project_type:
+        building_requests = building_requests.filter(project_type__icontains=project_type)
+    
+    budget_min = request.GET.get('budget_min')
+    budget_max = request.GET.get('budget_max')
+    if budget_min:
+        building_requests = building_requests.filter(estimated_budget__gte=budget_min)
+    if budget_max:
+        building_requests = building_requests.filter(estimated_budget__lte=budget_max)
+    
+    # Search
+    search_query = request.GET.get('q')
+    if search_query:
+        building_requests = building_requests.filter(
+            Q(description__icontains=search_query) |
+            Q(project_type__icontains=search_query) |
+            Q(city__icontains=search_query) |
+            Q(district__icontains=search_query)
+        )
+    
+    return render(request, 'properties/public_building_requests.html', {
+        'building_requests': building_requests,
+        'governorate': governorate,
+        'project_type': project_type,
+        'budget_min': budget_min,
+        'budget_max': budget_max,
+        'search_query': search_query,
+    })
 
 
 @login_required
@@ -2994,23 +3778,29 @@ def auction_detail(request, auction_id):
     """View auction details with real-time updates"""
     auction = get_object_or_404(Auction, id=auction_id)
     
-    # Check if auction requires access code
-    if auction.access_code:
-        if 'auction_access' not in request.session or request.session['auction_access'] != auction.id:
-            if request.method == 'POST':
-                code = request.POST.get('access_code')
-                if code == auction.access_code:
-                    request.session['auction_access'] = auction.id
-                    return redirect('auction_detail', auction_id=auction.id)
-                else:
-                    messages.error(request, 'كود الدخول غير صحيح')
-            return render(request, 'properties/auction_access.html', {'auction': auction})
+    # Check if auction requires access
+    if auction.access_type != 'public':
+        # Check if user is the broker
+        if auction.broker and auction.broker.user == request.user:
+            pass  # Broker always has access
+        # Check if user has session access
+        elif request.session.get(f'auction_access_{auction_id}'):
+            pass  # User has access via session
+        # Check if user has a valid invitation
+        elif request.user.is_authenticated and AuctionInvitation.objects.filter(auction=auction, invited_user=request.user, status='accepted').exists():
+            pass  # User has access via invitation
+        else:
+            # Redirect to access code page
+            return redirect('auction_access_code', auction_id=auction_id)
     
     # Get auction data
     highest_bid = auction.get_current_highest_bid()
     total_bids = auction.get_total_bids()
     participant_count = auction.get_participant_count()
     time_remaining = auction.get_time_remaining()
+    
+    # Get bids list
+    bids = auction.bids.select_related('user').all().order_by('-amount', '-created_at')
     
     # Check if user is participant
     is_participant = False
@@ -3028,6 +3818,7 @@ def auction_detail(request, auction_id):
         'participant_count': participant_count,
         'time_remaining': time_remaining,
         'is_participant': is_participant,
+        'bids': bids,
     }
     return render(request, 'properties/auction_detail.html', context)
 
@@ -3338,32 +4129,38 @@ def hotels_list(request):
 def resorts_list(request):
     """View for listing and searching resorts"""
     form = ResortSearchForm(request.GET or None)
-    resorts = Resort.objects.filter(is_active=True)
+    resorts = Resort.objects.filter(status='active')
     
     if form.is_valid():
         # Filter by resort type
         if form.cleaned_data.get('resort_type'):
             resorts = resorts.filter(resort_type__in=form.cleaned_data['resort_type'])
         
-        # Filter by price range
-        if form.cleaned_data.get('price_range'):
-            resorts = resorts.filter(price_range__in=form.cleaned_data['price_range'])
-        
-        # Filter by accommodation types (JSON field)
-        if form.cleaned_data.get('accommodation_types'):
-            resorts = [r for r in resorts if any(at in r.accommodation_types for at in form.cleaned_data['accommodation_types'])]
-        
-        # Filter by facilities (JSON field)
-        if form.cleaned_data.get('facilities'):
-            resorts = [r for r in resorts if any(f in r.facilities for f in form.cleaned_data['facilities'])]
-        
-        # Filter by suitable for (JSON field)
-        if form.cleaned_data.get('suitable_for'):
-            resorts = [r for r in resorts if any(sf in r.suitable_for for sf in form.cleaned_data['suitable_for'])]
-        
         # Filter by governorate
         if form.cleaned_data.get('governorate'):
             resorts = resorts.filter(governorate=form.cleaned_data['governorate'])
+        
+        # Filter by rating
+        if form.cleaned_data.get('rating'):
+            rating = int(form.cleaned_data['rating'])
+            resorts = resorts.filter(rating__gte=rating)
+        
+        # Filter by price range
+        if form.cleaned_data.get('price_range'):
+            price_ranges = form.cleaned_data['price_range']
+            q_objects = Q()
+            for price_range in price_ranges:
+                if price_range == '0-50000':
+                    q_objects |= Q(max_price__lte=50000) | Q(min_price__lte=50000)
+                elif price_range == '50000-100000':
+                    q_objects |= Q(min_price__gte=50000, max_price__lte=100000)
+                elif price_range == '100000-200000':
+                    q_objects |= Q(min_price__gte=100000, max_price__lte=200000)
+                elif price_range == '200000-500000':
+                    q_objects |= Q(min_price__gte=200000, max_price__lte=500000)
+                elif price_range == '500000+':
+                    q_objects |= Q(min_price__gte=500000)
+            resorts = resorts.filter(q_objects)
     
     return render(request, 'properties/resorts_list.html', {
         'resorts': resorts,
@@ -3981,12 +4778,9 @@ def broker_messages_list(request):
             message_type=Message.TYPE_BROKER_MESSAGE
         ).select_related('sender')
     
-    # Filter by archived status
+    # Filter by archived status (not available on Message model)
     show_archived = request.GET.get('archived') == '1'
-    if show_archived:
-        messages_list = messages_list.filter(is_archived=True)
-    else:
-        messages_list = messages_list.filter(is_archived=False)
+    # Note: is_archived field not available on Message model, skipping this filter
     
     messages_list = messages_list.order_by('-created_at')
     
@@ -5152,23 +5946,28 @@ def user_settings(request):
 def user_settings_profile(request):
     """Update user profile settings"""
     settings_obj, _ = UserSettings.objects.get_or_create(user=request.user)
+    user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
     
     if request.method == 'POST':
         profile_form = UserProfileForm(request.POST, instance=settings_obj)
         basic_form = UserBasicInfoForm(request.POST, instance=request.user)
+        image_form = UserProfileImageForm(request.POST, request.FILES, instance=user_profile)
         
-        if profile_form.is_valid() and basic_form.is_valid():
+        if profile_form.is_valid() and basic_form.is_valid() and image_form.is_valid():
             profile_form.save()
             basic_form.save()
+            image_form.save()
             messages.success(request, 'تم تحديث الملف الشخصي بنجاح')
             return redirect('user_settings_profile')
     else:
         profile_form = UserProfileForm(instance=settings_obj)
         basic_form = UserBasicInfoForm(instance=request.user)
+        image_form = UserProfileImageForm(instance=user_profile)
     
     return render(request, 'properties/user_settings_profile.html', {
         'profile_form': profile_form,
         'basic_form': basic_form,
+        'image_form': image_form,
     })
 
 
@@ -5389,15 +6188,479 @@ def user_settings_account(request):
 
 @login_required
 def admin_panel(request):
-    """Redirect to unified dashboard — admin section."""
+    """لوحة تحكم الإدارة الرئيسية"""
     from .permissions import can_access_admin_panel
 
     if not can_access_admin_panel(request.user):
         messages.error(request, 'ليس لديك صلاحية للوصول إلى لوحة الإدارة')
         return redirect('home')
 
-    # Redirect to dashboard with users tab active
-    return redirect(f"{reverse('dashboard')}?tab=users")
+    from django.contrib.auth.models import User
+    from .models import Property, Broker, UserProfile, Auction, Bid, Notification, SubscriptionRequest, FinancialTransaction, PropertyPayment, Resort, ResortBooking
+
+    # إحصائيات المستخدمين
+    total_users = User.objects.count()
+    active_users = User.objects.filter(is_active=True).count()
+    admin_users = User.objects.filter(is_superuser=True).count()
+    broker_users = User.objects.filter(broker_profile__isnull=False).count()
+    regular_users = total_users - admin_users - broker_users
+
+    # إحصائيات العقارات
+    total_properties = Property.objects.count()
+    active_properties = Property.objects.filter(status='published').count()
+    pending_properties = Property.objects.filter(status=Property.STATUS_PENDING_APPROVAL).count()
+    draft_properties = Property.objects.filter(status=Property.STATUS_DRAFT).count()
+    sold_properties = Property.objects.filter(status='sold').count()
+    
+    # إحصائيات الدفع
+    total_payments = PropertyPayment.objects.count()
+    pending_payments = PropertyPayment.objects.filter(status=PropertyPayment.STATUS_PENDING).count()
+    completed_payments = PropertyPayment.objects.filter(status=PropertyPayment.STATUS_COMPLETED).count()
+    total_revenue = PropertyPayment.objects.filter(status=PropertyPayment.STATUS_COMPLETED).aggregate(
+        total=Sum('total_amount')
+    )['total'] or 0
+
+    # إحصائيات المزادات
+    total_auctions = Auction.objects.count()
+    active_auctions = Auction.objects.filter(status='active').count()
+    pending_auctions = Auction.objects.filter(approval_status='pending').count()
+    ended_auctions = Auction.objects.filter(status='ended').count()
+
+    # إحصائيات الدلالين
+    total_brokers = Broker.objects.count()
+    active_brokers = Broker.objects.filter(is_active=True).count()
+    verified_brokers = Broker.objects.filter(is_verified=True).count()
+
+    # إحصائيات المزايدات
+    total_bids = Bid.objects.count()
+
+    # إحصائيات المنتجعات
+    total_resorts = Resort.objects.count()
+    active_resorts = Resort.objects.filter(status='published').count()
+    featured_resorts = Resort.objects.filter(is_featured=True).count()
+
+    # إحصائيات الفنادق
+    total_hotels = Property.objects.filter(category='hotel').count()
+    active_hotels = Property.objects.filter(category='hotel', status='published').count()
+    hotel_bookings = ResortBooking.objects.filter(resort__resort_type='hotel').count()
+
+    # إحصائيات الحجوزات
+    total_bookings = ResortBooking.objects.count()
+    confirmed_bookings = ResortBooking.objects.filter(status='confirmed').count()
+    cancelled_bookings = ResortBooking.objects.filter(status='cancelled').count()
+
+    # المستخدمين الجدد (آخر 7 أيام)
+    from datetime import timedelta
+    week_ago = timezone.now() - timedelta(days=7)
+    new_users = User.objects.filter(date_joined__gte=week_ago).count()
+
+    # العقارات الجديدة (آخر 7 أيام)
+    new_properties = Property.objects.filter(created_at__gte=week_ago).count()
+
+    # الإشعارات غير المقروءة
+    from .models import NotificationRecipient
+    unread_notifications = NotificationRecipient.objects.filter(is_read=False).count()
+
+    # طلبات الاشتراك المعلقة
+    pending_subscription_requests = SubscriptionRequest.objects.filter(status='pending').count()
+
+    # المعاملات المالية (آخر 30 يوم)
+    month_ago = timezone.now() - timedelta(days=30)
+    recent_transactions = FinancialTransaction.objects.filter(created_at__gte=month_ago).count()
+
+    # النشاط الحديث
+    recent_activity = ActivityLog.objects.select_related('user').order_by('-created_at')[:10]
+
+    # العقارات المعلقة
+    pending_properties_list = Property.objects.filter(
+        status=Property.STATUS_PENDING_APPROVAL
+    ).select_related('owner', 'broker')[:5]
+    
+    # المدفوعات المعلقة
+    pending_payments_list = PropertyPayment.objects.filter(
+        status=PropertyPayment.STATUS_PENDING
+    ).select_related('property', 'broker')[:5]
+
+    # طلبات الاشتراك المعلقة
+    pending_subscription_requests_list = SubscriptionRequest.objects.filter(status='pending').select_related('broker', 'requested_plan')[:5]
+
+    # المستخدمين الجدد
+    new_users_list = User.objects.filter(date_joined__gte=week_ago).order_by('-date_joined')[:5]
+
+    # المزادات المعلقة
+    pending_auctions_list = Auction.objects.filter(approval_status='pending').select_related('property', 'broker')[:5]
+
+    context = {
+        'total_users': total_users,
+        'active_users': active_users,
+        'admin_users': admin_users,
+        'broker_users': broker_users,
+        'regular_users': regular_users,
+        'total_properties': total_properties,
+        'active_properties': active_properties,
+        'pending_properties': pending_properties,
+        'draft_properties': draft_properties,
+        'sold_properties': sold_properties,
+        'total_auctions': total_auctions,
+        'active_auctions': active_auctions,
+        'pending_auctions': pending_auctions,
+        'ended_auctions': ended_auctions,
+        'total_brokers': total_brokers,
+        'active_brokers': active_brokers,
+        'verified_brokers': verified_brokers,
+        'total_bids': total_bids,
+        'new_users': new_users,
+        'new_properties': new_properties,
+        'unread_notifications': unread_notifications,
+        'pending_subscription_requests': pending_subscription_requests,
+        'recent_transactions': recent_transactions,
+        'recent_activity': recent_activity,
+        'pending_properties_list': pending_properties_list,
+        'pending_payments_list': pending_payments_list,
+        'pending_subscription_requests_list': pending_subscription_requests_list,
+        'new_users_list': new_users_list,
+        'pending_auctions_list': pending_auctions_list,
+        'total_payments': total_payments,
+        'pending_payments': pending_payments,
+        'completed_payments': completed_payments,
+        'total_revenue': total_revenue,
+        'total_resorts': total_resorts,
+        'active_resorts': active_resorts,
+        'featured_resorts': featured_resorts,
+        'total_hotels': total_hotels,
+        'active_hotels': active_hotels,
+        'hotel_bookings': hotel_bookings,
+        'total_bookings': total_bookings,
+        'confirmed_bookings': confirmed_bookings,
+        'cancelled_bookings': cancelled_bookings,
+    }
+
+    return render(request, 'properties/admin_panel.html', context)
+
+
+@login_required
+def admin_contact_view(request):
+    """صفحة مراسلة الإدارة للدلال والمستخدمين"""
+    from .permissions import can_access_admin_panel, get_user_type
+    from django.contrib.auth.models import User
+    from .models import Broker, UserProfile, Conversation, Message
+
+    user_type = get_user_type(request.user)
+    
+    # البحث عن المستلمين
+    search_query = request.GET.get('search', '')
+    
+    if user_type == 'admin':
+        # الإدارة يمكنها مراسلة الجميع
+        recipients = User.objects.filter(is_active=True).exclude(id=request.user.id).select_related('broker_profile', 'user_profile')
+    elif user_type == 'broker':
+        # الدلال يمكنه مراسلة الإدارة فقط
+        recipients = User.objects.filter(
+            Q(is_superuser=True) | Q(is_staff=True)
+        ).exclude(id=request.user.id).distinct().select_related('broker_profile', 'user_profile')
+    else:
+        # المستخدم العادي يمكنه مراسلة الإدارة والدلالين فقط
+        recipients = User.objects.filter(
+            Q(is_superuser=True) | Q(is_staff=True) | Q(broker_profile__isnull=False)
+        ).exclude(id=request.user.id).distinct().select_related('broker_profile', 'user_profile')
+    
+    # تطبيق البحث
+    if search_query:
+        recipients = recipients.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+    
+    # Get conversations for the user
+    try:
+        conversations = Conversation.objects.filter(
+            participants=request.user
+        ).prefetch_related('participants', 'messages').order_by('-updated_at')
+    except:
+        conversations = []
+    
+    # Get active conversation
+    active_conversation_id = request.GET.get('conversation_id')
+    active_conversation = None
+    messages = []
+    
+    if active_conversation_id:
+        try:
+            active_conversation = Conversation.objects.get(
+                id=active_conversation_id,
+                participants=request.user
+            )
+            messages = active_conversation.messages.all().order_by('created_at')
+        except:
+            pass
+    
+    # Get total messages count
+    try:
+        total_messages = Message.objects.filter(
+            Q(sender=request.user) | Q(recipient=request.user)
+        ).count()
+    except:
+        total_messages = 0
+    
+    # Get unread count
+    try:
+        unread_count = Message.objects.filter(
+            recipient=request.user,
+            is_read=False
+        ).count()
+    except:
+        unread_count = 0
+    
+    if request.method == 'POST':
+        recipient_id = request.POST.get('recipient_id')
+        message_content = request.POST.get('message')
+        subject = request.POST.get('subject', '')
+        message_type = request.POST.get('message_type', 'support')
+        priority = request.POST.get('priority', 'normal')
+        
+        if not all([recipient_id, message_content]):
+            messages.error(request, 'يرجى ملء جميع الحقول')
+        else:
+            recipient = get_object_or_404(User, pk=recipient_id)
+            
+            # إنشاء محادثة جديدة أو استخدام محادثة موجودة
+            try:
+                conversation = Conversation.objects.filter(
+                    participants=request.user
+                ).filter(participants=recipient).first()
+                
+                if not conversation:
+                    conversation = Conversation.objects.create()
+                    conversation.participants.add(request.user, recipient)
+            except:
+                conversation = Conversation.objects.create()
+                conversation.participants.add(request.user, recipient)
+            
+            # إنشاء رسالة جديدة
+            msg = Message.objects.create(
+                conversation=conversation,
+                sender=request.user,
+                recipient=recipient,
+                content=message_content,
+                subject=subject,
+                message_type=message_type,
+                priority=priority,
+                is_read=False
+            )
+            
+            # Update conversation timestamp
+            conversation.updated_at = timezone.now()
+            conversation.save()
+            
+            # Create notification for recipient
+            from .utils import create_notification
+            create_notification(
+                user=recipient,
+                notification_type='message',
+                title='رسالة جديدة',
+                message=f'لديك رسالة جديدة من {request.user.get_full_name() or request.user.username}',
+                link=f'/dashboard/admin-contact/?conversation_id={conversation.id}'
+            )
+            
+            messages.success(request, 'تم إرسال الرسالة بنجاح')
+            return redirect(f'/dashboard/admin-contact/?conversation_id={conversation.id}')
+    
+    context = {
+        'recipients': recipients,
+        'user_type': user_type,
+        'search_query': search_query,
+        'conversations': conversations,
+        'active_conversation': active_conversation,
+        'messages': messages,
+        'active_conversation_id': active_conversation_id,
+        'total_messages': total_messages,
+        'unread_count': unread_count,
+    }
+    
+    return render(request, 'properties/admin_contact.html', context)
+
+
+# ==================== Messaging System Views ====================
+
+@login_required
+def conversations_list(request):
+    """قائمة المحادثات للمستخدم"""
+    from .models import Conversation, Message
+    
+    conversations = Conversation.objects.filter(
+        participants=request.user,
+        is_active=True
+    ).prefetch_related('participants', 'messages')
+    
+    # ترتيب المحادثات حسب آخر رسالة
+    conversations = sorted(
+        conversations,
+        key=lambda c: c.last_message_at or c.created_at,
+        reverse=True
+    )
+    
+    context = {
+        'conversations': conversations,
+    }
+    
+    return render(request, 'properties/conversations_list.html', context)
+
+
+@login_required
+def conversation_detail(request, conversation_id):
+    """تفاصيل المحادثة"""
+    from .models import Conversation, Message
+    
+    conversation = get_object_or_404(
+        Conversation,
+        conversation_id=conversation_id,
+        participants=request.user
+    )
+    
+    # الحصول على الرسائل
+    messages = conversation.messages.filter(
+        is_deleted_by_sender=False,
+        is_deleted_by_recipient=False
+    ).order_by('created_at')
+    
+    # تحديث آخر رسالة
+    if messages.exists():
+        conversation.last_message_at = messages.last().created_at
+        conversation.save(update_fields=['last_message_at'])
+    
+    # تحديث الرسائل غير المقروءة
+    unread_messages = messages.filter(
+        recipient=request.user,
+        is_read=False
+    )
+    unread_messages.update(is_read=True)
+    
+    context = {
+        'conversation': conversation,
+        'messages': messages,
+    }
+    
+    return render(request, 'properties/conversation_detail.html', context)
+
+
+@login_required
+def start_conversation(request, user_id):
+    """بدء محادثة جديدة مع مستخدم"""
+    from .models import Conversation, Message
+    from .permissions import can_send_message_to_user
+    
+    other_user = get_object_or_404(User, pk=user_id)
+    
+    # التحقق من صلاحية المراسلة
+    if not can_send_message_to_user(request.user, other_user):
+        messages.error(request, 'ليس لديك صلاحية لمراسلة هذا المستخدم')
+        return redirect('conversations_list')
+    
+    # التحقق من وجود محادثة سابقة
+    existing_conversation = Conversation.objects.filter(
+        participants=request.user,
+        conversation_type=Conversation.TYPE_DIRECT
+    ).filter(participants=other_user).first()
+    
+    if existing_conversation:
+        return redirect('conversation_detail', conversation_id=existing_conversation.conversation_id)
+    
+    # إنشاء محادثة جديدة
+    conversation = Conversation.objects.create(
+        conversation_type=Conversation.TYPE_DIRECT,
+        created_by=request.user
+    )
+    conversation.participants.add(request.user, other_user)
+    
+    return redirect('conversation_detail', conversation_id=conversation.conversation_id)
+
+
+@login_required
+def send_message(request):
+    """إرسال رسالة جديدة"""
+    from .models import Conversation, Message
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+    
+    conversation_id = request.POST.get('conversation_id')
+    content = request.POST.get('content')
+    message_type = request.POST.get('message_type', Message.TYPE_TEXT)
+    
+    if not all([conversation_id, content]):
+        return JsonResponse({'error': 'Missing required fields'}, status=400)
+    
+    conversation = get_object_or_404(
+        Conversation,
+        conversation_id=conversation_id,
+        participants=request.user
+    )
+    
+    # الحصول على المستلم
+    other_user = conversation.participants.exclude(id=request.user.id).first()
+    
+    if not other_user:
+        return JsonResponse({'error': 'No recipient found'}, status=400)
+    
+    # إنشاء الرسالة
+    message = Message.objects.create(
+        conversation=conversation,
+        sender=request.user,
+        recipient=other_user,
+        message_type=message_type,
+        content=content,
+        status=Message.STATUS_SENT
+    )
+    
+    # تحديث آخر رسالة في المحادثة
+    conversation.last_message_at = message.created_at
+    conversation.save(update_fields=['last_message_at'])
+    
+    return JsonResponse({
+        'success': True,
+        'message_id': message.id,
+        'content': message.content,
+        'created_at': message.created_at.isoformat(),
+    })
+
+
+@login_required
+def conversation_archive(request, conversation_id):
+    """أرشفة المحادثة"""
+    from .models import Conversation
+    
+    conversation = get_object_or_404(
+        Conversation,
+        conversation_id=conversation_id,
+        participants=request.user
+    )
+    
+    conversation.is_archived = not conversation.is_archived
+    conversation.save(update_fields=['is_archived'])
+    
+    return redirect('conversations_list')
+
+
+@login_required
+def conversation_delete(request, conversation_id):
+    """حذف المحادثة من جانب المستخدم"""
+    from .models import Conversation, ConversationParticipant
+    
+    conversation = get_object_or_404(
+        Conversation,
+        conversation_id=conversation_id,
+        participants=request.user
+    )
+    
+    # حذف المشارك من المحادثة
+    ConversationParticipant.objects.filter(
+        conversation=conversation,
+        user=request.user
+    ).delete()
+    
+    return redirect('conversations_list')
 
 
 @login_required
@@ -5417,13 +6680,16 @@ def admin_users_list(request):
 
     # Add user type to each user
     for user in users:
-        if user.is_superuser:
-            user.user_type = 'admin'
-        elif hasattr(user, 'broker_profile') and user.broker_profile:
-            user.user_type = 'broker'
-        elif hasattr(user, 'user_profile') and user.user_profile:
-            user.user_type = 'user'
-        else:
+        try:
+            if user.is_superuser:
+                user.user_type = 'admin'
+            elif hasattr(user, 'broker_profile') and user.broker_profile:
+                user.user_type = 'broker'
+            elif hasattr(user, 'user_profile') and user.user_profile:
+                user.user_type = 'user'
+            else:
+                user.user_type = 'unknown'
+        except:
             user.user_type = 'unknown'
 
     context = {
@@ -5533,16 +6799,19 @@ def admin_edit_user(request, user_id):
         user.save()
 
         # Update profile based on type
-        if hasattr(user, 'broker_profile'):
-            broker = user.broker_profile
-            broker.phone = request.POST.get('phone', '').strip()
-            broker.is_active = request.POST.get('is_active') == 'on'
-            broker.save()
-        elif hasattr(user, 'user_profile'):
-            profile = user.user_profile
-            profile.phone = request.POST.get('phone', '').strip()
-            profile.is_active = request.POST.get('is_active') == 'on'
-            profile.save()
+        try:
+            if hasattr(user, 'broker') and user.broker:
+                broker = user.broker
+                broker.phone = request.POST.get('phone', '').strip()
+                broker.is_active = request.POST.get('is_active') == 'on'
+                broker.save()
+            elif hasattr(user, 'userprofile') and user.userprofile:
+                profile = user.userprofile
+                profile.phone = request.POST.get('phone', '').strip()
+                profile.is_active = request.POST.get('is_active') == 'on'
+                profile.save()
+        except Exception as e:
+            messages.error(request, f'حدث خطأ: {str(e)}')
 
         messages.success(request, 'تم تحديث المستخدم بنجاح')
         return redirect('admin_users_list')
@@ -5608,14 +6877,17 @@ def admin_toggle_user(request, user_id):
     user.save()
 
     # Toggle profile active status
-    if hasattr(user, 'broker_profile'):
-        broker = user.broker_profile
-        broker.is_active = user.is_active
-        broker.save()
-    elif hasattr(user, 'user_profile'):
-        profile = user.user_profile
-        profile.is_active = user.is_active
-        profile.save()
+    try:
+        if hasattr(user, 'broker') and user.broker:
+            broker = user.broker
+            broker.is_active = user.is_active
+            broker.save()
+        elif hasattr(user, 'userprofile') and user.userprofile:
+            profile = user.userprofile
+            profile.is_active = user.is_active
+            profile.save()
+    except Exception as e:
+        messages.error(request, f'حدث خطأ: {str(e)}')
 
     status = 'تفعيل' if user.is_active else 'إيقاف'
     messages.success(request, f'تم {status} المستخدم بنجاح')
@@ -5738,9 +7010,17 @@ def chat_view(request):
 def channels_list_view(request):
     """View for displaying all broker channels"""
     channels = BrokerChannel.objects.filter(
-        is_active=True,
-        is_archived=False
+        status='active'
     ).select_related('broker').prefetch_related('followers')
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        channels = channels.filter(
+            Q(name__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(broker__display_name__icontains=search_query)
+        )
     
     # Get user's follows and saves
     user_follows = set()
@@ -5764,6 +7044,7 @@ def channels_list_view(request):
         'user_follows': user_follows,
         'user_saves': user_saves,
         'page_title': 'قنوات الدلالين',
+        'search_query': search_query,
     }
     
     return render(request, 'properties/channels.html', context)
@@ -5771,7 +7052,7 @@ def channels_list_view(request):
 
 def channel_detail_view(request, slug):
     """View for displaying a single broker channel"""
-    channel = get_object_or_404(BrokerChannel, slug=slug, is_active=True, is_archived=False)
+    channel = get_object_or_404(BrokerChannel, slug=slug, status='active')
     
     # Get tab filter
     tab = request.GET.get('tab', 'all')
@@ -5884,3 +7165,4075 @@ def save_channel_view(request, channel_id):
         'action': action
     })
 
+
+@login_required
+def create_auction_view(request):
+    """إنشاء مزاد جديد - للإدارة والدلال فقط"""
+    from django.utils import timezone
+    from decimal import Decimal
+    
+    # التحقق من الصلاحيات
+    if not request.user.is_staff and not hasattr(request.user, 'broker'):
+        messages.error(request, 'غير مصرح لك بإنشاء مزادات')
+        return redirect('home')
+    
+    if request.method == 'POST':
+        try:
+            property_id = request.POST.get('property')
+            auction_type = request.POST.get('auction_type')
+            title = request.POST.get('title')
+            description = request.POST.get('description')
+            starting_price = request.POST.get('starting_price')
+            minimum_increment = request.POST.get('minimum_increment', 100000)
+            reserve_price = request.POST.get('reserve_price')
+            start_date = request.POST.get('start_date')
+            end_date = request.POST.get('end_date')
+            deposit_amount = request.POST.get('deposit_amount', 0)
+            terms = request.POST.get('terms')
+            contact_phone = request.POST.get('contact_phone')
+            contact_email = request.POST.get('contact_email')
+            max_participants = request.POST.get('max_participants')
+            
+            # التحقق من البيانات
+            if not all([property_id, title, description, starting_price, start_date, end_date, terms]):
+                messages.error(request, 'يرجى ملء جميع الحقول المطلوبة')
+                return redirect('create_auction')
+            
+            # الحصول على العقار
+            property_obj = get_object_or_404(Property, id=property_id)
+            
+            # تحديد الدلال
+            broker = None
+            if hasattr(request.user, 'broker'):
+                broker = request.user.broker
+            
+            # تحديد حالة الموافقة
+            approval_status = 'approved' if request.user.is_staff else 'pending'
+            approved_by = request.user if request.user.is_staff else None
+            approved_at = timezone.now() if request.user.is_staff else None
+            
+            # إنشاء المزاد
+            auction = Auction.objects.create(
+                property=property_obj,
+                broker=broker,
+                auction_type=auction_type,
+                title=title,
+                description=description,
+                starting_price=Decimal(starting_price),
+                minimum_increment=Decimal(minimum_increment),
+                reserve_price=Decimal(reserve_price) if reserve_price else None,
+                start_date=start_date,
+                end_date=end_date,
+                deposit_amount=Decimal(deposit_amount),
+                terms=terms,
+                contact_phone=contact_phone,
+                contact_email=contact_email,
+                max_participants=int(max_participants) if max_participants else None,
+                approval_status=approval_status,
+                approved_by=approved_by,
+                approved_at=approved_at
+            )
+            
+            if request.user.is_staff:
+                messages.success(request, 'تم إنشاء المزاد بنجاح')
+            else:
+                messages.success(request, 'تم إرسال طلب إنشاء المزاد للإدارة للمراجعة')
+            
+            return redirect('auction_detail', auction.id)
+            
+        except Exception as e:
+            messages.error(request, f'حدث خطأ: {str(e)}')
+            return redirect('create_auction')
+    
+    # عرض نموذج الإنشاء
+    properties_list = Property.objects.filter(status='active')
+    
+    return render(request, 'properties/create_auction.html', {
+        'properties': properties_list,
+        'auction_types': Auction.AUCTION_TYPES
+    })
+
+
+@login_required
+def auction_approval_view(request):
+    """إدارة موافقة المزادات - للإدارة فقط"""
+    if not request.user.is_staff:
+        messages.error(request, 'غير مصرح لك بالوصول إلى هذه الصفحة')
+        return redirect('home')
+    
+    pending_auctions = Auction.objects.filter(approval_status='pending')
+    
+    if request.method == 'POST':
+        auction_id = request.POST.get('auction_id')
+        action = request.POST.get('action')
+        rejection_reason = request.POST.get('rejection_reason', '')
+        
+        auction = get_object_or_404(Auction, id=auction_id)
+        
+        if action == 'approve':
+            auction.approval_status = 'approved'
+            auction.approved_by = request.user
+            auction.approved_at = timezone.now()
+            auction.save()
+            messages.success(request, 'تمت الموافقة على المزاد')
+            
+            # إرسال إشعار للدلال
+            if auction.broker:
+                Notification.objects.create(
+                    user=auction.broker.user,
+                    title='تمت الموافقة على مزادك',
+                    message=f'تمت الموافقة على مزاد "{auction.title}"',
+                    link=f'/auction/{auction.id}/'
+                )
+                
+        elif action == 'reject':
+            auction.approval_status = 'rejected'
+            auction.rejection_reason = rejection_reason
+            auction.save()
+            messages.success(request, 'تم رفض المزاد')
+            
+            # إرسال إشعار للدلال
+            if auction.broker:
+                Notification.objects.create(
+                    user=auction.broker.user,
+                    title='تم رفض مزادك',
+                    message=f'تم رفض مزاد "{auction.title}". السبب: {rejection_reason}',
+                    link=f'/auction/{auction.id}/'
+                )
+                
+        elif action == 'request_revision':
+            auction.approval_status = 'needs_revision'
+            auction.rejection_reason = rejection_reason
+            auction.save()
+            messages.success(request, 'تم طلب تعديل المزاد')
+            
+            # إرسال إشعار للدلال
+            if auction.broker:
+                Notification.objects.create(
+                    user=auction.broker.user,
+                    title='يحتاج تعديل',
+                    message=f'مزاد "{auction.title}" يحتاج تعديل. {rejection_reason}',
+                    link=f'/auction/{auction.id}/edit/'
+                )
+        
+        return redirect('auction_approval')
+    
+    return render(request, 'properties/auction_approval.html', {
+        'pending_auctions': pending_auctions
+    })
+
+
+@login_required
+def auction_detail_view(request, auction_id):
+    """صفحة تفاصيل المزاد مع المزايدة الحية"""
+    auction = get_object_or_404(Auction, id=auction_id)
+    
+    # التحقق من الموافقة للمزادات التي لم تتم الموافقة عليها بعد
+    if auction.approval_status != 'approved' and not request.user.is_staff:
+        if auction.broker and auction.broker.user == request.user:
+            pass  # الدلال يمكنه رؤية مزاده
+        else:
+            messages.error(request, 'هذا المزاد قيد المراجعة')
+            return redirect('auctions_list')
+    
+    # التحقق من التسجيل
+    is_participant = False
+    if request.user.is_authenticated:
+        is_participant = auction.participants.filter(user=request.user).exists()
+    
+    # الحصول على المزايدات
+    bids = auction.bids.select_related('user').order_by('-created_at')[:10]
+    
+    # الحصول على أعلى مزايدة
+    highest_bid = auction.get_current_highest_bid()
+    
+    # الوقت المتبقي
+    time_remaining = auction.get_time_remaining()
+    
+    return render(request, 'properties/auction_detail.html', {
+        'auction': auction,
+        'is_participant': is_participant,
+        'bids': bids,
+        'highest_bid': highest_bid,
+        'time_remaining': time_remaining
+    })
+
+
+@login_required
+def join_auction_view(request, auction_id):
+    """التسجيل في المزاد"""
+    auction = get_object_or_404(Auction, id=auction_id)
+    
+    # التحقق من أن المزاد موافق عليه
+    if auction.approval_status != 'approved':
+        messages.error(request, 'هذا المزاد غير متاح للتسجيل')
+        return redirect('auction_detail', auction.id)
+    
+    # التحقق من أن المستخدم ليس مسجلاً بالفعل
+    if auction.participants.filter(user=request.user).exists():
+        messages.error(request, 'أنت مسجل بالفعل في هذا المزاد')
+        return redirect('auction_detail', auction.id)
+    
+    # التحقق من الحد الأقصى للمشاركين
+    if auction.max_participants and auction.participants.count() >= auction.max_participants:
+        messages.error(request, 'تم الوصول للحد الأقصى للمشاركين')
+        return redirect('auction_detail', auction.id)
+    
+    if request.method == 'POST':
+        phone = request.POST.get('phone')
+        email = request.POST.get('email')
+        terms_accepted = request.POST.get('terms_accepted')
+        
+        if not all([phone, email, terms_accepted]):
+            messages.error(request, 'يرجى ملء جميع الحقول والموافقة على الشروط')
+            return redirect('auction_detail', auction.id)
+        
+        # إنشاء مشارك
+        participant = AuctionParticipant.objects.create(
+            auction=auction,
+            user=request.user,
+            phone=phone,
+            email=email,
+            approval_status='pending'  # يحتاج موافقة الإدارة إذا كان مفعل
+        )
+        
+        # إذا كان مبلغ التأمين 0، يتم الموافقة تلقائياً
+        if auction.deposit_amount == 0:
+            participant.approval_status = 'approved'
+            participant.approved_at = timezone.now()
+            participant.save()
+            messages.success(request, 'تم التسجيل في المزاد بنجاح')
+        else:
+            messages.success(request, 'تم التسجيل في المزاد. يرجى دفع مبلغ التأمين')
+        
+        return redirect('auction_detail', auction.id)
+    
+    return redirect('auction_detail', auction.id)
+
+
+@login_required
+def place_bid_view(request, auction_id):
+    """المزايدة (AJAX)"""
+    from decimal import Decimal
+    
+    auction = get_object_or_404(Auction, id=auction_id)
+    
+    # التحقق من أن المزاد نشط
+    if not auction.is_active():
+        return JsonResponse({
+            'success': False,
+            'error': 'المزاد غير نشط حالياً'
+        })
+    
+    # التحقق من أن المستخدم مشارك وموافق عليه
+    try:
+        participant = auction.participants.get(user=request.user)
+        if participant.approval_status != 'approved':
+            return JsonResponse({
+                'success': False,
+                'error': 'لم يتم الموافقة على مشاركتك بعد'
+            })
+    except AuctionParticipant.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'يجب التسجيل في المزاد أولاً'
+        })
+    
+    if request.method == 'POST':
+        bid_amount = request.POST.get('bid_amount')
+        
+        try:
+            bid_amount = Decimal(bid_amount)
+        except:
+            return JsonResponse({
+                'success': False,
+                'error': 'قيمة المزايدة غير صحيحة'
+            })
+        
+        # التحقق من الحد الأدنى
+        current_highest = auction.get_current_highest_bid()
+        minimum_bid = current_highest + auction.minimum_increment
+        
+        if bid_amount < minimum_bid:
+            return JsonResponse({
+                'success': False,
+                'error': f'أقل مزايدة مسموحة هي {minimum_bid:,} د.ع'
+            })
+        
+        # إنشاء المزايدة
+        bid = Bid.objects.create(
+            auction=auction,
+            user=request.user,
+            amount=bid_amount
+        )
+        
+        # التحقق من التمديد التلقائي
+        if auction.should_extend():
+            auction.extend_auction()
+        
+        return JsonResponse({
+            'success': True,
+            'bid_amount': str(bid_amount),
+            'current_highest': str(auction.get_current_highest_bid()),
+            'message': 'تمت المزايدة بنجاح'
+        })
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'طلب غير صحيح'
+    })
+
+
+# ==================== Payment System Views ====================
+
+@login_required
+def property_publication(request, slug):
+    """View for choosing publication type and duration"""
+    property = get_object_or_404(Property, slug=slug)
+    
+    # Check ownership
+    if property.owner != request.user:
+        messages.error(request, 'ليس لديك صلاحية نشر هذا العقار')
+        return redirect('property_detail', slug=slug)
+    
+    # Get pricing settings (default: 50 IQD per day)
+    from django.conf import settings
+    daily_price = getattr(settings, 'DAILY_PROPERTY_PRICE', 50.00)
+    featured_price = getattr(settings, 'FEATURED_PROPERTY_PRICE', 0.00)
+    
+    if request.method == 'POST':
+        form = PropertyPublicationForm(request.POST, daily_price=daily_price, featured_price=featured_price)
+        if form.is_valid():
+            publication_type = form.cleaned_data['publication_type']
+            publication_days = form.cleaned_data['publication_days']
+            
+            # Store in session for payment step
+            request.session['publication_data'] = {
+                'property_id': property.id,
+                'publication_type': publication_type,
+                'publication_days': publication_days,
+                'daily_price': str(daily_price),
+                'featured_price': str(featured_price),
+                'total_amount': str(form.calculate_total()),
+            }
+            
+            return redirect('property_payment', slug=slug)
+    else:
+        form = PropertyPublicationForm(daily_price=daily_price, featured_price=featured_price)
+    
+    context = {
+        'property': property,
+        'form': form,
+        'daily_price': daily_price,
+        'featured_price': featured_price,
+    }
+    
+    return render(request, 'properties/property_publication.html', context)
+
+
+@login_required
+def property_payment(request, slug):
+    """View for processing property payment"""
+    property = get_object_or_404(Property, slug=slug)
+    
+    # Check ownership
+    if property.owner != request.user:
+        messages.error(request, 'ليس لديك صلاحية دفع هذا العقار')
+        return redirect('property_detail', slug=slug)
+    
+    # Get publication data from session
+    publication_data = request.session.get('publication_data')
+    if not publication_data or publication_data.get('property_id') != property.id:
+        messages.error(request, 'يجب اختيار خطة النشر أولاً')
+        return redirect('property_publication', slug=slug)
+    
+    broker = get_broker(request.user)
+    if not broker:
+        messages.error(request, 'يجب أن تكون دلالاً لنشر العقارات')
+        return redirect('dashboard')
+    
+    payment_methods = PaymentMethod.objects.filter(is_active=True)
+    
+    if request.method == 'POST':
+        form = PropertyPaymentForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Create payment record
+            payment = PropertyPayment.objects.create(
+                property=property,
+                broker=broker,
+                payment_method=form.cleaned_data['payment_method'],
+                publication_type=publication_data['publication_type'],
+                days=int(publication_data['publication_days']),
+                daily_price=Decimal(publication_data['daily_price']),
+                featured_price=Decimal(publication_data['featured_price']),
+                total_amount=Decimal(publication_data['total_amount']),
+                payment_proof=form.cleaned_data.get('payment_proof'),
+                status=PropertyPayment.STATUS_PENDING,
+            )
+            
+            # Update property status
+            property.status = Property.STATUS_PAID
+            property.publication_type = publication_data['publication_type']
+            property.publication_days = int(publication_data['publication_days'])
+            property.save()
+            
+            # Create notification
+            PropertyNotification.objects.create(
+                user=request.user,
+                property=property,
+                notification_type=PropertyNotification.TYPE_PAYMENT_SUCCESS,
+                title='تم استلام طلب الدفع',
+                message=f'تم استلام طلب دفع لنشر العقار: {property.display_title}. سيتم مراجعة الدفع من قبل الإدارة.'
+            )
+            
+            # Clear session data
+            del request.session['publication_data']
+            
+            messages.success(request, 'تم استلام طلب الدفع بنجاح. سيتم مراجعته من قبل الإدارة.')
+            return redirect('dashboard')
+    else:
+        form = PropertyPaymentForm()
+    
+    context = {
+        'property': property,
+        'form': form,
+        'payment_methods': payment_methods,
+        'publication_type_display': 'مميز' if publication_data['publication_type'] == 'featured' else 'عادي',
+        'publication_days': publication_data['publication_days'],
+        'daily_price': Decimal(publication_data['daily_price']),
+        'featured_price': Decimal(publication_data['featured_price']),
+        'total_amount': Decimal(publication_data['total_amount']),
+    }
+    
+    return render(request, 'properties/property_payment.html', context)
+
+
+@login_required
+@staff_required
+def approve_property_payment(request, payment_id):
+    """Admin view to approve property payment"""
+    payment = get_object_or_404(PropertyPayment, id=payment_id)
+    
+    if payment.status != PropertyPayment.STATUS_PENDING:
+        messages.error(request, 'هذا الدفع ليس في حالة انتظار')
+        return redirect('admin_panel')
+    
+    if request.method == 'POST':
+        payment.status = PropertyPayment.STATUS_COMPLETED
+        payment.approved_by = request.user
+        payment.approved_at = timezone.now()
+        payment.payment_date = timezone.now()
+        
+        # Set publication dates
+        payment.publication_start_date = timezone.now()
+        from datetime import timedelta
+        payment.publication_end_date = timezone.now() + timedelta(days=payment.days)
+        
+        payment.save()
+        
+        # Update property status
+        property = payment.property
+        property.status = Property.STATUS_PUBLISHED
+        property.publication_start_date = payment.publication_start_date
+        property.publication_end_date = payment.publication_end_date
+        property.save()
+        
+        # Create notification
+        PropertyNotification.objects.create(
+            user=payment.broker.user,
+            property=property,
+            notification_type=PropertyNotification.TYPE_PROPERTY_APPROVED,
+            title='تم قبول الدفع وبدء النشر',
+            message=f'تم قبول دفع العقار: {property.display_title}. بدأ النشر الآن.'
+        )
+        
+        messages.success(request, 'تم قبول الدفع وبدء النشر بنجاح')
+        return redirect('admin_panel')
+    
+    context = {
+        'payment': payment,
+        'property': payment.property,
+    }
+    
+    return render(request, 'properties/approve_payment.html', context)
+
+
+# ==================== New Category Views ====================
+
+def properties_inside_iraq_view(request):
+    """View for properties inside Iraq with category selection"""
+    # Get filters from query parameters
+    property_type = request.GET.get('property_type', 'all')
+    listing_type = request.GET.get('listing_type', 'all')
+    governorate = request.GET.get('governorate', '')
+    city = request.GET.get('city', '')
+    price_min = request.GET.get('price_min', '')
+    price_max = request.GET.get('price_max', '')
+    area_min = request.GET.get('area_min', '')
+    area_max = request.GET.get('area_max', '')
+    
+    # Get properties inside Iraq
+    properties = get_public_properties()
+    properties = [p for p in properties if p.country and p.country.code == 'IQ']
+    
+    # Apply filters
+    if property_type != 'all':
+        properties = [p for p in properties if p.type == property_type]
+    
+    if listing_type == 'sale':
+        properties = [p for p in properties if p.status == 'ready']
+    elif listing_type == 'rent':
+        properties = [p for p in properties if p.status == 'rent']
+    
+    if governorate:
+        properties = [p for p in properties if p.governorate == governorate]
+    
+    if city:
+        properties = [p for p in properties if p.city == city]
+    
+    if price_min:
+        properties = [p for p in properties if p.price >= int(price_min)]
+    if price_max:
+        properties = [p for p in properties if p.price <= int(price_max)]
+    
+    if area_min:
+        properties = [p for p in properties if p.area >= int(area_min)]
+    if area_max:
+        properties = [p for p in properties if p.area <= int(area_max)]
+    
+    # Get user's likes and saves if authenticated
+    user_likes = set()
+    user_saves = set()
+    if request.user.is_authenticated:
+        user_likes = set(PropertyLike.objects.filter(user=request.user).values_list('property_id', flat=True))
+        user_saves = set(PropertySave.objects.filter(user=request.user).values_list('property_id', flat=True))
+    
+    return render(request, 'properties/categories/inside_iraq.html', {
+        'properties': properties,
+        'property_type': property_type,
+        'listing_type': listing_type,
+        'governorate': governorate,
+        'city': city,
+        'user_likes': user_likes,
+        'user_saves': user_saves,
+        'category_title': 'عقارات داخل العراق',
+        'category_icon': '🏠',
+    })
+
+
+def hotels_category_view(request):
+    """View for hotels category"""
+    from properties.models import PropertyHotel
+    
+    # Get filters
+    star_rating = request.GET.get('star_rating', '')
+    price_min = request.GET.get('price_min', '')
+    price_max = request.GET.get('price_max', '')
+    
+    hotels = PropertyHotel.objects.all()
+    
+    if star_rating:
+        hotels = hotels.filter(star_rating=int(star_rating))
+    
+    if price_min:
+        hotels = [h for h in hotels if h.price_per_night and h.price_per_night >= int(price_min)]
+    if price_max:
+        hotels = [h for h in hotels if h.price_per_night and h.price_per_night <= int(price_max)]
+    
+    return render(request, 'properties/categories/hotels.html', {
+        'hotels': hotels,
+        'star_rating': star_rating,
+        'price_min': price_min,
+        'price_max': price_max,
+        'category_title': 'فنادق',
+        'category_icon': '🏨',
+    })
+
+
+def resorts_category_view(request):
+    """View for resorts category"""
+    from properties.models import PropertyResort
+    
+    # Get filters
+    resort_type = request.GET.get('resort_type', '')
+    price_min = request.GET.get('price_min', '')
+    price_max = request.GET.get('price_max', '')
+    
+    resorts = PropertyResort.objects.all()
+    
+    if resort_type:
+        resorts = resorts.filter(resort_type=resort_type)
+    
+    if price_min:
+        resorts = [r for r in resorts if r.price_per_night and r.price_per_night >= int(price_min)]
+    if price_max:
+        resorts = [r for r in resorts if r.price_per_night and r.price_per_night <= int(price_max)]
+    
+    return render(request, 'properties/categories/resorts.html', {
+        'resorts': resorts,
+        'resort_type': resort_type,
+        'price_min': price_min,
+        'price_max': price_max,
+        'category_title': 'منتجعات وأماكن سياحية',
+        'category_icon': '🏖️',
+    })
+
+
+def outside_iraq_category_view(request):
+    """View for properties outside Iraq category"""
+    from properties.models import Country, City, Area
+    
+    # Get filters
+    country_id = request.GET.get('country', '')
+    city_id = request.GET.get('city', '')
+    property_type = request.GET.get('property_type', 'all')
+    price_min = request.GET.get('price_min', '')
+    price_max = request.GET.get('price_max', '')
+    
+    properties = get_public_properties()
+    properties = [p for p in properties if p.country and p.country.code != 'IQ']
+    
+    if country_id:
+        properties = [p for p in properties if p.country_id == int(country_id)]
+    
+    if city_id:
+        properties = [p for p in properties if p.city_id == int(city_id)]
+    
+    if property_type != 'all':
+        properties = [p for p in properties if p.type == property_type]
+    
+    if price_min:
+        properties = [p for p in properties if p.price >= int(price_min)]
+    if price_max:
+        properties = [p for p in properties if p.price <= int(price_max)]
+    
+    # Get all countries
+    countries = Country.objects.filter(is_active=True).order_by('name_ar')
+    
+    # Get user's likes and saves if authenticated
+    user_likes = set()
+    user_saves = set()
+    if request.user.is_authenticated:
+        user_likes = set(PropertyLike.objects.filter(user=request.user).values_list('property_id', flat=True))
+        user_saves = set(PropertySave.objects.filter(user=request.user).values_list('property_id', flat=True))
+    
+    return render(request, 'properties/categories/outside_iraq.html', {
+        'properties': properties,
+        'countries': countries,
+        'country_id': country_id,
+        'city_id': city_id,
+        'property_type': property_type,
+        'price_min': price_min,
+        'price_max': price_max,
+        'user_likes': user_likes,
+        'user_saves': user_saves,
+        'category_title': 'عقارات خارج العراق',
+        'category_icon': '🌍',
+    })
+
+
+# ==================== Dynamic Property Addition View ====================
+
+def handle_media_uploads(request, property):
+    """Handle media uploads for properties (images, videos, 360°)"""
+    from .models import PropertyImage, PropertyVideo
+    
+    # Handle cover image (main property field)
+    if 'cover_image' in request.FILES:
+        property.cover_image = request.FILES['cover_image']
+        property.save(update_fields=['cover_image'])
+    
+    # Handle personal image
+    if 'personal_image' in request.FILES:
+        property.personal_image = request.FILES['personal_image']
+        property.save(update_fields=['personal_image'])
+    
+    # Handle additional images (max 10) - stored in PropertyImage model
+    if 'additional_images' in request.FILES:
+        additional_files = request.FILES.getlist('additional_images')
+        for idx, img_file in enumerate(additional_files[:10]):  # Limit to 10 images
+            PropertyImage.objects.create(
+                property=property,
+                image=img_file,
+                is_primary=False,
+                image_type='photo',
+                sort_order=idx + 1
+            )
+    
+    # Handle property video
+    if 'property_video' in request.FILES:
+        video_file = request.FILES['property_video']
+        PropertyVideo.objects.create(
+            property=property,
+            video=video_file,
+            sort_order=0
+        )
+    
+    # Handle 360° images
+    if '360_images' in request.FILES:
+        files_360 = request.FILES.getlist('360_images')
+        for idx, img_360 in enumerate(files_360):
+            PropertyImage.objects.create(
+                property=property,
+                image=img_360,
+                is_primary=False,
+                image_type='360',
+                sort_order=idx + 100  # Use higher sort order for 360 images
+            )
+
+
+@login_required
+def dynamic_add_property(request):
+    """View for dynamic property addition based on category"""
+    from .forms import (
+        DynamicPropertyForm, PropertyInsideIraqForm, 
+        PropertyOutsideIraqForm, PropertyHotelForm, PropertyResortForm
+    )
+    from .models import PropertyImage, PropertyVideo, BrokerPlanSubscription
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    category_form = DynamicPropertyForm(request.POST or None)
+    property_form = None
+    template_name = 'properties/dynamic_add_property.html'
+    
+    if request.method == 'POST':
+        category = request.POST.get('category')
+        publication_type = request.POST.get('publication_type', 'normal')
+        publication_days = request.POST.get('publication_days')
+        
+        # Check if user has premium subscription for featured/pinned ads
+        if publication_type in ['featured', 'pinned']:
+            if hasattr(request.user, 'broker'):
+                active_subscription = BrokerPlanSubscription.objects.filter(
+                    broker=request.user.broker,
+                    status='active',
+                    end_date__gt=timezone.now()
+                ).first()
+                
+                if not active_subscription or active_subscription.plan.tier != 'premium':
+                    messages.error(request, 'يتطلب الإعلان المميز أو المثبت اشتراك مميز. يرجى ترقية اشتراكك.')
+                    return render(request, template_name, {
+                        'category_form': category_form,
+                        'property_form': property_form,
+                        'category': category,
+                    })
+        
+        if category == 'inside_iraq':
+            property_form = PropertyInsideIraqForm(request.POST, request.FILES)
+            if property_form.is_valid():
+                property = property_form.save(commit=False)
+                property.category = 'property_iraq'
+                property.owner = request.user
+                
+                # Handle publication type
+                if publication_type == 'featured':
+                    property.is_featured = True
+                    if publication_days:
+                        property.promotion_until = timezone.now().date() + timedelta(days=int(publication_days))
+                elif publication_type == 'pinned':
+                    property.is_pinned = True
+                    if publication_days:
+                        property.pinned_until = timezone.now() + timedelta(days=int(publication_days))
+                
+                property.save()
+                
+                # Handle media uploads
+                handle_media_uploads(request, property)
+                
+                messages.success(request, 'تم إضافة العقار داخل العراق بنجاح')
+                return redirect('dashboard')
+                
+        elif category == 'outside_iraq':
+            property_form = PropertyOutsideIraqForm(request.POST, request.FILES)
+            if property_form.is_valid():
+                property = property_form.save(commit=False)
+                property.category = 'property_outside'
+                property.owner = request.user
+                
+                # Handle publication type
+                if publication_type == 'featured':
+                    property.is_featured = True
+                    if publication_days:
+                        property.promotion_until = timezone.now().date() + timedelta(days=int(publication_days))
+                elif publication_type == 'pinned':
+                    property.is_pinned = True
+                    if publication_days:
+                        property.pinned_until = timezone.now() + timedelta(days=int(publication_days))
+                
+                property.save()
+                
+                # Handle media uploads
+                handle_media_uploads(request, property)
+                
+                messages.success(request, 'تم إضافة العقار خارج العراق بنجاح')
+                return redirect('dashboard')
+                
+        elif category == 'hotel':
+            property_form = PropertyHotelForm(request.POST, request.FILES)
+            if property_form.is_valid():
+                # Create base property first
+                property = Property.objects.create(
+                    title=property_form.cleaned_data['hotel_name'],
+                    category='hotel',
+                    owner=request.user,
+                    status='published',
+                    price=property_form.cleaned_data.get('price_per_night') or 0,
+                    currency=property_form.cleaned_data.get('currency', 'USD'),
+                )
+                
+                # Handle publication type for hotel
+                if publication_type == 'featured':
+                    property.is_featured = True
+                    if publication_days:
+                        property.promotion_until = timezone.now().date() + timedelta(days=int(publication_days))
+                elif publication_type == 'pinned':
+                    property.is_pinned = True
+                    if publication_days:
+                        property.pinned_until = timezone.now() + timedelta(days=int(publication_days))
+                
+                property.save()
+                
+                # Create hotel details
+                hotel = property_form.save(commit=False)
+                hotel.property = property
+                hotel.save()
+                
+                # Handle media uploads
+                handle_media_uploads(request, property)
+                
+                messages.success(request, 'تم إضافة الفندق بنجاح')
+                return redirect('dashboard')
+                
+        elif category == 'resort':
+            # Handle resort creation directly
+            name = request.POST.get('name')
+            resort_type = request.POST.get('resort_type')
+            description = request.POST.get('description')
+            governorate = request.POST.get('governorate')
+            city = request.POST.get('city')
+            district = request.POST.get('district')
+            full_address = request.POST.get('full_address')
+            phone = request.POST.get('phone')
+            whatsapp = request.POST.get('whatsapp')
+            email = request.POST.get('email')
+            website = request.POST.get('website')
+            working_hours = request.POST.get('working_hours')
+            working_days = request.POST.get('working_days')
+            min_price = request.POST.get('min_price')
+            max_price = request.POST.get('max_price')
+            currency = request.POST.get('currency', 'د.ع')
+            advance_booking = request.POST.get('advance_booking') == 'on'
+            latitude = request.POST.get('latitude')
+            longitude = request.POST.get('longitude')
+            video_url = request.POST.get('video_url')
+            meta_title = request.POST.get('meta_title')
+            meta_description = request.POST.get('meta_description')
+            keywords = request.POST.get('keywords')
+            
+            # Handle publication type for resort
+            publication_type = request.POST.get('publication_type', 'normal')
+            publication_days = request.POST.get('publication_days')
+            
+            if name and resort_type and description and governorate and city and full_address and phone:
+                from .models import Resort, ResortAmenity, ResortService
+                
+                # Create base property first
+                property = Property.objects.create(
+                    title=name,
+                    category='resort',
+                    owner=request.user,
+                    status='published',
+                    price=min_price or 0,
+                    currency=currency,
+                )
+                
+                # Handle publication type for resort
+                if publication_type == 'featured':
+                    property.is_featured = True
+                    if publication_days:
+                        property.promotion_until = timezone.now().date() + timedelta(days=int(publication_days))
+                elif publication_type == 'pinned':
+                    property.is_pinned = True
+                    if publication_days:
+                        property.pinned_until = timezone.now() + timedelta(days=int(publication_days))
+                
+                property.save()
+                
+                # Handle media uploads
+                handle_media_uploads(request, property)
+                
+                resort = Resort.objects.create(
+                    name=name,
+                    resort_type=resort_type,
+                    description=description,
+                    governorate=governorate,
+                    city=city,
+                    district=district,
+                    full_address=full_address,
+                    phone=phone,
+                    whatsapp=whatsapp,
+                    email=email,
+                    website=website,
+                    working_hours=working_hours,
+                    working_days=working_days,
+                    min_price=min_price,
+                    max_price=max_price,
+                    currency=currency,
+                    advance_booking=advance_booking,
+                    latitude=latitude,
+                    longitude=longitude,
+                    video_url=video_url,
+                    meta_title=meta_title,
+                    meta_description=meta_description,
+                    keywords=keywords,
+                    broker=request.user.broker if hasattr(request.user, 'broker') else None,
+                    user=request.user,
+                    property=property,  # Link resort to property
+                )
+                
+                # Handle logo (separate from cover_image)
+                if 'logo' in request.FILES:
+                    resort.logo = request.FILES['logo']
+                
+                resort.save()
+                
+                # Add amenities
+                amenities = request.POST.getlist('amenities')
+                for amenity in amenities:
+                    ResortAmenity.objects.create(
+                        resort=resort,
+                        amenity_type=amenity,
+                        is_available=True
+                    )
+                
+                # Add services
+                services = request.POST.getlist('services')
+                for service in services:
+                    ResortService.objects.create(
+                        resort=resort,
+                        service_type=service,
+                        is_available=True
+                    )
+                
+                messages.success(request, 'تم إضافة المنتجع بنجاح')
+                return redirect('resort_detail', slug=resort.slug)
+            else:
+                messages.error(request, 'يرجى ملء جميع الحقول المطلوبة')
+    
+    # Get the appropriate form based on selected category
+    category = request.GET.get('category') or request.POST.get('category')
+    
+    # Initialize all forms for instant switching
+    inside_iraq_form = PropertyInsideIraqForm()
+    outside_iraq_form = PropertyOutsideIraqForm()
+    hotel_form = PropertyHotelForm()
+    resort_form = PropertyResortForm()
+    
+    # Default form if no category selected
+    if category == 'inside_iraq':
+        property_form = PropertyInsideIraqForm()
+    elif category == 'outside_iraq':
+        property_form = PropertyOutsideIraqForm()
+    elif category == 'hotel':
+        property_form = PropertyHotelForm()
+    elif category == 'resort':
+        property_form = PropertyResortForm()
+    else:
+        # Default to inside_iraq form if no category selected
+        property_form = PropertyInsideIraqForm()
+    
+    return render(request, template_name, {
+        'category_form': category_form,
+        'property_form': property_form,
+        'category': category,
+        'inside_iraq_form': inside_iraq_form,
+        'outside_iraq_form': outside_iraq_form,
+        'hotel_form': hotel_form,
+        'resort_form': resort_form,
+    })
+
+
+@login_required
+@staff_required
+def reject_property_payment(request, payment_id):
+    """Admin view to reject property payment"""
+    payment = get_object_or_404(PropertyPayment, id=payment_id)
+    
+    if payment.status != PropertyPayment.STATUS_PENDING:
+        messages.error(request, 'هذا الدفع ليس في حالة انتظار')
+        return redirect('admin_panel')
+    
+    if request.method == 'POST':
+        rejection_reason = request.POST.get('rejection_reason', '')
+        
+        payment.status = PropertyPayment.STATUS_FAILED
+        payment.rejection_reason = rejection_reason
+        payment.approved_by = request.user
+        payment.approved_at = timezone.now()
+        payment.save()
+        
+        # Update property status
+        property = payment.property
+        property.status = Property.STATUS_REJECTED
+        property.rejection_reason = rejection_reason
+        property.save()
+        
+        # Create notification
+        PropertyNotification.objects.create(
+            user=payment.broker.user,
+            property=property,
+            notification_type=PropertyNotification.TYPE_PROPERTY_REJECTED,
+            title='تم رفض الدفع',
+            message=f'تم رفض دفع العقار: {property.display_title}. السبب: {rejection_reason}'
+        )
+        
+        messages.success(request, 'تم رفض الدفع')
+        return redirect('admin_panel')
+    
+    context = {
+        'payment': payment,
+        'property': payment.property,
+    }
+    
+    return render(request, 'properties/reject_payment.html', context)
+
+
+@login_required
+@staff_required
+def content_moderation_view(request):
+    """لوحة الموافقة على المحتوى - منشورات، قنوات، عقارات"""
+    
+    # فلترة حسب النوع
+    content_type = request.GET.get('type', 'all')
+    status_filter = request.GET.get('status', 'pending')
+    
+    # القنوات المعلقة
+    pending_channels = BrokerChannel.objects.filter(status='pending').select_related('broker', 'broker__user')
+    
+    # المنشورات المعلقة
+    pending_posts = ChannelPost.objects.filter(is_published=False).select_related('channel', 'channel__broker')
+    
+    # الفيديوهات المعلقة
+    pending_videos = ChannelVideo.objects.filter(is_published=False).select_related('channel', 'channel__broker')
+    
+    # العقارات المعلقة
+    pending_properties = Property.objects.filter(status=Property.STATUS_PENDING_APPROVAL).select_related('broker', 'owner')
+    
+    # القنوات المحجوبة
+    suspended_channels = BrokerChannel.objects.filter(status='suspended').select_related('broker', 'broker__user')
+    
+    # الدلالين المحجوبين
+    suspended_brokers = Broker.objects.filter(is_active=False).select_related('user')
+    
+    context = {
+        'pending_channels': pending_channels,
+        'pending_posts': pending_posts,
+        'pending_videos': pending_videos,
+        'pending_properties': pending_properties,
+        'suspended_channels': suspended_channels,
+        'suspended_brokers': suspended_brokers,
+        'content_type': content_type,
+        'status_filter': status_filter,
+    }
+    
+    return render(request, 'properties/content_moderation.html', context)
+
+
+@login_required
+@staff_required
+def approve_channel(request, channel_id):
+    """الموافقة على قناة"""
+    channel = get_object_or_404(BrokerChannel, id=channel_id)
+    channel.status = BrokerChannel.STATUS_ACTIVE
+    channel.save()
+    
+    messages.success(request, f'تم تفعيل قناة {channel.name} بنجاح')
+    return redirect('content_moderation')
+
+
+@login_required
+@staff_required
+def reject_channel(request, channel_id):
+    """رفض قناة"""
+    channel = get_object_or_404(BrokerChannel, id=channel_id)
+    channel.status = BrokerChannel.STATUS_INACTIVE
+    channel.save()
+    
+    messages.success(request, f'تم رفض قناة {channel.name}')
+    return redirect('content_moderation')
+
+
+@login_required
+@staff_required
+def suspend_channel(request, channel_id):
+    """حجب قناة"""
+    channel = get_object_or_404(BrokerChannel, id=channel_id)
+    channel.status = BrokerChannel.STATUS_SUSPENDED
+    channel.save()
+    
+    messages.success(request, f'تم حجب قناة {channel.name}')
+    return redirect('content_moderation')
+
+
+@login_required
+@staff_required
+def unsuspend_channel(request, channel_id):
+    """فك حجب قناة"""
+    channel = get_object_or_404(BrokerChannel, id=channel_id)
+    channel.status = BrokerChannel.STATUS_ACTIVE
+    channel.save()
+    
+    messages.success(request, f'تم فك حجب قناة {channel.name}')
+    return redirect('content_moderation')
+
+
+@login_required
+@staff_required
+def approve_post(request, post_id):
+    """الموافقة على منشور"""
+    post = get_object_or_404(ChannelPost, id=post_id)
+    post.is_published = True
+    post.save()
+    
+    messages.success(request, 'تم نشر المنشور بنجاح')
+    return redirect('content_moderation')
+
+
+@login_required
+@staff_required
+def reject_post(request, post_id):
+    """رفض منشور"""
+    post = get_object_or_404(ChannelPost, id=post_id)
+    post.delete()
+    
+    messages.success(request, 'تم حذف المنشور')
+    return redirect('content_moderation')
+
+
+@login_required
+@staff_required
+def approve_video(request, video_id):
+    """الموافقة على فيديو"""
+    video = get_object_or_404(ChannelVideo, id=video_id)
+    video.is_published = True
+    video.save()
+    
+    messages.success(request, 'تم نشر الفيديو بنجاح')
+    return redirect('content_moderation')
+
+
+@login_required
+@staff_required
+def reject_video(request, video_id):
+    """رفض فيديو"""
+    video = get_object_or_404(ChannelVideo, id=video_id)
+    video.delete()
+    
+    messages.success(request, 'تم حذف الفيديو')
+    return redirect('content_moderation')
+
+
+@login_required
+@staff_required
+def suspend_broker(request, broker_id):
+    """حجب دلال"""
+    broker = get_object_or_404(Broker, id=broker_id)
+    broker.is_active = False
+    broker.save()
+    
+    # حجب القناة أيضاً
+    if hasattr(broker, 'channel'):
+        broker.channel.status = BrokerChannel.STATUS_SUSPENDED
+        broker.channel.save()
+    
+    messages.success(request, f'تم حجب الدلال {broker.display_name}')
+    return redirect('content_moderation')
+
+
+@login_required
+@staff_required
+def unsuspend_broker(request, broker_id):
+    """فك حجب دلال"""
+    broker = get_object_or_404(Broker, id=broker_id)
+    broker.is_active = True
+    broker.save()
+    
+    # تفعيل القناة أيضاً
+    if hasattr(broker, 'channel'):
+        broker.channel.status = BrokerChannel.STATUS_ACTIVE
+        broker.channel.save()
+    
+    messages.success(request, f'تم فك حجب الدلال {broker.display_name}')
+    return redirect('content_moderation')
+
+
+@login_required
+@staff_required
+def user_monitoring_view(request):
+    """لوحة مراقبة المستخدمين - حذف، حجب، تقيد، إنذار"""
+    from django.contrib.auth.models import User
+    
+    # البحث والفلترة
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', 'all')
+    user_type_filter = request.GET.get('user_type', 'all')
+    
+    users = User.objects.all().select_related('broker_profile', 'user_profile')
+    
+    # تطبيق البحث
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query)
+        )
+    
+    # فلترة حسب الحالة
+    if status_filter == 'active':
+        users = users.filter(is_active=True)
+    elif status_filter == 'inactive':
+        users = users.filter(is_active=False)
+    elif status_filter == 'suspended':
+        users = users.filter(is_active=False)
+    
+    # فلترة حسب نوع المستخدم
+    if user_type_filter == 'admin':
+        users = users.filter(is_superuser=True)
+    elif user_type_filter == 'broker':
+        users = users.filter(broker_profile__isnull=False)
+    elif user_type_filter == 'regular':
+        users = users.filter(broker_profile__isnull=True, is_superuser=False, is_staff=False)
+    
+    # استبعاد المستخدم الحالي
+    users = users.exclude(id=request.user.id)
+    
+    # ترتيب حسب تاريخ التسجيل
+    users = users.order_by('-date_joined')
+    
+    context = {
+        'users': users,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'user_type_filter': user_type_filter,
+    }
+    
+    return render(request, 'properties/user_monitoring.html', context)
+
+
+@login_required
+@staff_required
+def delete_user(request, user_id):
+    """حذف مستخدم"""
+    user = get_object_or_404(User, id=user_id)
+    
+    if user.is_superuser:
+        messages.error(request, 'لا يمكن حذف المشرفين')
+        return redirect('user_monitoring')
+    
+    username = user.username
+    user.delete()
+    
+    messages.success(request, f'تم حذف المستخدم {username} بنجاح')
+    return redirect('user_monitoring')
+
+
+@login_required
+@staff_required
+def suspend_user(request, user_id):
+    """حجب مستخدم"""
+    user = get_object_or_404(User, id=user_id)
+    
+    if user.is_superuser:
+        messages.error(request, 'لا يمكن حجب المشرفين')
+        return redirect('user_monitoring')
+    
+    user.is_active = False
+    user.save()
+    
+    # حجب الدلال أيضاً إذا كان دلال
+    if hasattr(user, 'broker_profile'):
+        user.broker_profile.is_active = False
+        user.broker_profile.save()
+        
+        # حجب القناة أيضاً
+        if hasattr(user.broker_profile, 'channel'):
+            user.broker_profile.channel.status = BrokerChannel.STATUS_SUSPENDED
+            user.broker_profile.channel.save()
+    
+    messages.success(request, f'تم حجب المستخدم {user.username}')
+    return redirect('user_monitoring')
+
+
+@login_required
+@staff_required
+def unsuspend_user(request, user_id):
+    """فك حجب مستخدم"""
+    user = get_object_or_404(User, id=user_id)
+    user.is_active = True
+    user.save()
+    
+    # تفعيل الدلال أيضاً إذا كان دلال
+    if hasattr(user, 'broker_profile'):
+        user.broker_profile.is_active = True
+        user.broker_profile.save()
+        
+        # تفعيل القناة أيضاً
+        if hasattr(user.broker_profile, 'channel'):
+            user.broker_profile.channel.status = BrokerChannel.STATUS_ACTIVE
+            user.broker_profile.channel.save()
+    
+    messages.success(request, f'تم فك حجب المستخدم {user.username}')
+    return redirect('user_monitoring')
+
+
+@login_required
+@staff_required
+def restrict_user(request, user_id):
+    """تقيد مستخدم"""
+    user = get_object_or_404(User, id=user_id)
+    
+    if user.is_superuser:
+        messages.error(request, 'لا يمكن تقيد المشرفين')
+        return redirect('user_monitoring')
+    
+    # تقيد المستخدم - منع نشر العقارات
+    if hasattr(user, 'broker_profile'):
+        user.broker_profile.can_post_properties = False
+        user.broker_profile.save()
+    
+    messages.success(request, f'تم تقيد المستخدم {user.username}')
+    return redirect('user_monitoring')
+
+
+@login_required
+@staff_required
+def unrestrict_user(request, user_id):
+    """فك تقيد مستخدم"""
+    user = get_object_or_404(User, id=user_id)
+    
+    # فك تقيد المستخدم
+    if hasattr(user, 'broker_profile'):
+        user.broker_profile.can_post_properties = True
+        user.broker_profile.save()
+    
+    messages.success(request, f'تم فك تقيد المستخدم {user.username}')
+    return redirect('user_monitoring')
+
+
+@login_required
+@staff_required
+def warn_user(request, user_id):
+    """إنذار مستخدم"""
+    user = get_object_or_404(User, id=user_id)
+    
+    if request.method == 'POST':
+        warning_message = request.POST.get('warning_message', '')
+        
+        if not warning_message:
+            messages.error(request, 'يرجى كتابة رسالة الإنذار')
+        else:
+            # إنشاء إشعار للمستخدم
+            Notification.objects.create(
+                user=user,
+                notification_type='warning',
+                title='إنذار من الإدارة',
+                message=warning_message
+            )
+            
+            messages.success(request, f'تم إرسال إنذار للمستخدم {user.username}')
+            return redirect('user_monitoring')
+    
+    context = {
+        'user': user,
+    }
+    
+    return render(request, 'properties/warn_user.html', context)
+
+
+@login_required
+@broker_required
+def broker_create_building_request(request):
+    """إنشاء طلب بناء جديد من قبل الدلال"""
+    from .models import BuildingRequest
+    
+    if request.method == 'POST':
+        # معلومات العميل
+        full_name = request.POST.get('full_name', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        email = request.POST.get('email', '').strip()
+        
+        # معلومات المشروع
+        governorate = request.POST.get('governorate', '').strip()
+        city = request.POST.get('city', '').strip()
+        district = request.POST.get('district', '').strip()
+        address = request.POST.get('address', '').strip()
+        
+        # تفاصيل البناء
+        project_type = request.POST.get('project_type', '').strip()
+        estimated_area = request.POST.get('estimated_area')
+        estimated_budget = request.POST.get('estimated_budget')
+        expected_start_date = request.POST.get('expected_start_date')
+        expected_completion_date = request.POST.get('expected_completion_date')
+        
+        # حالة الطلب
+        priority = request.POST.get('priority', 'medium')
+        
+        # وصف المشروع
+        description = request.POST.get('description', '').strip()
+        requirements = request.POST.get('requirements', '').strip()
+        
+        # التحقق من الحقول المطلوبة
+        if not all([full_name, phone, governorate, city, project_type]):
+            messages.error(request, 'يرجى ملء جميع الحقول المطلوبة')
+        else:
+            # الحصول على الدلال
+            broker = request.user.broker_profile
+            
+            # إنشاء طلب البناء
+            building_request = BuildingRequest.objects.create(
+                broker=broker,
+                full_name=full_name,
+                phone=phone,
+                email=email,
+                governorate=governorate,
+                city=city,
+                district=district,
+                address=address,
+                project_type=project_type,
+                estimated_area=int(estimated_area) if estimated_area else None,
+                estimated_budget=int(estimated_budget) if estimated_budget else None,
+                expected_start_date=expected_start_date if expected_start_date else None,
+                expected_completion_date=expected_completion_date if expected_completion_date else None,
+                priority=priority,
+                description=description,
+                requirements=requirements,
+                status='pending'
+            )
+            
+            # إشعار للإدارة
+            from .utils import create_notification
+            admins = User.objects.filter(is_superuser=True)
+            
+            for admin in admins:
+                create_notification(
+                    user=admin,
+                    notification_type='building_request',
+                    title='طلب بناء جديد',
+                    message=f'طلب بناء جديد من الدلال {broker.display_name} في {city}',
+                    link=f'/admin-panel/building-requests/{building_request.id}/',
+                    metadata={'request_id': building_request.id}
+                )
+            
+            messages.success(request, 'تم إنشاء طلب البناء بنجاح. بانتظار موافقة الإدارة')
+            return redirect('broker_building_requests')
+    
+    return render(request, 'properties/broker_create_building_request.html')
+
+
+@login_required
+@broker_required
+def broker_building_requests(request):
+    """عرض طلبات البناء الخاصة بالدلال"""
+    from .models import BuildingRequest
+    
+    broker = request.user.broker_profile
+    requests = BuildingRequest.objects.filter(broker=broker).order_by('-created_at')
+    
+    context = {
+        'requests': requests,
+    }
+    
+    return render(request, 'properties/broker_building_requests.html', context)
+
+
+@login_required
+def building_request_contact(request, request_id):
+    """تواصل مع صاحب طلب البناء"""
+    building_request = get_object_or_404(BuildingRequest, pk=request_id)
+    
+    if request.method == 'POST':
+        message_content = request.POST.get('message', '').strip()
+        
+        if not message_content:
+            messages.error(request, 'يرجى كتابة رسالة')
+        else:
+            # Create a message using the existing messaging system
+            try:
+                from .models import Message
+                recipient = building_request.user if building_request.user else building_request.broker.user
+                
+                message = Message.objects.create(
+                    sender=request.user,
+                    recipient=recipient,
+                    subject=f'بخصوص طلب البناء: {building_request.project_type}',
+                    content=message_content,
+                    related_building_request=building_request
+                )
+                
+                # Create notification for the recipient
+                try:
+                    from .utils import create_notification
+                    create_notification(
+                        user=recipient,
+                        notification_type='message',
+                        title='رسالة جديدة بخصوص طلب بناء',
+                        message=f'رسالة من {request.user.get_full_name() or request.user.username} بخصوص طلب بناء في {building_request.city}',
+                        link='/messages/',
+                        metadata={'request_id': building_request.id}
+                    )
+                except:
+                    pass  # Notification creation is optional
+                
+                messages.success(request, 'تم إرسال رسالتك بنجاح')
+                return redirect('building_request_detail', request_id=request_id)
+            except Exception as e:
+                messages.error(request, 'حدث خطأ أثناء إرسال الرسالة')
+    
+    return render(request, 'properties/building_request_contact.html', {
+        'building_request': building_request
+    })
+
+
+@login_required
+def service_provider_register(request):
+    """تسجيل مقدم خدمة جديد"""
+    try:
+        provider = ServiceProvider.objects.get(user=request.user)
+        return redirect('service_provider_dashboard')
+    except ServiceProvider.DoesNotExist:
+        pass
+    
+    if request.method == 'POST':
+        form = ServiceProviderForm(request.POST, request.FILES)
+        if form.is_valid():
+            provider = form.save(commit=False)
+            provider.user = request.user
+            provider.save()
+            messages.success(request, 'تم إنشاء حساب مقدم الخدمة بنجاح')
+            return redirect('service_provider_dashboard')
+    else:
+        form = ServiceProviderForm()
+    
+    return render(request, 'properties/service_provider_register.html', {'form': form})
+
+
+@login_required
+def service_provider_dashboard(request):
+    """لوحة تحكم مقدم الخدمة"""
+    try:
+        provider = ServiceProvider.objects.get(user=request.user)
+    except ServiceProvider.DoesNotExist:
+        return redirect('service_provider_register')
+    
+    advertisements = ServiceAdvertisement.objects.filter(service_provider=provider).order_by('-created_at')
+    
+    return render(request, 'properties/service_provider_dashboard.html', {
+        'provider': provider,
+        'advertisements': advertisements,
+    })
+
+
+@login_required
+def create_service_advertisement(request):
+    """إنشاء إعلان خدمة جديد"""
+    try:
+        provider = ServiceProvider.objects.get(user=request.user)
+    except ServiceProvider.DoesNotExist:
+        messages.error(request, 'يرجى تسجيل حساب مقدم خدمة أولاً')
+        return redirect('service_provider_register')
+    
+    if request.method == 'POST':
+        form = ServiceAdvertisementForm(request.POST, request.FILES)
+        if form.is_valid():
+            advertisement = form.save(commit=False)
+            advertisement.service_provider = provider
+            
+            # Handle featured ads
+            if advertisement.is_featured:
+                from datetime import timedelta
+                advertisement.featured_until = timezone.now() + timedelta(days=30)
+            
+            advertisement.status = 'active'
+            advertisement.save()
+            messages.success(request, 'تم إنشاء الإعلان بنجاح')
+            return redirect('service_provider_dashboard')
+    else:
+        form = ServiceAdvertisementForm()
+    
+    return render(request, 'properties/create_service_advertisement.html', {'form': form})
+
+
+def public_service_advertisements(request):
+    """صفحة عرض إعلانات الخدمات العامة"""
+    from django.db.models import Q
+    
+    # Get only active advertisements
+    advertisements = ServiceAdvertisement.objects.filter(status='active').select_related('service_provider').order_by('-is_featured', '-created_at')
+    
+    # Apply filters
+    service_type = request.GET.get('service_type')
+    if service_type:
+        advertisements = advertisements.filter(service_type=service_type)
+    
+    governorate = request.GET.get('governorate')
+    if governorate:
+        advertisements = advertisements.filter(governorate=governorate)
+    
+    price_min = request.GET.get('price_min')
+    price_max = request.GET.get('price_max')
+    if price_min:
+        advertisements = advertisements.filter(price__gte=price_min)
+    if price_max:
+        advertisements = advertisements.filter(price__lte=price_max)
+    
+    # Search
+    search_query = request.GET.get('q')
+    if search_query:
+        advertisements = advertisements.filter(
+            Q(title__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(location__icontains=search_query)
+        )
+    
+    return render(request, 'properties/public_service_advertisements.html', {
+        'advertisements': advertisements,
+        'service_type': service_type,
+        'governorate': governorate,
+        'price_min': price_min,
+        'price_max': price_max,
+        'search_query': search_query,
+    })
+
+
+@login_required
+def service_advertisement_detail(request, ad_id):
+    """عرض تفاصيل إعلان الخدمة"""
+    advertisement = get_object_or_404(ServiceAdvertisement, pk=ad_id)
+    
+    # Increment views
+    advertisement.views_count += 1
+    advertisement.save()
+    
+    return render(request, 'properties/service_advertisement_detail.html', {
+        'advertisement': advertisement
+    })
+
+
+@login_required
+def contact_service_provider(request, ad_id):
+    """التواصل مع مقدم الخدمة"""
+    advertisement = get_object_or_404(ServiceAdvertisement, pk=ad_id)
+    
+    if request.method == 'POST':
+        message_content = request.POST.get('message', '').strip()
+        
+        if not message_content:
+            messages.error(request, 'يرجى كتابة رسالة')
+        else:
+            try:
+                from .models import Message
+                recipient = advertisement.service_provider.user
+                
+                message = Message.objects.create(
+                    sender=request.user,
+                    recipient=recipient,
+                    subject=f'بخصوص إعلان الخدمة: {advertisement.title}',
+                    content=message_content,
+                )
+                
+                # Increment inquiries count
+                advertisement.inquiries_count += 1
+                advertisement.save()
+                
+                messages.success(request, 'تم إرسال رسالتك بنجاح')
+                return redirect('service_advertisement_detail', ad_id=ad_id)
+            except Exception as e:
+                messages.error(request, 'حدث خطأ أثناء إرسال الرسالة')
+    
+    return render(request, 'properties/contact_service_provider.html', {
+        'advertisement': advertisement
+    })
+
+
+@login_required
+def auction_access_code(request, auction_id):
+    """صفحة إدخال رقم المزاد"""
+    auction = get_object_or_404(Auction, pk=auction_id)
+    
+    # Check if access code is required
+    if auction.access_type == 'public':
+        return redirect('auction_detail', auction_id=auction_id)
+    
+    # Check if user already has access
+    if request.user.is_authenticated:
+        # Check if user is the broker
+        if auction.broker and auction.broker.user == request.user:
+            return redirect('auction_detail', auction_id=auction_id)
+        
+        # Check if user has a valid invitation
+        if AuctionInvitation.objects.filter(auction=auction, invited_user=request.user, status='accepted').exists():
+            return redirect('auction_detail', auction_id=auction_id)
+    
+    if request.method == 'POST':
+        access_code = request.POST.get('access_code', '').strip()
+        invitation_code = request.POST.get('invitation_code', '').strip()
+        
+        if access_code:
+            # Check access code
+            if auction.access_code == access_code:
+                # Store access in session
+                request.session[f'auction_access_{auction_id}'] = True
+                messages.success(request, 'تم الدخول بنجاح')
+                return redirect('auction_detail', auction_id=auction_id)
+            else:
+                messages.error(request, 'رقم الدخول غير صحيح')
+        
+        elif invitation_code:
+            # Check invitation code
+            try:
+                invitation = AuctionInvitation.objects.get(auction=auction, invitation_code=invitation_code)
+                if invitation.status == 'pending':
+                    invitation.status = 'accepted'
+                    invitation.accepted_at = timezone.now()
+                    if request.user.is_authenticated:
+                        invitation.invited_user = request.user
+                    invitation.save()
+                    messages.success(request, 'تم قبول الدعوة بنجاح')
+                    return redirect('auction_detail', auction_id=auction_id)
+                elif invitation.status == 'accepted':
+                    messages.success(request, 'الدعوة مقبولة مسبقاً')
+                    return redirect('auction_detail', auction_id=auction_id)
+                else:
+                    messages.error(request, 'الدعوة غير صالحة')
+            except AuctionInvitation.DoesNotExist:
+                messages.error(request, 'كود الدعوة غير صحيح')
+    
+    return render(request, 'properties/auction_access_code.html', {
+        'auction': auction
+    })
+
+
+@login_required
+def create_auction_invitation(request, auction_id):
+    """إنشاء دعوة لمزاد"""
+    auction = get_object_or_404(Auction, pk=auction_id)
+    
+    # Check if user is the broker
+    if not auction.broker or auction.broker.user != request.user:
+        messages.error(request, 'ليس لديك صلاحية إنشاء دعوات لهذا المزاد')
+        return redirect('auction_detail', auction_id=auction_id)
+    
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        user_id = request.POST.get('user_id')
+        
+        invitation = AuctionInvitation(auction=auction, email=email, phone=phone)
+        
+        if user_id:
+            try:
+                user = User.objects.get(pk=user_id)
+                invitation.invited_user = user
+            except User.DoesNotExist:
+                messages.error(request, 'المستخدم غير موجود')
+                return redirect('auction_detail', auction_id=auction_id)
+        
+        invitation.generate_code()
+        invitation.save()
+        
+        # Send notification (you can implement email/SMS sending here)
+        messages.success(request, f'تم إنشاء الدعوة بنجاح. كود الدعوة: {invitation.invitation_code}')
+        return redirect('auction_detail', auction_id=auction_id)
+    
+    return render(request, 'properties/create_auction_invitation.html', {
+        'auction': auction
+    })
+
+
+@login_required
+def auction_invitations(request, auction_id):
+    """عرض دعوات المزاد"""
+    auction = get_object_or_404(Auction, pk=auction_id)
+    
+    # Check if user is the broker
+    if not auction.broker or auction.broker.user != request.user:
+        messages.error(request, 'ليس لديك صلاحية عرض دعوات هذا المزاد')
+        return redirect('auction_detail', auction_id=auction_id)
+    
+    invitations = auction.invitations.all().order_by('-created_at')
+    
+    return render(request, 'properties/auction_invitations.html', {
+        'auction': auction,
+        'invitations': invitations
+    })
+
+
+@login_required
+def building_request_detail(request, request_id):
+    """عرض تفاصيل طلب البناء"""
+    from .models import BuildingRequest
+    
+    building_request = get_object_or_404(BuildingRequest, id=request_id)
+    
+    context = {
+        'building_request': building_request,
+    }
+    
+    return render(request, 'properties/building_request_detail.html', context)
+
+
+@login_required
+@staff_required
+def admin_building_requests(request):
+    """عرض طلبات البناء للإدارة"""
+    from .models import BuildingRequest
+    
+    status_filter = request.GET.get('status', 'all')
+    governorate_filter = request.GET.get('governorate', 'all')
+    
+    requests = BuildingRequest.objects.all().select_related('broker', 'broker__user', 'user')
+    
+    if status_filter != 'all':
+        requests = requests.filter(status=status_filter)
+    
+    if governorate_filter != 'all':
+        requests = requests.filter(governorate=governorate_filter)
+    
+    requests = requests.order_by('-created_at')
+    
+    context = {
+        'requests': requests,
+        'status_filter': status_filter,
+        'governorate_filter': governorate_filter,
+    }
+    
+    return render(request, 'properties/admin_building_requests.html', context)
+
+
+@login_required
+@staff_required
+def admin_approve_building_request(request, request_id):
+    """الموافقة على طلب بناء"""
+    from .models import BuildingRequest
+    
+    building_request = get_object_or_404(BuildingRequest, id=request_id)
+    building_request.status = 'approved'
+    building_request.save()
+    
+    # إشعار للدلال
+    if building_request.broker:
+        from .utils import create_notification
+        create_notification(
+            user=building_request.broker.user,
+            notification_type='building_request',
+            title='تمت الموافقة على طلب البناء',
+            message=f'تمت الموافقة على طلب بنائك في {building_request.city}',
+            link=f'/broker/building-requests/{building_request.id}/',
+            metadata={'request_id': building_request.id}
+        )
+    
+    messages.success(request, 'تمت الموافقة على طلب البناء')
+    return redirect('admin_building_requests')
+
+
+@login_required
+@staff_required
+def admin_reject_building_request(request, request_id):
+    """رفض طلب بناء"""
+    from .models import BuildingRequest
+    
+    building_request = get_object_or_404(BuildingRequest, id=request_id)
+    building_request.status = 'cancelled'
+    building_request.save()
+    
+    # إشعار للدلال
+    if building_request.broker:
+        from .utils import create_notification
+        create_notification(
+            user=building_request.broker.user,
+            notification_type='building_request',
+            title='تم رفض طلب البناء',
+            message=f'تم رفض طلب بنائك في {building_request.city}',
+            link=f'/broker/building-requests/{building_request.id}/',
+            metadata={'request_id': building_request.id}
+        )
+    
+    messages.success(request, 'تم رفض طلب البناء')
+    return redirect('admin_building_requests')
+
+
+@login_required
+@broker_required
+def broker_create_auction(request):
+    """إنشاء مزاد جديد من قبل الدلال"""
+    from .models import Auction, Property, BrokerPlanSubscription
+    import secrets
+    
+    broker = request.user.broker_profile
+    
+    # التحقق من الاشتراك
+    try:
+        subscription = BrokerPlanSubscription.objects.filter(broker=broker, status='active').first()
+        if not subscription or not subscription.is_active():
+            messages.error(request, 'يجب أن يكون لديك اشتراك نشط لإنشاء مزاد')
+            return redirect('broker_auctions')
+        
+        if not subscription.can_add_auction():
+            remaining = subscription.plan.max_auctions - subscription.auctions_used
+            messages.error(request, f'لقد استنفذت عدد المزادات المسموح بها في اشتراكك. المتبقي: {remaining}')
+            return redirect('broker_auctions')
+    except Exception as e:
+        messages.error(request, 'حدث خطأ في التحقق من الاشتراك')
+        return redirect('broker_auctions')
+    
+    if request.method == 'POST':
+        # معلومات المزاد
+        property_id = request.POST.get('property')
+        auction_type = request.POST.get('auction_type')
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        starting_price = request.POST.get('starting_price')
+        minimum_increment = request.POST.get('minimum_increment')
+        reserve_price = request.POST.get('reserve_price')
+        start_date = request.POST.get('start_date')
+        start_time = request.POST.get('start_time')
+        end_date = request.POST.get('end_date')
+        end_time = request.POST.get('end_time')
+        auto_extend_minutes = request.POST.get('auto_extend_minutes')
+        deposit_amount = request.POST.get('deposit_amount')
+        access_type = request.POST.get('access_type')
+        access_code = request.POST.get('access_code')
+        max_participants = request.POST.get('max_participants')
+        terms = request.POST.get('terms')
+        contact_phone = request.POST.get('contact_phone')
+        contact_email = request.POST.get('contact_email')
+        
+        # التحقق من الحقول المطلوبة
+        if not all([property_id, auction_type, title, description, starting_price, start_date, start_time, end_date, end_time]):
+            messages.error(request, 'يرجى ملء جميع الحقول المطلوبة')
+        else:
+            # الحصول على العقار
+            property_obj = get_object_or_404(Property, id=property_id)
+            
+            # التحقق من أن العقار يملكه الدلال
+            if property_obj.broker != broker:
+                messages.error(request, 'يمكنك إنشاء مزاد فقط لعقاراتك')
+            else:
+                # دمج التاريخ والوقت
+                from datetime import datetime
+                start_datetime = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
+                end_datetime = datetime.strptime(f"{end_date} {end_time}", "%Y-%m-%d %H:%M")
+                
+                # توليد كود دخول عشوائي إذا لم يتم توفيره
+                if not access_code and access_type == 'private':
+                    access_code = secrets.token_hex(4).upper()
+                
+                # استخدام مزاد من الحصة
+                if not subscription.use_auction():
+                    messages.error(request, 'حدث خطأ في استخدام حصة المزاد')
+                    return redirect('broker_auctions')
+                
+                # إنشاء المزاد
+                auction = Auction.objects.create(
+                    property=property_obj,
+                    broker=broker,
+                    auction_type=auction_type,
+                    title=title,
+                    description=description,
+                    starting_price=starting_price,
+                    minimum_increment=int(minimum_increment) if minimum_increment else 100000,
+                    reserve_price=int(reserve_price) if reserve_price else None,
+                    start_date=start_datetime,
+                    end_date=end_datetime,
+                    auto_extend_minutes=int(auto_extend_minutes) if auto_extend_minutes else 5,
+                    deposit_amount=int(deposit_amount) if deposit_amount else 0,
+                    access_type=access_type if access_type else 'public',
+                    access_code=access_code,
+                    max_participants=int(max_participants) if max_participants else None,
+                    terms=terms,
+                    contact_phone=contact_phone,
+                    contact_email=contact_email,
+                    status='upcoming',
+                    approval_status='pending'
+                )
+                
+                # إشعار للإدارة
+                from .utils import create_notification
+                admins = User.objects.filter(is_superuser=True)
+                
+                for admin in admins:
+                    create_notification(
+                        user=admin,
+                        notification_type='auction',
+                        title='مزاد جديد بانتظار الموافقة',
+                        message=f'مزاد جديد من الدلال {broker.display_name}: {title}',
+                        link=f'/admin-panel/auctions/{auction.id}/',
+                        metadata={'auction_id': auction.id}
+                    )
+                
+                messages.success(request, 'تم إنشاء المزاد بنجاح. بانتظار موافقة الإدارة')
+                return redirect('broker_auctions')
+    
+    # الحصول على عقارات الدلال
+    broker = request.user.broker_profile
+    properties = Property.objects.filter(broker=broker, is_active=True)
+    
+    context = {
+        'properties': properties,
+    }
+    
+    return render(request, 'properties/broker_create_auction.html', context)
+
+
+@login_required
+@broker_required
+def broker_auctions(request):
+    """عرض المزادات الخاصة بالدلال"""
+    from .models import Auction, BrokerPlanSubscription
+    
+    broker = request.user.broker_profile
+    auctions = Auction.objects.filter(broker=broker).order_by('-created_at')
+    
+    # Get subscription info
+    subscription = BrokerPlanSubscription.objects.filter(broker=broker, status='active').first()
+    auctions_remaining = 0
+    auctions_used = 0
+    max_auctions = 0
+    
+    if subscription and subscription.is_active():
+        auctions_used = subscription.auctions_used
+        max_auctions = subscription.plan.max_auctions
+        auctions_remaining = max_auctions - auctions_used
+    
+    context = {
+        'auctions': auctions,
+        'subscription': subscription,
+        'auctions_remaining': auctions_remaining,
+        'auctions_used': auctions_used,
+        'max_auctions': max_auctions,
+    }
+    
+    return render(request, 'properties/broker_auctions.html', context)
+
+
+@login_required
+@staff_required
+def admin_auctions(request):
+    """عرض المزادات للإدارة"""
+    from .models import Auction
+    
+    status_filter = request.GET.get('status', 'all')
+    approval_filter = request.GET.get('approval', 'all')
+    
+    auctions = Auction.objects.all().select_related('broker', 'broker__user', 'property')
+    
+    if status_filter != 'all':
+        auctions = auctions.filter(status=status_filter)
+    
+    if approval_filter != 'all':
+        auctions = auctions.filter(approval_status=approval_filter)
+    
+    auctions = auctions.order_by('-created_at')
+    
+    context = {
+        'auctions': auctions,
+        'status_filter': status_filter,
+        'approval_filter': approval_filter,
+    }
+    
+    return render(request, 'properties/admin_auctions.html', context)
+
+
+@login_required
+@staff_required
+def admin_approve_auction(request, auction_id):
+    """الموافقة على مزاد"""
+    from .models import Auction
+    
+    auction = get_object_or_404(Auction, id=auction_id)
+    auction.approval_status = 'approved'
+    auction.approved_by = request.user
+    auction.approved_at = timezone.now()
+    auction.save()
+    
+    # إشعار للدلال
+    if auction.broker:
+        from .utils import create_notification
+        create_notification(
+            user=auction.broker.user,
+            notification_type='auction',
+            title='تمت الموافقة على المزاد',
+            message=f'تمت الموافقة على مزادك: {auction.title}',
+            link=f'/broker/auctions/{auction.id}/',
+            metadata={'auction_id': auction.id}
+        )
+    
+    messages.success(request, 'تمت الموافقة على المزاد')
+    return redirect('admin_auctions')
+
+
+@login_required
+@staff_required
+def admin_reject_auction(request, auction_id):
+    """رفض مزاد"""
+    from .models import Auction
+    
+    if request.method == 'POST':
+        auction = get_object_or_404(Auction, id=auction_id)
+        rejection_reason = request.POST.get('rejection_reason', '')
+        
+        auction.approval_status = 'rejected'
+        auction.rejection_reason = rejection_reason
+        auction.save()
+        
+        # إشعار للدلال
+        if auction.broker:
+            from .utils import create_notification
+            create_notification(
+                user=auction.broker.user,
+                notification_type='auction',
+                title='تم رفض المزاد',
+                message=f'تم رفض مزادك: {auction.title}. السبب: {rejection_reason}',
+                link=f'/broker/auctions/{auction.id}/',
+                metadata={'auction_id': auction.id}
+            )
+        
+        messages.success(request, 'تم رفض المزاد')
+        return redirect('admin_auctions')
+    
+    auction = get_object_or_404(Auction, id=auction_id)
+    context = {
+        'auction': auction,
+    }
+    
+    return render(request, 'properties/admin_reject_auction.html', context)
+
+
+@login_required
+def auction_detail(request, auction_id):
+    """عرض تفاصيل المزاد"""
+    from .models import Auction
+    
+    auction = get_object_or_404(Auction, id=auction_id)
+    
+    context = {
+        'auction': auction,
+    }
+    
+    return render(request, 'properties/auction_detail.html', context)
+
+
+@login_required
+def auction_join(request, auction_id):
+    """الانضمام إلى المزاد"""
+    from .models import Auction, AuctionParticipant
+    
+    auction = get_object_or_404(Auction, id=auction_id)
+    
+    if request.method == 'POST':
+        access_code = request.POST.get('access_code', '').strip()
+        
+        # التحقق من كود الدخول
+        if auction.access_code and access_code != auction.access_code:
+            messages.error(request, 'كود الدخول غير صحيح')
+            return redirect('auction_detail', auction_id=auction_id)
+        
+        # التحقق من أن المستخدم لم ينضم بعد
+        if AuctionParticipant.objects.filter(auction=auction, user=request.user).exists():
+            messages.warning(request, 'أنت منضم بالفعل لهذا المزاد')
+            return redirect('auction_detail', auction_id=auction_id)
+        
+        # التحقق من الحد الأقصى للمشاركين
+        if auction.max_participants:
+            current_participants = auction.participants.count()
+            if current_participants >= auction.max_participants:
+                messages.error(request, 'وصل المزاد إلى الحد الأقصى للمشاركين')
+                return redirect('auction_detail', auction_id=auction_id)
+        
+        # إنشاء مشارك جديد
+        participant = AuctionParticipant.objects.create(
+            auction=auction,
+            user=request.user,
+            is_verified=True
+        )
+        
+        messages.success(request, 'تم الانضمام إلى المزاد بنجاح')
+        return redirect('auction_live', auction_id=auction_id)
+    
+    context = {
+        'auction': auction,
+    }
+    
+    return render(request, 'properties/auction_join.html', context)
+
+
+@login_required
+def auction_live(request, auction_id):
+    """المزاد الحي"""
+    from .models import Auction, Bid
+    
+    auction = get_object_or_404(Auction, id=auction_id)
+    
+    # التحقق من أن المستخدم مشارك
+    if not AuctionParticipant.objects.filter(auction=auction, user=request.user).exists():
+        messages.error(request, 'يجب الانضمام إلى المزاد أولاً')
+        return redirect('auction_detail', auction_id=auction_id)
+    
+    # الحصول على المزايدات
+    bids = auction.bids.all().order_by('-created_at')[:10]
+    
+    context = {
+        'auction': auction,
+        'bids': bids,
+    }
+    
+    return render(request, 'properties/auction_live.html', context)
+
+
+@login_required
+def place_bid(request, auction_id):
+    """وضع مزايدة"""
+    from .models import Auction, Bid
+    
+    auction = get_object_or_404(Auction, id=auction_id)
+    
+    if request.method == 'POST':
+        bid_amount = request.POST.get('bid_amount')
+        
+        # التحقق من أن المستخدم مشارك
+        if not AuctionParticipant.objects.filter(auction=auction, user=request.user).exists():
+            messages.error(request, 'يجب الانضمام إلى المزاد أولاً')
+            return redirect('auction_detail', auction_id=auction_id)
+        
+        # التحقق من أن المزاد نشط
+        if not auction.is_active():
+            messages.error(request, 'المزاد غير نشط حالياً')
+            return redirect('auction_detail', auction_id=auction_id)
+        
+        # التحقق من المبلغ
+        try:
+            bid_amount = int(bid_amount)
+        except:
+            messages.error(request, 'يرجى إدخال مبلغ صحيح')
+            return redirect('auction_live', auction_id=auction_id)
+        
+        # التحقق من الحد الأدنى للزيادة
+        current_highest = auction.get_current_highest_bid()
+        if bid_amount < current_highest + auction.minimum_increment:
+            messages.error(request, f'يجب أن تكون المزايدة أعلى من {current_highest + auction.minimum_increment}')
+            return redirect('auction_live', auction_id=auction_id)
+        
+        # إنشاء المزايدة
+        bid = Bid.objects.create(
+            auction=auction,
+            user=request.user,
+            amount=bid_amount
+        )
+        
+        # تمديد المزاد إذا لزم الأمر
+        auction.extend_auction()
+        
+        messages.success(request, 'تم وضع المزايدة بنجاح')
+        return redirect('auction_live', auction_id=auction_id)
+    
+    return redirect('auction_live', auction_id=auction_id)
+
+
+@login_required
+@staff_required
+def determine_auction_winner(request, auction_id):
+    """تحديد الفائز في المزاد"""
+    from .models import Auction, Bid
+    
+    auction = get_object_or_404(Auction, id=auction_id)
+    
+    if auction.status != 'ended':
+        messages.error(request, 'يمكن تحديد الفائز فقط للمزادات المنتهية')
+        return redirect('admin_auctions')
+    
+    if auction.winner_announced:
+        messages.warning(request, 'تم الإعلان عن الفائز بالفعل')
+        return redirect('admin_auctions')
+    
+    # الحصول على أعلى مزايدة
+    winning_bid = auction.bids.order_by('-amount').first()
+    
+    if winning_bid:
+        auction.winner = winning_bid.user
+        auction.winning_bid = winning_bid
+        auction.winner_announced = True
+        auction.save()
+        
+        # إشعار للفائز
+        from .utils import create_notification
+        create_notification(
+            user=winning_bid.user,
+            notification_type='auction',
+            title='🎉 فزت بالمزاد!',
+            message=f'تهانينا! فزت بمزاد {auction.title} بمبلغ {winning_bid.amount}',
+            link=f'/auction/{auction.id}/',
+            metadata={'auction_id': auction.id}
+        )
+        
+        messages.success(request, 'تم تحديد الفائز بنجاح')
+    else:
+        messages.error(request, 'لا توجد مزايدات لهذا المزاد')
+    
+    return redirect('admin_auctions')
+
+
+# ==================== User Moderation Views ====================
+
+@login_required
+def user_moderation_panel(request):
+    """لوحة تحكم مراقبة المستخدمين"""
+    from .permissions import is_platform_admin
+    
+    if not is_platform_admin(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    from django.contrib.auth.models import User
+    from .models import UserWarning, UserSuspension, UserModerationAction, ActivityLog
+    
+    # إحصائيات
+    total_users = User.objects.filter(is_active=True).count()
+    suspended_users = UserSuspension.objects.filter(status='active').count()
+    active_warnings = UserWarning.objects.filter(is_acknowledged=False).count()
+    recent_actions = UserModerationAction.objects.all()[:10]
+    
+    # قائمة المستخدمين مع الفلترة
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    
+    users = User.objects.all().select_related('broker_profile', 'user_profile')
+    
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query)
+        )
+    
+    if status_filter == 'suspended':
+        users = [u for u in users if UserSuspension.objects.filter(user=u, status='active').exists()]
+    elif status_filter == 'warned':
+        users = [u for u in users if UserWarning.objects.filter(user=u, is_acknowledged=False).exists()]
+    
+    # إضافة معلومات المراقبة لكل مستخدم
+    users_with_moderation = []
+    for user in users:
+        active_suspension = UserSuspension.objects.filter(user=user, status='active').first()
+        active_warnings = UserWarning.objects.filter(user=user, is_acknowledged=False).count()
+        recent_activity = ActivityLog.objects.filter(user=user).order_by('-created_at')[:5]
+        
+        users_with_moderation.append({
+            'user': user,
+            'is_suspended': active_suspension is not None,
+            'suspension': active_suspension,
+            'warning_count': active_warnings,
+            'recent_activity': recent_activity,
+        })
+    
+    context = {
+        'total_users': total_users,
+        'suspended_users': suspended_users,
+        'active_warnings': active_warnings,
+        'recent_actions': recent_actions,
+        'users': users_with_moderation,
+        'search_query': search_query,
+        'status_filter': status_filter,
+    }
+    
+    return render(request, 'properties/user_moderation_panel.html', context)
+
+
+@login_required
+def user_detail_moderation(request, user_id):
+    """تفاصيل مراقبة مستخدم معين"""
+    from .permissions import is_platform_admin
+    
+    if not is_platform_admin(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    from django.contrib.auth.models import User
+    from .models import UserWarning, UserSuspension, UserModerationAction, ActivityLog
+    
+    user = get_object_or_404(User, id=user_id)
+    
+    # بيانات المستخدم
+    warnings = UserWarning.objects.filter(user=user).order_by('-created_at')
+    suspensions = UserSuspension.objects.filter(user=user).order_by('-start_date')
+    moderation_actions = UserModerationAction.objects.filter(user=user).order_by('-created_at')
+    recent_activity = ActivityLog.objects.filter(user=user).order_by('-created_at')[:20]
+    
+    # التحقق من حالة التعطيل الحالية
+    active_suspension = UserSuspension.objects.filter(user=user, status='active').first()
+    
+    context = {
+        'target_user': user,
+        'warnings': warnings,
+        'suspensions': suspensions,
+        'moderation_actions': moderation_actions,
+        'recent_activity': recent_activity,
+        'active_suspension': active_suspension,
+    }
+    
+    return render(request, 'properties/user_moderation_detail.html', context)
+
+
+@login_required
+def issue_user_warning(request, user_id):
+    """إصدار إنذار لمستخدم"""
+    from .permissions import is_platform_admin
+    
+    if not is_platform_admin(request.user):
+        messages.error(request, 'ليس لديك صلاحية للقيام بهذا الإجراء')
+        return redirect('dashboard')
+    
+    from django.contrib.auth.models import User
+    from .models import UserWarning, UserModerationAction
+    
+    user = get_object_or_404(User, id=user_id)
+    
+    if request.method == 'POST':
+        warning_type = request.POST.get('warning_type')
+        severity = request.POST.get('severity', 'medium')
+        reason = request.POST.get('reason')
+        duration_days = request.POST.get('duration_days')
+        
+        if not all([warning_type, reason]):
+            messages.error(request, 'يرجى ملء جميع الحقول المطلوبة')
+        else:
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            expires_at = None
+            if duration_days:
+                expires_at = timezone.now() + timedelta(days=int(duration_days))
+            
+            # إنشاء الإنذار
+            warning = UserWarning.objects.create(
+                user=user,
+                issued_by=request.user,
+                warning_type=warning_type,
+                severity=severity,
+                reason=reason,
+                expires_at=expires_at
+            )
+            
+            # تسجيل الإجراء
+            UserModerationAction.objects.create(
+                user=user,
+                moderator=request.user,
+                action='warning',
+                reason=f'{warning_type}: {reason}',
+                duration=timedelta(days=int(duration_days)) if duration_days else None,
+                ip_address=get_client_ip(request)
+            )
+            
+            # إشعار للمستخدم
+            from .utils import create_notification
+            create_notification(
+                user=user,
+                notification_type='warning',
+                title='⚠️ إنذار جديد',
+                message=f'لقد تلقيت إنذاراً: {reason}',
+                metadata={'warning_id': warning.id}
+            )
+            
+            messages.success(request, 'تم إصدار الإنذار بنجاح')
+            return redirect('user_moderation_detail', user_id=user.id)
+    
+    context = {
+        'target_user': user,
+        'warning_types': UserWarning.TYPE_CHOICES,
+        'severity_choices': UserWarning.SEVERITY_CHOICES,
+    }
+    
+    return render(request, 'properties/issue_warning.html', context)
+
+
+@login_required
+def suspend_user(request, user_id):
+    """تعطيل مستخدم"""
+    from .permissions import is_platform_admin
+    
+    if not is_platform_admin(request.user):
+        messages.error(request, 'ليس لديك صلاحية للقيام بهذا الإجراء')
+        return redirect('dashboard')
+    
+    from django.contrib.auth.models import User
+    from .models import UserSuspension, UserModerationAction
+    
+    user = get_object_or_404(User, id=user_id)
+    
+    # التحقق من عدم تعطيل المستخدم بالفعل
+    if UserSuspension.objects.filter(user=user, status='active').exists():
+        messages.error(request, 'المستخدم معطل بالفعل')
+        return redirect('user_moderation_detail', user_id=user.id)
+    
+    if request.method == 'POST':
+        reason = request.POST.get('reason')
+        description = request.POST.get('description')
+        duration_days = request.POST.get('duration_days')
+        
+        if not all([reason, description]):
+            messages.error(request, 'يرجى ملء جميع الحقول المطلوبة')
+        else:
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            end_date = None
+            if duration_days:
+                end_date = timezone.now() + timedelta(days=int(duration_days))
+            
+            # إنشاء التعطيل
+            suspension = UserSuspension.objects.create(
+                user=user,
+                suspended_by=request.user,
+                reason=reason,
+                description=description,
+                end_date=end_date
+            )
+            
+            # تعطيل حساب المستخدم
+            user.is_active = False
+            user.save()
+            
+            # تسجيل الإجراء
+            UserModerationAction.objects.create(
+                user=user,
+                moderator=request.user,
+                action='suspend',
+                reason=f'{reason}: {description}',
+                duration=timedelta(days=int(duration_days)) if duration_days else None,
+                ip_address=get_client_ip(request)
+            )
+            
+            # إشعار للمستخدم
+            from .utils import create_notification
+            create_notification(
+                user=user,
+                notification_type='suspension',
+                title='🚫 تم تعطيل حسابك',
+                message=f'تم تعطيل حسابك للسبب: {description}',
+                metadata={'suspension_id': suspension.id}
+            )
+            
+            messages.success(request, 'تم تعطيل المستخدم بنجاح')
+            return redirect('user_moderation_detail', user_id=user.id)
+    
+    context = {
+        'target_user': user,
+        'reason_choices': UserSuspension.REASON_CHOICES,
+    }
+    
+    return render(request, 'properties/suspend_user.html', context)
+
+
+@login_required
+def lift_suspension(request, user_id):
+    """رفع تعطيل مستخدم"""
+    from .permissions import is_platform_admin
+    
+    if not is_platform_admin(request.user):
+        messages.error(request, 'ليس لديك صلاحية للقيام بهذا الإجراء')
+        return redirect('dashboard')
+    
+    from django.contrib.auth.models import User
+    from .models import UserSuspension, UserModerationAction
+    
+    user = get_object_or_404(User, id=user_id)
+    suspension = UserSuspension.objects.filter(user=user, status='active').first()
+    
+    if not suspension:
+        messages.error(request, 'المستخدم غير معطل حالياً')
+        return redirect('user_moderation_detail', user_id=user.id)
+    
+    if request.method == 'POST':
+        lift_reason = request.POST.get('lift_reason', '')
+        
+        # رفع التعطيل
+        suspension.lift(lifted_by=request.user, reason=lift_reason)
+        
+        # تفعيل حساب المستخدم
+        user.is_active = True
+        user.save()
+        
+        # تسجيل الإجراء
+        UserModerationAction.objects.create(
+            user=user,
+            moderator=request.user,
+            action='unsuspend',
+            reason=f'رفع التعطيل: {lift_reason}',
+            ip_address=get_client_ip(request)
+        )
+        
+        # إشعار للمستخدم
+        from .utils import create_notification
+        create_notification(
+            user=user,
+            notification_type='activation',
+            title='✅ تم تفعيل حسابك',
+            message='تم رفع التعطيل عن حسابك بنجاح',
+            metadata={'suspension_id': suspension.id}
+        )
+        
+        messages.success(request, 'تم رفع التعطيل بنجاح')
+        return redirect('user_moderation_detail', user_id=user.id)
+    
+    context = {
+        'target_user': user,
+        'suspension': suspension,
+    }
+    
+    return render(request, 'properties/lift_suspension.html', context)
+
+
+@login_required
+def delete_user(request, user_id):
+    """حذف مستخدم"""
+    from .permissions import is_platform_admin
+    
+    if not is_platform_admin(request.user):
+        messages.error(request, 'ليس لديك صلاحية للقيام بهذا الإجراء')
+        return redirect('dashboard')
+    
+    from django.contrib.auth.models import User
+    from .models import UserModerationAction
+    
+    user = get_object_or_404(User, id=user_id)
+    
+    if user.is_superuser:
+        messages.error(request, 'لا يمكن حذف المشرفين')
+        return redirect('user_moderation_detail', user_id=user.id)
+    
+    if request.method == 'POST':
+        reason = request.POST.get('reason')
+        
+        # تسجيل الإجراء قبل الحذف
+        UserModerationAction.objects.create(
+            user=user,
+            moderator=request.user,
+            action='delete',
+            reason=reason or 'حذف حساب',
+            ip_address=get_client_ip(request)
+        )
+        
+        # حذف المستخدم
+        username = user.username
+        user.delete()
+        
+        messages.success(request, f'تم حذف المستخدم {username} بنجاح')
+        return redirect('user_moderation_panel')
+    
+    context = {
+        'target_user': user,
+    }
+    
+    return render(request, 'properties/delete_user.html', context)
+
+
+@login_required
+def subscription_renewal_request(request):
+    """طلب تجديد اشتراك"""
+    broker = get_broker(request.user)
+    if not broker:
+        messages.error(request, 'يجب أن تكون دلالاً للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    # Get current subscription
+    current_subscription = BrokerPlanSubscription.objects.filter(
+        broker=broker,
+        status='active'
+    ).first()
+    
+    if request.method == 'POST':
+        property_types = request.POST.getlist('property_types')
+        regular_count = int(request.POST.get('regular_count', 0))
+        premium_count = int(request.POST.get('premium_count', 0))
+        days_requested = int(request.POST.get('days_requested', 0))
+        notes = request.POST.get('notes', '')
+        
+        # property_types now only includes property types (iraq, outside, hotels, resorts)
+        # building_requests and auctions are handled separately
+        
+        if regular_count < 0 or premium_count < 0:
+            messages.error(request, 'يجب إدخال أعداد صحيحة')
+            return render(request, 'properties/subscription_renewal_request.html', {
+                'current_subscription': current_subscription
+            })
+        
+        if regular_count == 0 and premium_count == 0:
+            messages.error(request, 'يجب تحديد عدد عقارات واحد على الأقل')
+            return render(request, 'properties/subscription_renewal_request.html', {
+                'current_subscription': current_subscription
+            })
+        
+        if days_requested < 1:
+            messages.error(request, 'يجب إدخال عدد أيام صحيح')
+            return render(request, 'properties/subscription_renewal_request.html', {
+                'current_subscription': current_subscription
+            })
+        
+        # Calculate cost
+        regular_price = 50
+        premium_price = 1000
+        regular_cost = regular_price * regular_count * days_requested
+        premium_cost = premium_price * premium_count * days_requested
+        estimated_cost = regular_cost + premium_cost
+        total_properties = regular_count + premium_count
+        
+        # Create combined plan name
+        plan_name_parts = []
+        if regular_count > 0:
+            plan_name_parts.append(f'{regular_count} عادي')
+        if premium_count > 0:
+            plan_name_parts.append(f'{premium_count} مميز')
+        plan_name = f'اشتراك مركب - {", ".join(plan_name_parts)}'
+        
+        # Find or create appropriate plan
+        plan = AdvancedSubscriptionPlan.objects.filter(
+            plan_type='combined',
+            name=plan_name
+        ).first()
+        
+        if not plan:
+            # Create plan if it doesn't exist
+            plan = AdvancedSubscriptionPlan.objects.create(
+                name=plan_name,
+                plan_type='combined',
+                tier='mixed',
+                price_per_day=estimated_cost // days_requested if days_requested > 0 else 0,
+                max_properties=total_properties,
+                allow_property_replacement=True,
+                is_active=True
+            )
+        
+        # Create renewal request
+        renewal_request = SubscriptionRenewalRequest.objects.create(
+            broker=broker,
+            current_subscription=current_subscription,
+            plan=plan,
+            days_requested=days_requested,
+            property_count=total_properties,
+            regular_count=regular_count,
+            premium_count=premium_count,
+            property_types=property_types,
+            estimated_cost=estimated_cost,
+            notes=notes,
+            status='pending'
+        )
+        
+        messages.success(request, 'تم إرسال طلب التجديد بنجاح')
+        return redirect('dashboard')
+    
+    return render(request, 'properties/subscription_renewal_request.html', {
+        'current_subscription': current_subscription
+    })
+
+
+@login_required
+def subscription_renewal_requests_list(request):
+    """قائمة طلبات التجديد (للإدارة)"""
+    from .permissions import is_platform_admin
+    
+    if not is_platform_admin(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    requests = SubscriptionRenewalRequest.objects.all().select_related('broker', 'plan').order_by('-created_at')
+    
+    return render(request, 'properties/subscription_renewal_requests_list.html', {
+        'requests': requests
+    })
+
+
+@login_required
+def approve_subscription_renewal(request, request_id):
+    """الموافقة على طلب تجديد اشتراك"""
+    from .permissions import is_platform_admin
+    
+    if not is_platform_admin(request.user):
+        return JsonResponse({'success': False, 'error': 'ليس لديك صلاحية'})
+    
+    renewal_request = get_object_or_404(SubscriptionRenewalRequest, id=request_id)
+    
+    if renewal_request.status != 'pending':
+        return JsonResponse({'success': False, 'error': 'الطلب ليس في حالة انتظار'})
+    
+    # Create or update subscription
+    subscription = renewal_request.current_subscription
+    if not subscription:
+        # Create new subscription
+        subscription = BrokerPlanSubscription.objects.create(
+            broker=renewal_request.broker,
+            plan=renewal_request.plan,
+            start_date=timezone.now(),
+            end_date=timezone.now() + timezone.timedelta(days=renewal_request.days_requested),
+            status='active',
+            total_paid=renewal_request.estimated_cost
+        )
+    else:
+        # Renew existing subscription
+        subscription.renew(renewal_request.days_requested)
+        subscription.total_paid += renewal_request.estimated_cost
+        subscription.save()
+    
+    # Update request status
+    renewal_request.status = 'approved'
+    renewal_request.approved_by = request.user
+    renewal_request.approved_at = timezone.now()
+    renewal_request.save()
+    
+    return JsonResponse({'success': True})
+
+
+@login_required
+def reject_subscription_renewal(request, request_id):
+    """رفض طلب تجديد اشتراك"""
+    from .permissions import is_platform_admin
+    
+    if not is_platform_admin(request.user):
+        return JsonResponse({'success': False, 'error': 'ليس لديك صلاحية'})
+    
+    renewal_request = get_object_or_404(SubscriptionRenewalRequest, id=request_id)
+    
+    if renewal_request.status != 'pending':
+        return JsonResponse({'success': False, 'error': 'الطلب ليس في حالة انتظار'})
+    
+    renewal_request.status = 'rejected'
+    renewal_request.rejection_reason = request.POST.get('reason', '')
+    renewal_request.save()
+    
+    return JsonResponse({'success': True})
+
+
+@login_required
+def user_monitoring_panel(request):
+    """لوحة مراقبة المستخدمين"""
+    from .permissions import is_platform_admin
+    
+    if not is_platform_admin(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    users = User.objects.all().select_related('user_profile', 'broker_profile').order_by('-date_joined')
+    
+    # Get additional info for each user
+    users_data = []
+    for user in users:
+        broker = None
+        try:
+            broker = Broker.objects.get(user=user)
+        except Broker.DoesNotExist:
+            pass
+        
+        subscription = None
+        if broker:
+            try:
+                subscription = BrokerPlanSubscription.objects.filter(
+                    broker=broker,
+                    status='active'
+                ).first()
+            except:
+                pass
+        
+        user_data = {
+            'user': user,
+            'broker': broker,
+            'subscription': subscription,
+            'is_superuser': user.is_superuser,
+            'is_staff': user.is_staff,
+            'is_active': user.is_active,
+            'date_joined': user.date_joined,
+            'last_login': user.last_login,
+            'email': user.email,
+        }
+        users_data.append(user_data)
+    
+    return render(request, 'properties/user_monitoring_panel.html', {
+        'users_data': users_data
+    })
+
+
+@login_required
+def user_monitoring_detail(request, user_id):
+    """تفاصيل مراقبة مستخدم محدد"""
+    from .permissions import is_platform_admin
+    
+    if not is_platform_admin(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    user = get_object_or_404(User, id=user_id)
+    
+    # Get broker info
+    broker = None
+    try:
+        broker = Broker.objects.get(user=user)
+    except Broker.DoesNotExist:
+        pass
+    
+    # Get subscription info
+    subscriptions = []
+    if broker:
+        subscriptions = BrokerPlanSubscription.objects.filter(
+            broker=broker
+        ).order_by('-created_at')
+    
+    # Get properties
+    properties = []
+    if broker:
+        properties = Property.objects.filter(
+            broker=broker
+        ).order_by('-created_at')[:20]
+    
+    # Get activity logs
+    activity_logs = []
+    try:
+        activity_logs = ActivityLog.objects.filter(
+            user=user
+        ).order_by('-created_at')[:50]
+    except:
+        pass
+    
+    # Get messages
+    messages_sent = []
+    messages_received = []
+    try:
+        messages_sent = Message.objects.filter(
+            sender=user
+        ).order_by('-created_at')[:20]
+        messages_received = Message.objects.filter(
+            recipient=user
+        ).order_by('-created_at')[:20]
+    except:
+        pass
+    
+    return render(request, 'properties/user_monitoring_detail.html', {
+        'user': user,
+        'broker': broker,
+        'subscriptions': subscriptions,
+        'properties': properties,
+        'activity_logs': activity_logs,
+        'messages_sent': messages_sent,
+        'messages_received': messages_received,
+    })
+
+
+def get_client_ip(request):
+    """الحصول على عنوان IP للعميل"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+
+# ==================== NOTIFICATIONS VIEWS ====================
+
+@login_required
+def notification_center(request):
+    """مركز الإشعارات للمستخدم"""
+    from .models import Notification, NotificationRecipient
+    
+    # Get all notifications for the user
+    notifications = NotificationRecipient.objects.filter(
+        user=request.user,
+        is_archived=False
+    ).select_related('notification').order_by('-created_at')
+    
+    # Get unread count
+    unread_count = notifications.filter(is_read=False).count()
+    
+    # Filter by read status
+    filter_type = request.GET.get('filter', 'all')
+    if filter_type == 'unread':
+        notifications = notifications.filter(is_read=False)
+    elif filter_type == 'read':
+        notifications = notifications.filter(is_read=True)
+    
+    # Search
+    search_query = request.GET.get('search', '')
+    if search_query:
+        notifications = notifications.filter(
+            notification__title__icontains=search_query
+        )
+    
+    context = {
+        'notifications': notifications,
+        'unread_count': unread_count,
+        'filter_type': filter_type,
+        'search_query': search_query,
+    }
+    
+    return render(request, 'properties/notification_center.html', context)
+
+
+@login_required
+def notification_detail(request, notification_id):
+    """عرض تفاصيل إشعار"""
+    from .models import Notification, NotificationRecipient
+    
+    try:
+        recipient = NotificationRecipient.objects.get(
+            notification_id=notification_id,
+            user=request.user
+        )
+        
+        # Mark as read
+        recipient.mark_as_read()
+        
+        # If button link exists, redirect
+        if recipient.notification.button_link:
+            return redirect(recipient.notification.button_link)
+        
+        context = {
+            'recipient': recipient,
+            'notification': recipient.notification,
+        }
+        
+        return render(request, 'properties/notification_detail.html', context)
+    
+    except NotificationRecipient.DoesNotExist:
+        messages.error(request, 'الإشعار غير موجود')
+        return redirect('notification_center')
+
+
+@login_required
+def mark_notification_read(request, notification_id):
+    """تعليم إشعار كمقروء"""
+    from .models import NotificationRecipient
+    
+    if request.method == 'POST':
+        try:
+            recipient = NotificationRecipient.objects.get(
+                notification_id=notification_id,
+                user=request.user
+            )
+            recipient.mark_as_read()
+            
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': True})
+            
+            messages.success(request, 'تم تعليم الإشعار كمقروء')
+        except NotificationRecipient.DoesNotExist:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'الإشعار غير موجود'})
+            messages.error(request, 'الإشعار غير موجود')
+    
+    return redirect('notification_center')
+
+
+@login_required
+def mark_notification_clicked(request, notification_id):
+    """تعليم إشعار كتم النقر"""
+    from .models import NotificationRecipient
+    
+    if request.method == 'POST':
+        try:
+            recipient = NotificationRecipient.objects.get(
+                notification_id=notification_id,
+                user=request.user
+            )
+            recipient.mark_as_clicked()
+            
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': True})
+            
+        except NotificationRecipient.DoesNotExist:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False})
+    
+    return JsonResponse({'success': True})
+
+
+@login_required
+def archive_notification(request, notification_id):
+    """أرشفة إشعار"""
+    from .models import NotificationRecipient
+    
+    if request.method == 'POST':
+        try:
+            recipient = NotificationRecipient.objects.get(
+                notification_id=notification_id,
+                user=request.user
+            )
+            recipient.archive()
+            
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': True})
+            
+            messages.success(request, 'تم أرشفة الإشعار')
+        except NotificationRecipient.DoesNotExist:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'الإشعار غير موجود'})
+            messages.error(request, 'الإشعار غير موجود')
+    
+    return redirect('notification_center')
+
+
+@login_required
+def delete_notification(request, notification_id):
+    """حذف إشعار"""
+    from .models import NotificationRecipient
+    
+    if request.method == 'POST':
+        try:
+            recipient = NotificationRecipient.objects.get(
+                notification_id=notification_id,
+                user=request.user
+            )
+            recipient.delete()
+            
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': True})
+            
+            messages.success(request, 'تم حذف الإشعار')
+        except NotificationRecipient.DoesNotExist:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'الإشعار غير موجود'})
+            messages.error(request, 'الإشعار غير موجود')
+    
+    return redirect('notification_center')
+
+
+@login_required
+def mark_all_read(request):
+    """تعليم جميع الإشعارات كمقروءة"""
+    from .models import NotificationRecipient
+    
+    if request.method == 'POST':
+        NotificationRecipient.objects.filter(
+            user=request.user,
+            is_read=False
+        ).update(is_read=True)
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': True})
+        
+        messages.success(request, 'تم تعليم جميع الإشعارات كمقروءة')
+    
+    return redirect('notification_center')
+
+
+@login_required
+def get_unread_count(request):
+    """الحصول على عدد الإشعارات غير المقروءة (AJAX)"""
+    from .models import NotificationRecipient
+    
+    count = NotificationRecipient.objects.filter(
+        user=request.user,
+        is_read=False
+    ).count()
+    
+    return JsonResponse({'count': count})
+
+
+@login_required
+def admin_notification_panel(request):
+    """لوحة إدارة الإشعارات"""
+    from .models import Notification, NotificationLog
+    from .permissions import can_access_admin_panel
+    
+    if not can_access_admin_panel(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    notifications = Notification.objects.all().order_by('-created_at')
+    
+    # Stats
+    total_sent = notifications.filter(status='sent').count()
+    total_draft = notifications.filter(status='draft').count()
+    total_scheduled = notifications.filter(status='scheduled').count()
+    
+    context = {
+        'notifications': notifications,
+        'total_sent': total_sent,
+        'total_draft': total_draft,
+        'total_scheduled': total_scheduled,
+    }
+    
+    return render(request, 'properties/admin_notification_panel.html', context)
+
+
+@login_required
+def admin_create_notification(request):
+    """إنشاء إشعار جديد"""
+    from .models import Notification
+    from .permissions import can_access_admin_panel
+    
+    if not can_access_admin_panel(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        notification_type = request.POST.get('notification_type', 'info')
+        priority = request.POST.get('priority', 'normal')
+        delivery_type = request.POST.get('delivery_type', 'in_app')
+        icon = request.POST.get('icon', '')
+        color = request.POST.get('color', '#0d9488')
+        button_text = request.POST.get('button_text', '')
+        button_link = request.POST.get('button_link', '')
+        
+        # Targeting
+        target_all_users = request.POST.get('target_all_users') == 'on'
+        target_all_brokers = request.POST.get('target_all_brokers') == 'on'
+        target_all_admins = request.POST.get('target_all_admins') == 'on'
+        target_office_owners = request.POST.get('target_office_owners') == 'on'
+        target_managers = request.POST.get('target_managers') == 'on'
+        target_active_users = request.POST.get('target_active_users') == 'on'
+        target_new_users = request.POST.get('target_new_users') == 'on'
+        target_inactive_users = request.POST.get('target_inactive_users') == 'on'
+        
+        # Account type targeting
+        target_account_type = request.POST.get('target_account_type', '')
+        target_subscription_type = request.POST.get('target_subscription_type', '')
+        target_account_status = request.POST.get('target_account_status', '')
+        
+        # Properties targeting
+        target_has_properties_str = request.POST.get('target_has_properties', '')
+        target_has_properties = None
+        if target_has_properties_str == 'true':
+            target_has_properties = True
+        elif target_has_properties_str == 'false':
+            target_has_properties = False
+        
+        # Location targeting
+        target_governorate = request.POST.get('target_governorate', '')
+        target_city = request.POST.get('target_city', '')
+        target_area = request.POST.get('target_area', '')
+        
+        # Property type targeting
+        target_property_type = request.POST.get('target_property_type', '')
+        
+        # Broker targeting
+        target_premium_brokers = request.POST.get('target_premium_brokers') == 'on'
+        target_min_properties = request.POST.get('target_min_properties')
+        target_min_rating = request.POST.get('target_min_rating')
+        
+        # Scheduling
+        scheduled_for = request.POST.get('scheduled_for')
+        expires_at = request.POST.get('expires_at')
+        
+        # Action
+        action = request.POST.get('action', 'send')  # send, schedule, draft
+        
+        # Create notification
+        notification = Notification.objects.create(
+            title=title,
+            description=description,
+            notification_type=notification_type,
+            priority=priority,
+            delivery_type=delivery_type,
+            icon=icon,
+            color=color,
+            button_text=button_text,
+            button_link=button_link,
+            target_all_users=target_all_users,
+            target_all_brokers=target_all_brokers,
+            target_all_admins=target_all_admins,
+            target_office_owners=target_office_owners,
+            target_managers=target_managers,
+            target_active_users=target_active_users,
+            target_new_users=target_new_users,
+            target_inactive_users=target_inactive_users,
+            target_account_type=target_account_type,
+            target_subscription_type=target_subscription_type,
+            target_account_status=target_account_status,
+            target_has_properties=target_has_properties,
+            target_governorate=target_governorate,
+            target_city=target_city,
+            target_area=target_area,
+            target_property_type=target_property_type,
+            target_premium_brokers=target_premium_brokers,
+            target_min_properties=int(target_min_properties) if target_min_properties else None,
+            target_min_rating=float(target_min_rating) if target_min_rating else None,
+            scheduled_for=scheduled_for if scheduled_for else None,
+            expires_at=expires_at if expires_at else None,
+            created_by=request.user,
+            status='draft' if action == 'draft' else ('scheduled' if scheduled_for else 'sent')
+        )
+        
+        # If sending immediately
+        if action == 'send' and not scheduled_for:
+            from .services import NotificationService
+            service = NotificationService()
+            service.send_notification(notification)
+        
+        messages.success(request, 'تم إنشاء الإشعار بنجاح')
+        return redirect('admin_notification_panel')
+    
+    return render(request, 'properties/admin_create_notification.html')
+
+
+@login_required
+def admin_edit_notification(request, notification_id):
+    """تعديل إشعار (فقط للمسودات والمجدولة)"""
+    from .models import Notification
+    from .permissions import can_access_admin_panel
+    
+    if not can_access_admin_panel(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    notification = get_object_or_404(Notification, id=notification_id)
+    
+    # Only allow editing drafts and scheduled notifications
+    if notification.status not in ['draft', 'scheduled']:
+        messages.error(request, 'لا يمكن تعديل الإشعارات المرسلة')
+        return redirect('admin_notification_detail', notification_id=notification_id)
+    
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        notification_type = request.POST.get('notification_type', 'info')
+        priority = request.POST.get('priority', 'normal')
+        delivery_type = request.POST.get('delivery_type', 'in_app')
+        icon = request.POST.get('icon', '')
+        color = request.POST.get('color', '#0d9488')
+        button_text = request.POST.get('button_text', '')
+        button_link = request.POST.get('button_link', '')
+        
+        # Targeting
+        target_all_users = request.POST.get('target_all_users') == 'on'
+        target_all_brokers = request.POST.get('target_all_brokers') == 'on'
+        target_all_admins = request.POST.get('target_all_admins') == 'on'
+        target_office_owners = request.POST.get('target_office_owners') == 'on'
+        target_managers = request.POST.get('target_managers') == 'on'
+        target_active_users = request.POST.get('target_active_users') == 'on'
+        target_new_users = request.POST.get('target_new_users') == 'on'
+        target_inactive_users = request.POST.get('target_inactive_users') == 'on'
+        
+        # Account type targeting
+        target_account_type = request.POST.get('target_account_type', '')
+        target_subscription_type = request.POST.get('target_subscription_type', '')
+        target_account_status = request.POST.get('target_account_status', '')
+        
+        # Properties targeting
+        target_has_properties_str = request.POST.get('target_has_properties', '')
+        target_has_properties = None
+        if target_has_properties_str == 'true':
+            target_has_properties = True
+        elif target_has_properties_str == 'false':
+            target_has_properties = False
+        
+        # Location targeting
+        target_governorate = request.POST.get('target_governorate', '')
+        target_city = request.POST.get('target_city', '')
+        target_area = request.POST.get('target_area', '')
+        
+        # Property type targeting
+        target_property_type = request.POST.get('target_property_type', '')
+        
+        # Broker targeting
+        target_premium_brokers = request.POST.get('target_premium_brokers') == 'on'
+        target_min_properties = request.POST.get('target_min_properties')
+        target_min_rating = request.POST.get('target_min_rating')
+        
+        # Scheduling
+        scheduled_for = request.POST.get('scheduled_for')
+        expires_at = request.POST.get('expires_at')
+        
+        # Action
+        action = request.POST.get('action', 'send')  # send, schedule, draft
+        
+        # Update notification
+        notification.title = title
+        notification.description = description
+        notification.notification_type = notification_type
+        notification.priority = priority
+        notification.delivery_type = delivery_type
+        notification.icon = icon
+        notification.color = color
+        notification.button_text = button_text
+        notification.button_link = button_link
+        notification.target_all_users = target_all_users
+        notification.target_all_brokers = target_all_brokers
+        notification.target_all_admins = target_all_admins
+        notification.target_office_owners = target_office_owners
+        notification.target_managers = target_managers
+        notification.target_active_users = target_active_users
+        notification.target_new_users = target_new_users
+        notification.target_inactive_users = target_inactive_users
+        notification.target_account_type = target_account_type
+        notification.target_subscription_type = target_subscription_type
+        notification.target_account_status = target_account_status
+        notification.target_has_properties = target_has_properties
+        notification.target_governorate = target_governorate
+        notification.target_city = target_city
+        notification.target_area = target_area
+        notification.target_property_type = target_property_type
+        notification.target_premium_brokers = target_premium_brokers
+        notification.target_min_properties = int(target_min_properties) if target_min_properties else None
+        notification.target_min_rating = float(target_min_rating) if target_min_rating else None
+        notification.scheduled_for = scheduled_for if scheduled_for else None
+        notification.expires_at = expires_at if expires_at else None
+        notification.status = 'draft' if action == 'draft' else ('scheduled' if scheduled_for else 'sent')
+        notification.save()
+        
+        # If sending immediately
+        if action == 'send' and not scheduled_for:
+            from .services import NotificationService
+            service = NotificationService()
+            service.send_notification(notification)
+        
+        messages.success(request, 'تم تحديث الإشعار بنجاح')
+        return redirect('admin_notification_detail', notification_id=notification.id)
+    
+    context = {
+        'notification': notification,
+        'edit_mode': True,
+    }
+    return render(request, 'properties/admin_create_notification.html', context)
+
+
+@login_required
+def admin_resend_notification(request, notification_id):
+    """إعادة إرسال إشعار"""
+    from .models import Notification
+    from .permissions import can_access_admin_panel
+    
+    if not can_access_admin_panel(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    notification = get_object_or_404(Notification, id=notification_id)
+    
+    # Create a copy of the notification
+    new_notification = Notification.objects.create(
+        title=notification.title,
+        description=notification.description,
+        notification_type=notification.notification_type,
+        priority=notification.priority,
+        delivery_type=notification.delivery_type,
+        icon=notification.icon,
+        color=notification.color,
+        button_text=notification.button_text,
+        button_link=notification.button_link,
+        target_all_users=notification.target_all_users,
+        target_all_brokers=notification.target_all_brokers,
+        target_all_admins=notification.target_all_admins,
+        target_office_owners=notification.target_office_owners,
+        target_managers=notification.target_managers,
+        target_active_users=notification.target_active_users,
+        target_new_users=notification.target_new_users,
+        target_inactive_users=notification.target_inactive_users,
+        target_account_type=notification.target_account_type,
+        target_subscription_type=notification.target_subscription_type,
+        target_account_status=notification.target_account_status,
+        target_has_properties=notification.target_has_properties,
+        target_governorate=notification.target_governorate,
+        target_city=notification.target_city,
+        target_area=notification.target_area,
+        target_property_type=notification.target_property_type,
+        target_premium_brokers=notification.target_premium_brokers,
+        target_min_properties=notification.target_min_properties,
+        target_min_rating=notification.target_min_rating,
+        created_by=request.user,
+        status='sent'
+    )
+    
+    # Send the notification
+    from .services import NotificationService
+    service = NotificationService()
+    service.send_notification(new_notification)
+    
+    messages.success(request, 'تم إعادة إرسال الإشعار بنجاح')
+    return redirect('admin_notification_detail', notification_id=new_notification.id)
+
+
+@login_required
+def admin_notification_detail(request, notification_id):
+    """عرض تفاصيل إشعار للإدارة"""
+    from .models import Notification, NotificationLog
+    from .permissions import can_access_admin_panel
+    
+    if not can_access_admin_panel(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    notification = get_object_or_404(Notification, id=notification_id)
+    logs = notification.logs.all()
+    
+    context = {
+        'notification': notification,
+        'logs': logs,
+    }
+    
+    return render(request, 'properties/admin_notification_detail.html', context)
+
+
+@login_required
+def admin_send_notification(request, notification_id):
+    """إرسال إشعار"""
+    from .models import Notification
+    from .permissions import can_access_admin_panel
+    
+    if not can_access_admin_panel(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    notification = get_object_or_404(Notification, id=notification_id)
+    
+    from .services import NotificationService
+    service = NotificationService()
+    service.send_notification(notification)
+    
+    messages.success(request, 'تم إرسال الإشعار بنجاح')
+    return redirect('admin_notification_detail', notification_id=notification_id)
+
+
+@login_required
+def admin_delete_notification(request, notification_id):
+    """حذف إشعار"""
+    from .models import Notification
+    from .permissions import can_access_admin_panel
+    
+    if not can_access_admin_panel(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    notification = get_object_or_404(Notification, id=notification_id)
+    notification.delete()
+    
+    messages.success(request, 'تم حذف الإشعار')
+    return redirect('admin_notification_panel')
+
+
+@login_required
+def admin_bulk_messaging(request):
+    """صفحة المراسلة الجماعية للإدارة"""
+    from .models import Broker, User, UserProfile
+    from .permissions import can_send_to_all_brokers, can_send_to_all_users
+    
+    if not can_send_to_all_brokers(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('admin_panel')
+    
+    # الحصول على قائمة الدلالين
+    brokers = Broker.objects.filter(is_active=True).select_related('user')
+    
+    # الحصول على قائمة المستخدمين
+    users = User.objects.filter(
+        is_active=True,
+        broker_profile__isnull=True
+    ).select_related('user_profile')
+    
+    if request.method == 'POST':
+        message_type = request.POST.get('message_type')
+        content = request.POST.get('content')
+        target_type = request.POST.get('target_type')  # 'brokers', 'users', 'all'
+        selected_brokers = request.POST.getlist('selected_brokers')
+        selected_users = request.POST.getlist('selected_users')
+        
+        if not content:
+            messages.error(request, 'يرجى إدخال محتوى الرسالة')
+        else:
+            from .models import Conversation, Message
+            
+            recipients = []
+            
+            if target_type == 'brokers' or target_type == 'all':
+                if selected_brokers:
+                    recipients.extend([User.objects.get(id=int(bid)) for bid in selected_brokers])
+                else:
+                    recipients.extend([broker.user for broker in brokers])
+            
+            if target_type == 'users' or target_type == 'all':
+                if selected_users:
+                    recipients.extend([User.objects.get(id=int(uid)) for uid in selected_users])
+                else:
+                    recipients.extend(list(users))
+            
+            # إنشاء محادثات جماعية
+            for recipient in recipients:
+                # التحقق من وجود محادثة سابقة
+                existing_conversation = Conversation.objects.filter(
+                    participants=request.user,
+                    conversation_type=Conversation.TYPE_DIRECT
+                ).filter(participants=recipient).first()
+                
+                if existing_conversation:
+                    conversation = existing_conversation
+                else:
+                    conversation = Conversation.objects.create(
+                        conversation_type=Conversation.TYPE_DIRECT,
+                        created_by=request.user
+                    )
+                    conversation.participants.add(request.user, recipient)
+                
+                # إرسال الرسالة
+                Message.objects.create(
+                    conversation=conversation,
+                    sender=request.user,
+                    recipient=recipient,
+                    message_type=message_type or Message.TYPE_TEXT,
+                    content=content,
+                    status=Message.STATUS_SENT
+                )
+            
+            messages.success(request, f'تم إرسال الرسالة إلى {len(recipients)} مستخدم')
+            return redirect('admin_bulk_messaging')
+    
+    context = {
+        'brokers': brokers,
+        'users': users,
+        'total_brokers': brokers.count(),
+        'total_users': users.count(),
+    }
+    
+    return render(request, 'properties/admin_bulk_messaging.html', context)
+
+
+@login_required
+def broker_bulk_messaging(request):
+    """صفحة المراسلة الجماعية للدلال"""
+    from .models import User, UserProfile
+    from .permissions import can_send_to_all_users
+    
+    if not can_send_to_all_users(request.user):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+    
+    # الحصول على قائمة المستخدمين
+    users = User.objects.filter(
+        is_active=True,
+        broker_profile__isnull=True
+    ).select_related('user_profile')
+    
+    if request.method == 'POST':
+        message_type = request.POST.get('message_type')
+        content = request.POST.get('content')
+        selected_users = request.POST.getlist('selected_users')
+        
+        if not content:
+            messages.error(request, 'يرجى إدخال محتوى الرسالة')
+        else:
+            from .models import Conversation, Message
+            
+            recipients = []
+            
+            if selected_users:
+                recipients.extend([User.objects.get(id=int(uid)) for uid in selected_users])
+            else:
+                recipients.extend(list(users))
+            
+            # إنشاء محادثات جماعية
+            for recipient in recipients:
+                # التحقق من وجود محادثة سابقة
+                existing_conversation = Conversation.objects.filter(
+                    participants=request.user,
+                    conversation_type=Conversation.TYPE_DIRECT
+                ).filter(participants=recipient).first()
+                
+                if existing_conversation:
+                    conversation = existing_conversation
+                else:
+                    conversation = Conversation.objects.create(
+                        conversation_type=Conversation.TYPE_DIRECT,
+                        created_by=request.user
+                    )
+                    conversation.participants.add(request.user, recipient)
+                
+                # إرسال الرسالة
+                Message.objects.create(
+                    conversation=conversation,
+                    sender=request.user,
+                    recipient=recipient,
+                    message_type=message_type or Message.TYPE_TEXT,
+                    content=content,
+                    status=Message.STATUS_SENT
+                )
+            
+            messages.success(request, f'تم إرسال الرسالة إلى {len(recipients)} مستخدم')
+            return redirect('broker_bulk_messaging')
+    
+    context = {
+        'users': users,
+        'total_users': users.count(),
+    }
+    
+    return render(request, 'properties/broker_bulk_messaging.html', context)
+
+
+# ==================== Resort Views ====================
+
+def resort_detail(request, slug):
+    """View for resort details"""
+    resort = get_object_or_404(Resort, slug=slug, status='active')
+    resort.increment_views()
+    
+    # Get reviews
+    reviews = resort.reviews.filter(is_approved=True)[:10]
+    
+    # Get offers
+    offers = resort.offers.filter(is_active=True)
+    
+    # Get amenities
+    amenities = resort.amenities.filter(is_available=True)
+    
+    # Get services
+    services = resort.services.filter(is_available=True)
+    
+    # Check if user liked this resort
+    is_liked = False
+    if request.user.is_authenticated:
+        is_liked = ResortLike.objects.filter(resort=resort, user=request.user).exists()
+    
+    # Check if user reviewed this resort
+    has_reviewed = False
+    if request.user.is_authenticated:
+        has_reviewed = ResortReview.objects.filter(resort=resort, user=request.user).exists()
+    
+    context = {
+        'resort': resort,
+        'reviews': reviews,
+        'offers': offers,
+        'amenities': amenities,
+        'services': services,
+        'is_liked': is_liked,
+        'has_reviewed': has_reviewed,
+    }
+    
+    return render(request, 'properties/resort_detail.html', context)
+
+
+@login_required
+def resort_create(request):
+    """View for creating a new resort"""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        resort_type = request.POST.get('resort_type')
+        description = request.POST.get('description')
+        governorate = request.POST.get('governorate')
+        city = request.POST.get('city')
+        district = request.POST.get('district')
+        full_address = request.POST.get('full_address')
+        phone = request.POST.get('phone')
+        whatsapp = request.POST.get('whatsapp')
+        email = request.POST.get('email')
+        website = request.POST.get('website')
+        working_hours = request.POST.get('working_hours')
+        working_days = request.POST.get('working_days')
+        min_price = request.POST.get('min_price')
+        max_price = request.POST.get('max_price')
+        currency = request.POST.get('currency', 'د.ع')
+        advance_booking = request.POST.get('advance_booking') == 'on'
+        latitude = request.POST.get('latitude')
+        longitude = request.POST.get('longitude')
+        video_url = request.POST.get('video_url')
+        meta_title = request.POST.get('meta_title')
+        meta_description = request.POST.get('meta_description')
+        keywords = request.POST.get('keywords')
+        
+        resort = Resort.objects.create(
+            name=name,
+            resort_type=resort_type,
+            description=description,
+            governorate=governorate,
+            city=city,
+            district=district,
+            full_address=full_address,
+            phone=phone,
+            whatsapp=whatsapp,
+            email=email,
+            website=website,
+            working_hours=working_hours,
+            working_days=working_days,
+            min_price=min_price,
+            max_price=max_price,
+            currency=currency,
+            advance_booking=advance_booking,
+            latitude=latitude,
+            longitude=longitude,
+            video_url=video_url,
+            meta_title=meta_title,
+            meta_description=meta_description,
+            keywords=keywords,
+            broker=request.user.broker if hasattr(request.user, 'broker') else None,
+            user=request.user,
+        )
+        
+        # Handle cover image
+        if 'cover_image' in request.FILES:
+            resort.cover_image = request.FILES['cover_image']
+        
+        # Handle logo
+        if 'logo' in request.FILES:
+            resort.logo = request.FILES['logo']
+        
+        resort.save()
+        
+        # Add amenities
+        amenities = request.POST.getlist('amenities')
+        for amenity in amenities:
+            ResortAmenity.objects.create(
+                resort=resort,
+                amenity_type=amenity,
+                is_available=True
+            )
+        
+        # Add services
+        services = request.POST.getlist('services')
+        for service in services:
+            ResortService.objects.create(
+                resort=resort,
+                service_type=service,
+                is_available=True
+            )
+        
+        messages.success(request, 'تم إضافة المنتجع بنجاح')
+        return redirect('resort_detail', slug=resort.slug)
+    
+    return render(request, 'properties/resort_form.html')
+
+
+@login_required
+def resort_update(request, slug):
+    """View for updating a resort"""
+    resort = get_object_or_404(Resort, slug=slug)
+    
+    # Check ownership
+    if resort.broker and resort.broker.user != request.user:
+        if resort.user != request.user:
+            messages.error(request, 'ليس لديك صلاحية تعديل هذا المنتجع')
+            return redirect('resort_detail', slug=slug)
+    
+    if request.method == 'POST':
+        resort.name = request.POST.get('name', resort.name)
+        resort.resort_type = request.POST.get('resort_type', resort.resort_type)
+        resort.description = request.POST.get('description', resort.description)
+        resort.governorate = request.POST.get('governorate', resort.governorate)
+        resort.city = request.POST.get('city', resort.city)
+        resort.district = request.POST.get('district', resort.district)
+        resort.full_address = request.POST.get('full_address', resort.full_address)
+        resort.phone = request.POST.get('phone', resort.phone)
+        resort.whatsapp = request.POST.get('whatsapp', resort.whatsapp)
+        resort.email = request.POST.get('email', resort.email)
+        resort.website = request.POST.get('website', resort.website)
+        resort.working_hours = request.POST.get('working_hours', resort.working_hours)
+        resort.working_days = request.POST.get('working_days', resort.working_days)
+        
+        min_price = request.POST.get('min_price')
+        if min_price:
+            resort.min_price = min_price
+        
+        max_price = request.POST.get('max_price')
+        if max_price:
+            resort.max_price = max_price
+        
+        resort.currency = request.POST.get('currency', resort.currency)
+        resort.advance_booking = request.POST.get('advance_booking') == 'on'
+        
+        # Handle cover image
+        if 'cover_image' in request.FILES:
+            resort.cover_image = request.FILES['cover_image']
+        
+        # Handle logo
+        if 'logo' in request.FILES:
+            resort.logo = request.FILES['logo']
+        
+        resort.save()
+        
+        # Update amenities
+        amenities = request.POST.getlist('amenities')
+        resort.amenities.all().delete()
+        for amenity in amenities:
+            ResortAmenity.objects.create(
+                resort=resort,
+                amenity_type=amenity,
+                is_available=True
+            )
+        
+        # Update services
+        services = request.POST.getlist('services')
+        resort.services.all().delete()
+        for service in services:
+            ResortService.objects.create(
+                resort=resort,
+                service_type=service,
+                is_available=True
+            )
+        
+        messages.success(request, 'تم تحديث المنتجع بنجاح')
+        return redirect('resort_detail', slug=resort.slug)
+    
+    context = {
+        'resort': resort,
+    }
+    
+    return render(request, 'properties/resort_form.html', context)
+
+
+@login_required
+def resort_delete(request, slug):
+    """View for deleting a resort"""
+    resort = get_object_or_404(Resort, slug=slug)
+    
+    # Check ownership
+    if resort.broker and resort.broker.user != request.user:
+        if resort.user != request.user:
+            messages.error(request, 'ليس لديك صلاحية حذف هذا المنتجع')
+            return redirect('resort_detail', slug=slug)
+    
+    if request.method == 'POST':
+        resort.delete()
+        messages.success(request, 'تم حذف المنتجع بنجاح')
+        return redirect('resorts_list')
+    
+    context = {
+        'resort': resort,
+    }
+    
+    return render(request, 'properties/resort_confirm_delete.html', context)
+
+
+@login_required
+def resort_booking(request, slug):
+    """View for booking a resort"""
+    resort = get_object_or_404(Resort, slug=slug, status='active')
+    
+    if request.method == 'POST':
+        check_in = request.POST.get('check_in')
+        check_out = request.POST.get('check_out')
+        guests = request.POST.get('guests', 1)
+        special_requests = request.POST.get('special_requests', '')
+        
+        # Calculate total price
+        from datetime import datetime, timedelta
+        check_in_date = datetime.strptime(check_in, '%Y-%m-%d').date()
+        check_out_date = datetime.strptime(check_out, '%Y-%m-%d').date()
+        nights = (check_out_date - check_in_date).days
+        
+        if nights <= 0:
+            messages.error(request, 'تاريخ المغادرة يجب أن يكون بعد تاريخ الوصول')
+            return redirect('resort_detail', slug=slug)
+        
+        # Use average price if min and max are different
+        if resort.min_price and resort.max_price:
+            avg_price = (resort.min_price + resort.max_price) / 2
+        elif resort.min_price:
+            avg_price = resort.min_price
+        elif resort.max_price:
+            avg_price = resort.max_price
+        else:
+            avg_price = 0
+        
+        total_price = avg_price * nights
+        
+        booking = ResortBooking.objects.create(
+            resort=resort,
+            user=request.user,
+            check_in=check_in_date,
+            check_out=check_out_date,
+            guests=int(guests),
+            total_price=total_price,
+            special_requests=special_requests,
+            status='pending'
+        )
+        
+        # Create notification
+        Notification.create(
+            user=resort.broker.user if resort.broker else resort.user,
+            notification_type='message_received',
+            title='حجز جديد',
+            message=f'حجز جديد للمنتجع {resort.name} من {request.user.username}',
+            link=f'/resorts/{resort.slug}/bookings/'
+        )
+        
+        messages.success(request, 'تم إرسال طلب الحجز بنجاح')
+        return redirect('resort_detail', slug=slug)
+    
+    context = {
+        'resort': resort,
+    }
+    
+    return render(request, 'properties/resort_booking.html', context)
+
+
+@login_required
+def resort_review(request, slug):
+    """View for adding a review to a resort"""
+    resort = get_object_or_404(Resort, slug=slug, status='active')
+    
+    if request.method == 'POST':
+        rating = request.POST.get('rating')
+        comment = request.POST.get('comment')
+        
+        # Check if user already reviewed
+        existing_review = ResortReview.objects.filter(resort=resort, user=request.user).first()
+        if existing_review:
+            existing_review.rating = int(rating)
+            existing_review.comment = comment
+            existing_review.save()
+            messages.success(request, 'تم تحديث تقييمك بنجاح')
+        else:
+            ResortReview.objects.create(
+                resort=resort,
+                user=request.user,
+                rating=int(rating),
+                comment=comment,
+                is_approved=False
+            )
+            messages.success(request, 'تم إضافة تقييمك بنجاح وسيتم مراجعته')
+        
+        return redirect('resort_detail', slug=slug)
+    
+    context = {
+        'resort': resort,
+    }
+    
+    return render(request, 'properties/resort_review.html', context)
+
+
+@login_required
+def resort_like(request, slug):
+    """View for liking/unliking a resort"""
+    resort = get_object_or_404(Resort, slug=slug, status='active')
+    
+    like = ResortLike.objects.filter(resort=resort, user=request.user).first()
+    
+    if like:
+        like.delete()
+        resort.likes_count -= 1
+        resort.save(update_fields=['likes_count'])
+        return JsonResponse({'liked': False, 'likes_count': resort.likes_count})
+    else:
+        ResortLike.objects.create(resort=resort, user=request.user)
+        return JsonResponse({'liked': True, 'likes_count': resort.likes_count})
+
+
+@login_required
+def resort_my_resorts(request):
+    """View for user's resorts"""
+    resorts = Resort.objects.filter(
+        Q(broker__user=request.user) | Q(user=request.user)
+    ).order_by('-created_at')
+    
+    context = {
+        'resorts': resorts,
+    }
+    
+    return render(request, 'properties/resort_my_resorts.html', context)
+
+
+@login_required
+def resort_my_bookings(request):
+    """View for user's resort bookings"""
+    bookings = ResortBooking.objects.filter(user=request.user).order_by('-created_at')
+    
+    context = {
+        'bookings': bookings,
+    }
+    
+    return render(request, 'properties/resort_my_bookings.html', context)

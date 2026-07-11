@@ -23,3 +23,12 @@ def mul(value, arg):
         return float(value) * float(arg)
     except (ValueError, TypeError):
         return 0
+
+
+@register.filter
+def add(value, arg):
+    """Add arg to value"""
+    try:
+        return float(value) + float(arg)
+    except (ValueError, TypeError):
+        return 0

@@ -1,0 +1,298 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}منشورات القناة - {{ channel.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-channel-properties-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.channel-header {
+  background: var(--card-bg);
+  padding: 30px;
+  border-radius: var(--radius);
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.channel-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--border);
+}
+
+.channel-info h1 {
+  color: var(--text);
+  margin: 0 0 10px 0;
+}
+
+.channel-info p {
+  color: var(--text-light);
+  margin: 5px 0;
+}
+
+.filters-bar {
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: var(--radius);
+  margin-bottom: 30px;
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filters-bar select {
+  padding: 10px 15px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.properties-table {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.properties-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.properties-table th,
+.properties-table td {
+  padding: 15px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.properties-table th {
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.properties-table tr:hover {
+  background: rgba(13, 148, 136, 0.05);
+}
+
+.property-thumbnail {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--border);
+}
+
+.property-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.property-price {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-ready {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.status-draft {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+.status-pending {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-delete {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.btn-view {
+  background: rgba(13, 148, 136, 0.1);
+  color: var(--primary);
+}
+
+.btn-view:hover {
+  background: rgba(13, 148, 136, 0.2);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-light);
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.back-btn {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  color: var(--text);
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+  background: var(--bg);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-channel-properties-container">
+  <a href="{% url 'admin_channels_list' %}" class="back-btn">← العودة لقائمة القنوات</a>
+  
+  <div class="channel-header">
+    {% if channel.logo %}
+    <img src="{{ channel.logo.url }}" alt="{{ channel.name }}" class="channel-logo">
+    {% else %}
+    <div class="channel-logo" style="display: flex; align-items: center; justify-content: center; font-size: 2rem;">📺</div>
+    {% endif %}
+    <div class="channel-info">
+      <h1>{{ channel.name }}</h1>
+      <p>الدلال: {{ channel.broker.display_name }}</p>
+      <p>عدد العقارات: {{ channel.properties_count }} | المتابعين: {{ channel.followers_count }}</p>
+    </div>
+  </div>
+
+  <form method="get" class="filters-bar">
+    <select name="status">
+      <option value="all" {% if status_filter == 'all' %}selected{% endif %}>كل الحالات</option>
+      <option value="ready" {% if status_filter == 'ready' %}selected{% endif %}>منشور</option>
+      <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>مسودة</option>
+      <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>بانتظار الموافقة</option>
+    </select>
+    
+    <button type="submit" style="padding: 10px 25px; background: var(--primary); color: white; border: none; border-radius: var(--radius); cursor: pointer;">تصفية</button>
+  </form>
+
+  {% if properties %}
+  <div class="properties-table">
+    <table>
+      <thead>
+        <tr>
+          <th>العقار</th>
+          <th>السعر</th>
+          <th>الموقع</th>
+          <th>الحالة</th>
+          <th>المالك</th>
+          <th>تاريخ الإضافة</th>
+          <th>الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for property in properties %}
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 15px;">
+              {% if property.gallery_images.first %}
+              <img src="{{ property.gallery_images.first.image.url }}" alt="{{ property.title }}" class="property-thumbnail">
+              {% else %}
+              <div class="property-thumbnail" style="display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">🏠</div>
+              {% endif %}
+              <div class="property-title">{{ property.title|truncatechars:40 }}</div>
+            </div>
+          </td>
+          <td>
+            <div class="property-price">{{ property.price }} {{ property.currency }}</div>
+          </td>
+          <td>
+            {% if property.governorate %}
+            {{ property.get_governorate_display }}
+            {% elif property.country %}
+            {{ property.country.name_ar }}
+            {% else %}
+            -
+            {% endif %}
+          </td>
+          <td>
+            <span class="status-badge status-{{ property.status }}">
+              {% if property.status == 'ready' %}منشور{% endif %}
+              {% if property.status == 'draft' %}مسودة{% endif %}
+              {% if property.status == 'pending' %}بانتظار الموافقة{% endif %}
+            </span>
+          </td>
+          <td>
+            {% if property.owner %}
+            {{ property.owner.username }}
+            {% else %}
+            -
+            {% endif %}
+          </td>
+          <td>{{ property.created_at|date:"Y-m-d" }}</td>
+          <td>
+            <div class="action-buttons">
+              <a href="{% url 'property_detail' property.id %}" class="action-btn btn-view" target="_blank">
+                👁️ عرض
+              </a>
+              <a href="{% url 'admin_channel_property_delete' channel.id property.id %}" class="action-btn btn-delete" onclick="return confirm('هل أنت متأكد من حذف هذا العقار؟')">
+                🗑️ حذف
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📄</div>
+    <h3>لا توجد منشورات</h3>
+    <p>لم يتم العثور على منشورات لهذه القناة</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

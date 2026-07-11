@@ -1,0 +1,290 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}الرسائل{% endblock %}
+
+{% block content %}
+<div class="messages-container">
+  <div class="messages-sidebar">
+    <div class="messages-header">
+      <h2>💬 الرسائل</h2>
+      <a href="{% url 'dashboard' %}" class="btn-back">←</a>
+    </div>
+    
+    <div class="search-box">
+      <input type="text" id="searchConversations" placeholder="🔍 بحث في المحادثات...">
+    </div>
+    
+    <div class="conversations-list" id="conversationsList">
+      {% for conversation in conversations %}
+      <div class="conversation-item" data-conversation-id="{{ conversation.conversation_id }}">
+        <a href="{% url 'conversation_detail' conversation.conversation_id %}" class="conversation-link">
+          <div class="conversation-avatar">
+            {% with other_user=conversation.get_other_participant|default:request.user %}
+              {% if other_user %}
+                {{ other_user.username|slice:":1"|upper }}
+              {% else %}
+                ?
+              {% endif %}
+            {% endwith %}
+          </div>
+          
+          <div class="conversation-info">
+            <div class="conversation-name">
+              {% with other_user=conversation.get_other_participant|default:request.user %}
+                {% if other_user %}
+                  {{ other_user.get_full_name|default:other_user.username }}
+                {% else %}
+                  محادثة
+                {% endif %}
+              {% endwith %}
+            </div>
+            
+            <div class="conversation-preview">
+              {% with last_message=conversation.messages.first %}
+                {% if last_message %}
+                  {% if last_message.sender == request.user %}
+                    أنت:
+                  {% endif %}
+                  {{ last_message.content|truncatewords:5 }}
+                {% else %}
+                  لا توجد رسائل
+                {% endif %}
+              {% endwith %}
+            </div>
+          </div>
+          
+          <div class="conversation-meta">
+            <div class="conversation-time">
+              {% with last_message=conversation.messages.first %}
+                {% if last_message %}
+                  {{ last_message.created_at|timesince }}
+                {% else %}
+                  {{ conversation.created_at|timesince }}
+                {% endif %}
+              {% endwith %}
+            </div>
+            
+            <div class="conversation-actions">
+              <a href="{% url 'conversation_archive' conversation.conversation_id %}" class="action-btn" title="أرشفة">📁</a>
+              <a href="{% url 'conversation_delete' conversation.conversation_id %}" class="action-btn" title="حذف">🗑️</a>
+            </div>
+          </div>
+        </a>
+      </div>
+      {% empty %}
+      <div class="no-conversations">
+        <div class="no-conversations-icon">💬</div>
+        <p>لا توجد محادثات</p>
+        <a href="{% url 'dashboard' %}" class="btn btn-primary">تصفح العقارات</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<style>
+.messages-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+.messages-sidebar {
+  background: var(--bg-alt);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.messages-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  color: white;
+}
+
+.messages-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.btn-back {
+  color: white;
+  text-decoration: none;
+  font-size: 1.5rem;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  transition: background 0.3s;
+}
+
+.btn-back:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.search-box {
+  padding: 15px;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #ff6b35;
+}
+
+.conversations-list {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+.conversation-item {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.3s;
+}
+
+.conversation-item:hover {
+  background: var(--bg);
+}
+
+.conversation-link {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  text-decoration: none;
+  color: var(--text);
+  gap: 15px;
+}
+
+.conversation-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.conversation-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.conversation-name {
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: var(--text);
+}
+
+.conversation-preview {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.conversation-time {
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.conversation-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.action-btn {
+  color: var(--text-light);
+  text-decoration: none;
+  padding: 5px;
+  border-radius: var(--radius-sm);
+  transition: all 0.3s;
+}
+
+.action-btn:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.no-conversations {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-light);
+}
+
+.no-conversations-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.no-conversations p {
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+}
+
+/* Scrollbar styling */
+.conversations-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.conversations-list::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+.conversations-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.conversations-list::-webkit-scrollbar-thumb:hover {
+  background: #ff6b35;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('searchConversations');
+  const conversations = document.querySelectorAll('.conversation-item');
+  
+  searchInput.addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    
+    conversations.forEach(conversation => {
+      const name = conversation.querySelector('.conversation-name').textContent.toLowerCase();
+      const preview = conversation.querySelector('.conversation-preview').textContent.toLowerCase();
+      
+      if (name.includes(searchTerm) || preview.includes(searchTerm)) {
+        conversation.style.display = '';
+      } else {
+        conversation.style.display = 'none';
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

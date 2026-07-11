@@ -1,0 +1,177 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}{{ category_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.category-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 60px 20px;
+  text-align: center;
+  color: white;
+  border-radius: 0 0 30px 30px;
+  margin-bottom: 30px;
+}
+
+.category-icon {
+  font-size: 4rem;
+  margin-bottom: 15px;
+}
+
+.category-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.category-subtitle {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.filter-section {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 25px;
+  margin-bottom: 30px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+}
+
+.form-control option {
+  background: #1a1a1a;
+  color: white;
+}
+
+.btn-filter {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-filter:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 25px;
+  padding: 0 20px;
+}
+
+.no-results {
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="category-header">
+  <div class="category-icon">{{ category_icon }}</div>
+  <h1 class="category-title">{{ category_title }}</h1>
+  <p class="category-subtitle">تصفح العقارات داخل العراق مع خيارات فلترة متقدمة</p>
+</div>
+
+<div class="container">
+  <!-- Filter Section -->
+  <div class="filter-section">
+    <form method="get" class="filter-grid">
+      <div class="form-group">
+        <label>نوع العقار</label>
+        <select name="property_type" class="form-control">
+          <option value="all" {% if property_type == 'all' %}selected{% endif %}>الكل</option>
+          <option value="house" {% if property_type == 'house' %}selected{% endif %}>بيت</option>
+          <option value="apartment" {% if property_type == 'apartment' %}selected{% endif %}>شقة</option>
+          <option value="villa" {% if property_type == 'villa' %}selected{% endif %}>فيلا</option>
+          <option value="land" {% if property_type == 'land' %}selected{% endif %}>أرض</option>
+          <option value="shop" {% if property_type == 'shop' %}selected{% endif %}>محل تجاري</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>نوع الإعلان</label>
+        <select name="listing_type" class="form-control">
+          <option value="all" {% if listing_type == 'all' %}selected{% endif %}>الكل</option>
+          <option value="sale" {% if listing_type == 'sale' %}selected{% endif %}>بيع</option>
+          <option value="rent" {% if listing_type == 'rent' %}selected{% endif %}>إيجار</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>المحافظة</label>
+        <select name="governorate" class="form-control">
+          <option value="" {% if not governorate %}selected{% endif %}>الكل</option>
+          <option value="BAG" {% if governorate == 'BAG' %}selected{% endif %}>بغداد</option>
+          <option value="BAS" {% if governorate == 'BAS' %}selected{% endif %}>البصرة</option>
+          <option value="NIN" {% if governorate == 'NIN' %}selected{% endif %}>نينوى</option>
+          <option value="ERB" {% if governorate == 'ERB' %}selected{% endif %}>أربيل</option>
+          <option value="NAJ" {% if governorate == 'NAJ' %}selected{% endif %}>النجف</option>
+          <option value="KAR" {% if governorate == 'KAR' %}selected{% endif %}>كربلاء</option>
+          <option value="BAB" {% if governorate == 'BAB' %}selected{% endif %}>بابل</option>
+          <option value="DHI" {% if governorate == 'DHI' %}selected{% endif %}>ذي قار</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>السعر من</label>
+        <input type="number" name="price_min" class="form-control" placeholder="السعر الأدنى" value="{{ price_min }}">
+      </div>
+
+      <div class="form-group">
+        <label>السعر إلى</label>
+        <input type="number" name="price_max" class="form-control" placeholder="السعر الأعلى" value="{{ price_max }}">
+      </div>
+
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <button type="submit" class="btn-filter">تصفية النتائج</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Properties Grid -->
+  {% if properties %}
+  <div class="properties-grid">
+    {% for property in properties %}
+    {% include 'properties/_property_card.html' %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="no-results">
+    <p>لا توجد عقارات مطابقة لمعايير البحث</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

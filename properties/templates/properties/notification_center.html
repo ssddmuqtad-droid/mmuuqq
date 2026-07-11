@@ -1,0 +1,214 @@
+{% extends "properties/dashboard_base.html" %}
+{% load static %}
+
+{% block title %}الإشعارات{% endblock %}
+{% block dashboard_title %}الإشعارات{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم</a>
+<button onclick="markAllRead()" class="btn btn-primary">تعليم الكل كمقروء</button>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <!-- Filters -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <div class="btn-group" role="group">
+                                <a href="?filter=all" class="btn {% if filter_type == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                                    الكل ({{ notifications|length }})
+                                </a>
+                                <a href="?filter=unread" class="btn {% if filter_type == 'unread' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                                    غير مقروء ({{ unread_count }})
+                                </a>
+                                <a href="?filter=read" class="btn {% if filter_type == 'read' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                                    مقروء
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <form method="GET" class="d-flex">
+                                <input type="text" name="search" class="form-control" placeholder="بحث في الإشعارات..." value="{{ search_query }}">
+                                <button type="submit" class="btn btn-primary ms-2">بحث</button>
+                                {% if search_query %}
+                                <a href="{% url 'notification_center' %}" class="btn btn-outline-secondary ms-2">إلغاء</a>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications List -->
+            {% if notifications %}
+            <div class="list-group">
+                {% for recipient in notifications %}
+                <div class="list-group-item {% if not recipient.is_read %}unread-notification{% endif %}" 
+                     style="border-left: 4px solid {{ recipient.notification.color }}; cursor: pointer;"
+                     onclick="openNotification({{ recipient.notification.id }})">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            {% if recipient.notification.icon %}
+                            <span class="me-3" style="font-size: 1.5rem;">{{ recipient.notification.icon }}</span>
+                            {% endif %}
+                            <div>
+                                <h5 class="mb-1 {% if not recipient.is_read %}fw-bold{% endif %}">
+                                    {{ recipient.notification.title }}
+                                </h5>
+                                <p class="mb-1 text-muted">{{ recipient.notification.description|truncatewords:20 }}</p>
+                                <small class="text-muted">
+                                    {{ recipient.created_at|date:"Y-m-d H:i" }}
+                                    {% if recipient.notification.button_text %}
+                                    <span class="badge bg-info">{{ recipient.notification.button_text }}</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-link text-muted" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                {% if not recipient.is_read %}
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="markAsRead({{ recipient.notification.id }}); return false;">
+                                        تعليم كمقروء
+                                    </a>
+                                </li>
+                                {% endif %}
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="archiveNotification({{ recipient.notification.id }}); return false;">
+                                        أرشفة
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="#" onclick="deleteNotification({{ recipient.notification.id }}); return false;">
+                                        حذف
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div style="font-size: 4rem; opacity: 0.3;">🔔</div>
+                <h4 class="text-muted">لا توجد إشعارات</h4>
+                <p class="text-muted">ستظهر الإشعارات الجديدة هنا</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.unread-notification {
+    background-color: rgba(13, 148, 136, 0.1);
+}
+
+.list-group-item:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.list-group-item {
+    transition: background-color 0.2s ease;
+}
+</style>
+
+<script>
+function openNotification(notificationId) {
+    window.location.href = `/notifications/${notificationId}/`;
+}
+
+function markAsRead(notificationId) {
+    fetch(`/notifications/${notificationId}/read/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+function archiveNotification(notificationId) {
+    if (!confirm('هل أنت متأكد من أرشفة هذا الإشعار؟')) return;
+    
+    fetch(`/notifications/${notificationId}/archive/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+function deleteNotification(notificationId) {
+    if (!confirm('هل أنت متأكد من حذف هذا الإشعار؟')) return;
+    
+    fetch(`/notifications/${notificationId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+function markAllRead() {
+    if (!confirm('هل تريد تعليم جميع الإشعارات كمقروءة؟')) return;
+    
+    fetch('/notifications/mark-all-read/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

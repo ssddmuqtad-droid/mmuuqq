@@ -1,0 +1,404 @@
+{% extends "properties/dashboard_base.html" %}
+{% load static %}
+
+{% block title %}{% if edit_mode %}تعديل إشعار{% else %}إنشاء إشعار جديد{% endif %}{% endblock %}
+{% block dashboard_title %}{% if edit_mode %}تعديل <span>إشعار</span>{% else %}إنشاء <span>إشعار جديد</span>{% endif %}{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'admin_notification_panel' %}" class="btn btn-outline">العودة للإشعارات</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">إنشاء إشعار جديد</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="notificationForm">
+                        {% csrf_token %}
+                        
+                        <!-- Basic Info -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">المعلومات الأساسية</h6>
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="title" class="form-label">العنوان *</label>
+                                    <input type="text" class="form-control" id="title" name="title" required
+                                           value="{% if edit_mode and notification %}{{ notification.title }}{% endif %}">
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label for="description" class="form-label">الوصف *</label>
+                                    <textarea class="form-control" id="description" name="description" rows="4" required>{% if edit_mode and notification %}{{ notification.description }}{% endif %}</textarea>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="notification_type" class="form-label">النوع</label>
+                                    <select class="form-select" id="notification_type" name="notification_type">
+                                        <option value="info" {% if edit_mode and notification.notification_type == 'info' %}selected{% endif %}>معلومة</option>
+                                        <option value="success" {% if edit_mode and notification.notification_type == 'success' %}selected{% endif %}>نجاح</option>
+                                        <option value="warning" {% if edit_mode and notification.notification_type == 'warning' %}selected{% endif %}>تحذير</option>
+                                        <option value="error" {% if edit_mode and notification.notification_type == 'error' %}selected{% endif %}>خطأ</option>
+                                        <option value="property" {% if edit_mode and notification.notification_type == 'property' %}selected{% endif %}>عقار</option>
+                                        <option value="message" {% if edit_mode and notification.notification_type == 'message' %}selected{% endif %}>رسالة</option>
+                                        <option value="rating" {% if edit_mode and notification.notification_type == 'rating' %}selected{% endif %}>تقييم</option>
+                                        <option value="subscription" {% if edit_mode and notification.notification_type == 'subscription' %}selected{% endif %}>اشتراك</option>
+                                        <option value="auction" {% if edit_mode and notification.notification_type == 'auction' %}selected{% endif %}>مزاد</option>
+                                        <option value="building" {% if edit_mode and notification.notification_type == 'building' %}selected{% endif %}>بناء</option>
+                                        <option value="system" {% if edit_mode and notification.notification_type == 'system' %}selected{% endif %}>نظام</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="priority" class="form-label">الأولوية</label>
+                                    <select class="form-select" id="priority" name="priority">
+                                        <option value="low" {% if edit_mode and notification.priority == 'low' %}selected{% endif %}>منخفضة</option>
+                                        <option value="normal" {% if edit_mode and notification.priority == 'normal' or not edit_mode %}selected{% endif %}>عادية</option>
+                                        <option value="high" {% if edit_mode and notification.priority == 'high' %}selected{% endif %}>عالية</option>
+                                        <option value="urgent" {% if edit_mode and notification.priority == 'urgent' %}selected{% endif %}>عاجلة</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="delivery_type" class="form-label">نوع الإرسال</label>
+                                    <select class="form-select" id="delivery_type" name="delivery_type">
+                                        <option value="in_app" {% if edit_mode and notification.delivery_type == 'in_app' or not edit_mode %}selected{% endif %}>داخلي فقط</option>
+                                        <option value="push" {% if edit_mode and notification.delivery_type == 'push' %}selected{% endif %}>Push Notification فقط</option>
+                                        <option value="both" {% if edit_mode and notification.delivery_type == 'both' %}selected{% endif %}>كلاهما</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="icon" class="form-label">الأيقونة</label>
+                                    <input type="text" class="form-control" id="icon" name="icon" placeholder="🔔"
+                                           value="{% if edit_mode and notification %}{{ notification.icon }}{% endif %}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="color" class="form-label">اللون</label>
+                                    <input type="color" class="form-control form-control-color" id="color" name="color" value="{% if edit_mode and notification %}{{ notification.color }}{% else %}#0d9488{% endif %}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="image" class="form-label">صورة (اختياري)</label>
+                                    <input type="file" class="form-control" id="image" name="image">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Elements -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">عناصر الإجراء</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="button_text" class="form-label">نص الزر</label>
+                                    <input type="text" class="form-control" id="button_text" name="button_text" placeholder="مثال: عرض التفاصيل"
+                                           value="{% if edit_mode and notification %}{{ notification.button_text }}{% endif %}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="button_link" class="form-label">رابط الزر</label>
+                                    <input type="url" class="form-control" id="button_link" name="button_link" placeholder="https://..."
+                                           value="{% if edit_mode and notification %}{{ notification.button_link }}{% endif %}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Targeting -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">استهداف المستخدمين</h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="target_all_users" name="target_all_users"
+                                               {% if edit_mode and notification.target_all_users %}checked{% endif %}>
+                                        <label class="form-check-label" for="target_all_users">
+                                            جميع المستخدمين
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="target_all_brokers" name="target_all_brokers"
+                                               {% if edit_mode and notification.target_all_brokers %}checked{% endif %}>
+                                        <label class="form-check-label" for="target_all_brokers">
+                                            جميع الدلالين
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="target_all_admins" name="target_all_admins"
+                                               {% if edit_mode and notification.target_all_admins %}checked{% endif %}>
+                                        <label class="form-check-label" for="target_all_admins">
+                                            جميع المشرفين
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="target_office_owners" name="target_office_owners"
+                                               {% if edit_mode and notification.target_office_owners %}checked{% endif %}>
+                                        <label class="form-check-label" for="target_office_owners">
+                                            أصحاب المكاتب
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="target_managers" name="target_managers"
+                                               {% if edit_mode and notification.target_managers %}checked{% endif %}>
+                                        <label class="form-check-label" for="target_managers">
+                                            المدراء
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="target_active_users" name="target_active_users"
+                                               {% if edit_mode and notification.target_active_users %}checked{% endif %}>
+                                        <label class="form-check-label" for="target_active_users">
+                                            المستخدمين النشطين
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="target_new_users" name="target_new_users"
+                                               {% if edit_mode and notification.target_new_users %}checked{% endif %}>
+                                        <label class="form-check-label" for="target_new_users">
+                                            المستخدمين الجدد
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="target_inactive_users" name="target_inactive_users"
+                                               {% if edit_mode and notification.target_inactive_users %}checked{% endif %}>
+                                        <label class="form-check-label" for="target_inactive_users">
+                                            المستخدمين غير النشطين
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Type Targeting -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">الاستهداف حسب نوع الحساب</h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="target_account_type" class="form-label">نوع الحساب</label>
+                                    <select class="form-select" id="target_account_type" name="target_account_type">
+                                        <option value="">الكل</option>
+                                        <option value="broker" {% if edit_mode and notification.target_account_type == 'broker' %}selected{% endif %}>دلال</option>
+                                        <option value="user" {% if edit_mode and notification.target_account_type == 'user' %}selected{% endif %}>مستخدم عادي</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="target_subscription_type" class="form-label">نوع الاشتراك</label>
+                                    <select class="form-select" id="target_subscription_type" name="target_subscription_type">
+                                        <option value="">الكل</option>
+                                        <option value="basic" {% if edit_mode and notification.target_subscription_type == 'basic' %}selected{% endif %}>أساسي</option>
+                                        <option value="premium" {% if edit_mode and notification.target_subscription_type == 'premium' %}selected{% endif %}>مميز</option>
+                                        <option value="gold" {% if edit_mode and notification.target_subscription_type == 'gold' %}selected{% endif %}>ذهبي</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="target_account_status" class="form-label">حالة الحساب</label>
+                                    <select class="form-select" id="target_account_status" name="target_account_status">
+                                        <option value="">الكل</option>
+                                        <option value="active" {% if edit_mode and notification.target_account_status == 'active' %}selected{% endif %}>نشط</option>
+                                        <option value="inactive" {% if edit_mode and notification.target_account_status == 'inactive' %}selected{% endif %}>غير نشط</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Properties Targeting -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">الاستهداف حسب العقارات</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="target_has_properties" class="form-label">ملكية العقارات</label>
+                                    <select class="form-select" id="target_has_properties" name="target_has_properties">
+                                        <option value="">الكل</option>
+                                        <option value="true" {% if edit_mode and notification.target_has_properties == True %}selected{% endif %}>لديه عقارات</option>
+                                        <option value="false" {% if edit_mode and notification.target_has_properties == False %}selected{% endif %}>ليس لديه عقارات</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Location Targeting -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">الاستهداف حسب الموقع</h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="target_governorate" class="form-label">المحافظة</label>
+                                    <select class="form-select" id="target_governorate" name="target_governorate">
+                                        <option value="">الكل</option>
+                                        <option value="بغداد" {% if edit_mode and notification.target_governorate == 'بغداد' %}selected{% endif %}>بغداد</option>
+                                        <option value="البصرة" {% if edit_mode and notification.target_governorate == 'البصرة' %}selected{% endif %}>البصرة</option>
+                                        <option value="نينوى" {% if edit_mode and notification.target_governorate == 'نينوى' %}selected{% endif %}>نينوى</option>
+                                        <option value="أربيل" {% if edit_mode and notification.target_governorate == 'أربيل' %}selected{% endif %}>أربيل</option>
+                                        <option value="النجف" {% if edit_mode and notification.target_governorate == 'النجف' %}selected{% endif %}>النجف</option>
+                                        <option value="كربلاء" {% if edit_mode and notification.target_governorate == 'كربلاء' %}selected{% endif %}>كربلاء</option>
+                                        <option value="بابل" {% if edit_mode and notification.target_governorate == 'بابل' %}selected{% endif %}>بابل</option>
+                                        <option value="الأنبار" {% if edit_mode and notification.target_governorate == 'الأنبار' %}selected{% endif %}>الأنبار</option>
+                                        <option value="ذي قار" {% if edit_mode and notification.target_governorate == 'ذي قار' %}selected{% endif %}>ذي قار</option>
+                                        <option value="ميسان" {% if edit_mode and notification.target_governorate == 'ميسان' %}selected{% endif %}>ميسان</option>
+                                        <option value="القادسية" {% if edit_mode and notification.target_governorate == 'القادسية' %}selected{% endif %}>القادسية</option>
+                                        <option value="ديالى" {% if edit_mode and notification.target_governorate == 'ديالى' %}selected{% endif %}>ديالى</option>
+                                        <option value="المثنى" {% if edit_mode and notification.target_governorate == 'المثنى' %}selected{% endif %}>المثنى</option>
+                                        <option value="صلاح الدين" {% if edit_mode and notification.target_governorate == 'صلاح الدين' %}selected{% endif %}>صلاح الدين</option>
+                                        <option value="كركوك" {% if edit_mode and notification.target_governorate == 'كركوك' %}selected{% endif %}>كركوك</option>
+                                        <option value="واسط" {% if edit_mode and notification.target_governorate == 'واسط' %}selected{% endif %}>واسط</option>
+                                        <option value="العمارة" {% if edit_mode and notification.target_governorate == 'العمارة' %}selected{% endif %}>العمارة</option>
+                                        <option value="الديوانية" {% if edit_mode and notification.target_governorate == 'الديوانية' %}selected{% endif %}>الديوانية</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="target_city" class="form-label">المدينة</label>
+                                    <input type="text" class="form-control" id="target_city" name="target_city"
+                                           value="{% if edit_mode and notification %}{{ notification.target_city }}{% endif %}">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="target_area" class="form-label">المنطقة</label>
+                                    <input type="text" class="form-control" id="target_area" name="target_area"
+                                           value="{% if edit_mode and notification %}{{ notification.target_area }}{% endif %}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Property Type Targeting -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">الاستهداف حسب نوع العقار</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="target_property_type" class="form-label">نوع العقار</label>
+                                    <select class="form-select" id="target_property_type" name="target_property_type">
+                                        <option value="">الكل</option>
+                                        <option value="سكني" {% if edit_mode and notification.target_property_type == 'سكني' %}selected{% endif %}>سكني</option>
+                                        <option value="تجاري" {% if edit_mode and notification.target_property_type == 'تجاري' %}selected{% endif %}>تجاري</option>
+                                        <option value="زراعي" {% if edit_mode and notification.target_property_type == 'زراعي' %}selected{% endif %}>زراعي</option>
+                                        <option value="صناعي" {% if edit_mode and notification.target_property_type == 'صناعي' %}selected{% endif %}>صناعي</option>
+                                        <option value="شقق" {% if edit_mode and notification.target_property_type == 'شقق' %}selected{% endif %}>شقق</option>
+                                        <option value="فلل" {% if edit_mode and notification.target_property_type == 'فلل' %}selected{% endif %}>فلل</option>
+                                        <option value="أراضي" {% if edit_mode and notification.target_property_type == 'أراضي' %}selected{% endif %}>أراضي</option>
+                                        <option value="فنادق" {% if edit_mode and notification.target_property_type == 'فنادق' %}selected{% endif %}>فنادق</option>
+                                        <option value="منتجعات" {% if edit_mode and notification.target_property_type == 'منتجعات' %}selected{% endif %}>منتجعات</option>
+                                        <option value="مشاريع استثمارية" {% if edit_mode and notification.target_property_type == 'مشاريع استثمارية' %}selected{% endif %}>مشاريع استثمارية</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Broker Targeting -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">الاستهداف حسب معايير الدلالين</h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="target_premium_brokers" name="target_premium_brokers"
+                                               {% if edit_mode and notification.target_premium_brokers %}checked{% endif %}>
+                                        <label class="form-check-label" for="target_premium_brokers">
+                                            الدلالين المميزين فقط
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="target_min_properties" class="form-label">أقل عدد عقارات</label>
+                                    <input type="number" class="form-control" id="target_min_properties" name="target_min_properties" min="0"
+                                           value="{% if edit_mode and notification.target_min_properties %}{{ notification.target_min_properties }}{% endif %}">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="target_min_rating" class="form-label">أقل تقييم</label>
+                                    <input type="number" class="form-control" id="target_min_rating" name="target_min_rating" min="0" max="5" step="0.1"
+                                           value="{% if edit_mode and notification.target_min_rating %}{{ notification.target_min_rating }}{% endif %}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scheduling -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">الجدولة</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="scheduled_for" class="form-label">مجدولة للإرسال في</label>
+                                    <input type="datetime-local" class="form-control" id="scheduled_for" name="scheduled_for"
+                                           value="{% if edit_mode and notification.scheduled_for %}{{ notification.scheduled_for|date:'Y-m-d\TH:i' }}{% endif %}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="expires_at" class="form-label">تنتهي في</label>
+                                    <input type="datetime-local" class="form-control" id="expires_at" name="expires_at"
+                                           value="{% if edit_mode and notification.expires_at %}{{ notification.expires_at|date:'Y-m-d\TH:i' }}{% endif %}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">الإجراء</h6>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-info" onclick="previewNotification()">
+                                    معاينة
+                                </button>
+                                <button type="submit" name="action" value="send" class="btn btn-primary">
+                                    إرسال فوري
+                                </button>
+                                <button type="submit" name="action" value="schedule" class="btn btn-warning">
+                                    جدولة
+                                </button>
+                                <button type="submit" name="action" value="draft" class="btn btn-secondary">
+                                    حفظ كمسودة
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">معاينة الإشعار</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <!-- Preview content will be inserted here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function previewNotification() {
+    const title = document.getElementById('title').value || 'عنوان الإشعار';
+    const description = document.getElementById('description').value || 'وصف الإشعار';
+    const icon = document.getElementById('icon').value || '🔔';
+    const color = document.getElementById('color').value || '#0d9488';
+    const buttonText = document.getElementById('button_text').value;
+    const buttonLink = document.getElementById('button_link').value;
+    
+    let previewHTML = `
+        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f8f9fa;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <span style="font-size: 24px;">${icon}</span>
+                <h6 style="margin: 0; color: ${color};">${title}</h6>
+            </div>
+            <p style="margin: 0 0 10px 0; color: #333;">${description}</p>
+            ${buttonText ? `<button style="background: ${color}; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">${buttonText}</button>` : ''}
+        </div>
+    `;
+    
+    document.getElementById('previewContent').innerHTML = previewHTML;
+    new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+</script>
+{% endblock %}

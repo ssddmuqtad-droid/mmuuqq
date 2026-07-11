@@ -1,0 +1,250 @@
+{% extends 'properties/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}إنشاء منشور جديد - {{ channel.name }}{% endblock %}
+
+{% block dashboard_title %}إنشاء منشور جديد{% endblock %}
+
+{% block dashboard_subtitle %}
+<p style="margin:4px 0 0;color:var(--text-muted);font-size:0.9rem;">
+  نشر محتوى في قناة {{ channel.name }}
+</p>
+{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'my_channel' %}" class="btn btn-outline">← العودة لقناتي</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.create-post-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.post-form {
+  background: var(--card-bg);
+  padding: 30px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.form-group {
+  margin-bottom: 25px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.form-group textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.form-group input[type=" file"] {
+  padding: 8px;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.btn-submit {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-submit:hover {
+  background: var(--primary-dark);
+}
+
+.preview-section {
+  margin-top: 30px;
+  padding: 20px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  border: 2px dashed var(--border);
+}
+
+.preview-section h4 {
+  color: var(--text);
+  margin-bottom: 15px;
+}
+
+.post-type-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.post-type-card {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.post-type-card:hover {
+  border-color: var(--primary);
+  background: rgba(13, 148, 136, 0.05);
+}
+
+.post-type-card.selected {
+  border-color: var(--primary);
+  background: rgba(13, 148, 136, 0.1);
+}
+
+.post-type-card .icon {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.post-type-card .label {
+  font-weight: 600;
+  color: var(--text);
+}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="create-post-container">
+  <form method="post" enctype="multipart/form-data" class="post-form">
+    {% csrf_token %}
+    
+    <div class="form-group">
+      <label>نوع المنشور</label>
+      <div class="post-type-cards">
+        <div class="post-type-card" onclick="selectPostType('text')">
+          <div class="icon">📝</div>
+          <div class="label">نص</div>
+        </div>
+        <div class="post-type-card" onclick="selectPostType('image')">
+          <div class="icon">🖼️</div>
+          <div class="label">صورة</div>
+        </div>
+        <div class="post-type-card" onclick="selectPostType('video')">
+          <div class="icon">🎥</div>
+          <div class="label">فيديو</div>
+        </div>
+        <div class="post-type-card" onclick="selectPostType('property')">
+          <div class="icon">🏠</div>
+          <div class="label">عقار</div>
+        </div>
+        <div class="post-type-card" onclick="selectPostType('ad')">
+          <div class="icon">📢</div>
+          <div class="label">إعلان</div>
+        </div>
+      </div>
+      <input type="hidden" name="post_type" id="post_type" value="text">
+    </div>
+    
+    <div class="form-group">
+      <label for="content">المحتوى</label>
+      <textarea 
+        name="content" 
+        id="content" 
+        placeholder="اكتب محتوى المنشور هنا..."
+        required
+      ></textarea>
+    </div>
+    
+    <div class="form-group" id="image-group" style="display: none;">
+      <label for="image">صورة</label>
+      <input type="file" name="image" id="image" accept="image/*">
+    </div>
+    
+    <div class="form-group" id="video-group" style="display: none;">
+      <label for="video">فيديو</label>
+      <input type="file" name="video" id="video" accept="video/*">
+    </div>
+    
+    <div class="form-group" id="property-group" style="display: none;">
+      <label for="property_id">العقار المرتبط</label>
+      <select name="property_id" id="property_id">
+        <option value="">-- اختر عقار --</option>
+        {% for property in broker_properties %}
+        <option value="{{ property.id }}">{{ property.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div class="form-group checkbox-group">
+      <input type="checkbox" name="is_pinned" id="is_pinned">
+      <label for="is_pinned">تثبيت المنشور</label>
+    </div>
+    
+    <div class="form-group checkbox-group">
+      <input type="checkbox" name="is_advertisement" id="is_advertisement">
+      <label for="is_advertisement">إعلان مدفوع</label>
+    </div>
+    
+    <button type="submit" class="btn-submit">نشر المنشور</button>
+  </form>
+</div>
+
+<script>
+function selectPostType(type) {
+  document.getElementById('post_type').value = type;
+  
+  // Remove selected class from all cards
+  document.querySelectorAll('.post-type-card').forEach(card => {
+    card.classList.remove('selected');
+  });
+  
+  // Add selected class to clicked card
+  event.currentTarget.classList.add('selected');
+  
+  // Show/hide relevant fields
+  document.getElementById('image-group').style.display = type === 'image' ? 'block' : 'none';
+  document.getElementById('video-group').style.display = type === 'video' ? 'block' : 'none';
+  document.getElementById('property-group').style.display = type === 'property' ? 'block' : 'none';
+}
+
+// Select text by default
+document.addEventListener('DOMContentLoaded', function() {
+  selectPostType('text');
+});
+</script>
+{% endblock %}

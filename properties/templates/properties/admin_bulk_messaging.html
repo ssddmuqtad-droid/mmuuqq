@@ -1,0 +1,188 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}رسائل الإدارة الجماعية{% endblock %}
+{% block dashboard_title %}رسائل <span>الإدارة الجماعية</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'admin_panel' %}" class="btn btn-outline">لوحة الإدارة</a>
+<a href="{% url 'conversations_list' %}" class="btn btn-primary">💬 المحادثات</a>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>💬 رسائل الإدارة الجماعية</h1>
+    <p>إرسال رسائل جماعية للدلالين والمستخدمين</p>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h5>📊 الإحصائيات</h5>
+        </div>
+        <div class="card-body">
+          <div class="stat-item">
+            <span class="stat-label">عدد الدلالين:</span>
+            <span class="stat-value">{{ total_brokers }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">عدد المستخدمين:</span>
+            <span class="stat-value">{{ total_users }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">المجموع:</span>
+            <span class="stat-value">{{ total_brokers|add:total_users }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">
+          <h5>✉️ إرسال رسالة جماعية</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" id="bulk-message-form">
+            {% csrf_token %}
+            
+            <div class="form-group mb-3">
+              <label for="target_type">الفئة المستهدفة:</label>
+              <select class="form-control" id="target_type" name="target_type" onchange="toggleTargetSelection()">
+                <option value="brokers">الدلالين فقط</option>
+                <option value="users">المستخدمين فقط</option>
+                <option value="all">الجميع</option>
+              </select>
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="message_type">نوع الرسالة:</label>
+              <select class="form-control" id="message_type" name="message_type">
+                <option value="text">نص</option>
+                <option value="image">صورة</option>
+                <option value="link">رابط</option>
+              </select>
+            </div>
+
+            <div class="form-group mb-3" id="brokers-selection" style="display: none;">
+              <label>اختر الدلالين:</label>
+              <div class="checkbox-list" style="max-height: 200px; overflow-y: auto;">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="select-all-brokers" onchange="toggleAllBrokers(this)">
+                  <label class="form-check-label" for="select-all-brokers">تحديد الكل</label>
+                </div>
+                {% for broker in brokers %}
+                <div class="form-check">
+                  <input class="form-check-input broker-checkbox" type="checkbox" name="selected_brokers" value="{{ broker.user.id }}" id="broker-{{ broker.user.id }}">
+                  <label class="form-check-label" for="broker-{{ broker.user.id }}">
+                    {{ broker.user.username }} - {{ broker.company_name|default:"بدون شركة" }}
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="form-group mb-3" id="users-selection" style="display: none;">
+              <label>اختر المستخدمين:</label>
+              <div class="checkbox-list" style="max-height: 200px; overflow-y: auto;">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="select-all-users" onchange="toggleAllUsers(this)">
+                  <label class="form-check-label" for="select-all-users">تحديد الكل</label>
+                </div>
+                {% for user in users %}
+                <div class="form-check">
+                  <input class="form-check-input user-checkbox" type="checkbox" name="selected_users" value="{{ user.id }}" id="user-{{ user.id }}">
+                  <label class="form-check-label" for="user-{{ user.id }}">
+                    {{ user.username }} - {{ user.user_profile.phone|default:"بدون رقم" }}
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="content">محتوى الرسالة:</label>
+              <textarea class="form-control" id="content" name="content" rows="5" required placeholder="اكتب رسالتك هنا..."></textarea>
+            </div>
+
+            <div class="form-group mb-3">
+              <button type="submit" class="btn btn-success btn-lg btn-block">
+                📤 إرسال الرسالة
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  font-weight: 600;
+  color: #666;
+}
+
+.stat-value {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.checkbox-list {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  background: #f9f9f9;
+}
+
+.form-check {
+  padding: 5px 0;
+}
+</style>
+
+<script>
+function toggleTargetSelection() {
+  const targetType = document.getElementById('target_type').value;
+  const brokersSelection = document.getElementById('brokers-selection');
+  const usersSelection = document.getElementById('users-selection');
+
+  if (targetType === 'brokers') {
+    brokersSelection.style.display = 'block';
+    usersSelection.style.display = 'none';
+  } else if (targetType === 'users') {
+    brokersSelection.style.display = 'none';
+    usersSelection.style.display = 'block';
+  } else {
+    brokersSelection.style.display = 'block';
+    usersSelection.style.display = 'block';
+  }
+}
+
+function toggleAllBrokers(checkbox) {
+  const brokerCheckboxes = document.querySelectorAll('.broker-checkbox');
+  brokerCheckboxes.forEach(cb => cb.checked = checkbox.checked);
+}
+
+function toggleAllUsers(checkbox) {
+  const userCheckboxes = document.querySelectorAll('.user-checkbox');
+  userCheckboxes.forEach(cb => cb.checked = checkbox.checked);
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+  toggleTargetSelection();
+});
+</script>
+{% endblock %}

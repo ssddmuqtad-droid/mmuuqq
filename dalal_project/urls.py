@@ -37,6 +37,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('properties.urls')),
     path('api/', include('properties.api_urls')),
+    # Social Authentication
+    path('social/', include('social_django.urls', namespace='social')),
     # Health check endpoint
     path('health/', health_check, name='health-check'),
     # API Documentation

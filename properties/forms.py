@@ -5,7 +5,7 @@ from django.core.validators import MinValueValidator
 from django.contrib.auth.models import User
 
 from .constants import COMMON_NASIRIYAH_DISTRICTS, IRAQ_GOVERNORATES
-from .models import Property, Message, SiteSettings, PropertyImage, PropertyNote, VirtualTour360, Auction, Bid, BuildingRequest, LandInfo, BuildingDetails, Budget, Blueprint, Quote, ProjectTracking, DeliveryMilestone, ContractorRating, ContractorBid, FinancialTransaction, Expense, Payment, Report, Profit, SubscriptionPlan, UserSettings, BlockedUser, SavedSearch, OfficePresence, PresenceNotification, BrokerSubscription, BrokerNotificationSettings, AutoBid, AuctionRating, AuctionLiveStream, AuctionAdvertisement, Hotel, Resort
+from .models import Property, Message, SiteSettings, PropertyImage, PropertyVideo, PropertyNote, VirtualTour360, Auction, Bid, BuildingRequest, LandInfo, BuildingDetails, Budget, Blueprint, Quote, ProjectTracking, DeliveryMilestone, ContractorRating, ContractorBid, FinancialTransaction, Expense, Payment, Report, Profit, SubscriptionPlan, UserSettings, BlockedUser, SavedSearch, OfficePresence, PresenceNotification, BrokerSubscription, BrokerNotificationSettings, AutoBid, AuctionRating, AuctionLiveStream, AuctionAdvertisement, Hotel, Resort, PaymentMethod, PropertyPayment, PropertyNotification, SubscriptionRequest, BrokerChannel, ChannelRating, ChannelReview, ChannelReviewReply, ChannelMilestone, OutsideProperty, PropertyHotel, PropertyResort, PropertyDocument, PropertyMediaStats, WhatsAppMessage, TelegramMessage, AppointmentBooking, PropertyInquiry, LiveStream, LiveStreamComment, UserProfile, ServiceProvider, ServiceAdvertisement, HotelPage, HotelPost, HotelRoom, HotelOffer, HotelBooking, ServiceProviderCategory, ServiceProviderPage, ServiceProviderWork, ServiceProviderService, ServiceProviderGallery, ServiceProviderVideo, ServiceProvider360, ServiceProviderFollower, ServiceProviderRating, ServiceProviderContact, ServiceProviderQuote
 
 
 def _fc(placeholder=''):
@@ -45,7 +45,15 @@ class PropertySearchForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['type'].choices = [('', 'كل الأنواع')] + list(Property.PROPERTY_TYPES)
-        self.fields['status'].choices = [('', 'كل الحالات')] + list(Property.STATUS_CHOICES)
+        # Update status choices for new payment system
+        self.fields['status'].choices = [
+            ('', 'كل الحالات'),
+            (Property.STATUS_PUBLISHED, 'منشور'),
+            (Property.STATUS_DRAFT, 'مسودة'),
+            (Property.STATUS_PAID, 'تم الدفع'),
+            (Property.STATUS_PENDING_APPROVAL, 'بانتظار الموافقة'),
+            (Property.STATUS_EXPIRED, 'منتهي'),
+        ]
         from .constants import SORT_CHOICES
         self.fields['sort'].choices = SORT_CHOICES
         for name, field in self.fields.items():
@@ -57,98 +65,339 @@ class PropertyForm(forms.ModelForm):
     class Meta:
         model = Property
         fields = [
-            'title', 'type', 'status', 'district', 'street', 'location',
-            'area', 'price', 'description', 'phone', 'bedrooms', 'bathrooms', 'floors',
-            'year_built', 'parking', 'furnished', 'latitude', 'longitude',
-            'is_featured', 'is_promoted', 'view_commission_rate',
+            'title', 'type', 'status', 'category',
+            # Property Purpose and Condition
+            'purpose', 'property_condition', 'ownership_status',
+            # Property ID and Owner
+            'property_number', 'owner_name',
+            # Price
+            'price', 'negotiable', 'currency', 'original_price',
+            # Additional Price Details
+            'price_per_meter', 'down_payment', 'installments', 'annual_maintenance_fee',
+            # Location - Iraq
+            'governorate', 'city', 'district', 'subdistrict', 'nahiyah', 'street', 'landmark', 'location',
+            # Location - Outside Iraq
+            'country', 'city_outside', 'area_outside', 'postal_code', 'taxes', 'registration_fees', 'foreign_ownership_laws',
+            # GPS
+            'latitude', 'longitude', 'nearest_landmark', 'distance_to_city_center', 'distance_to_airport',
+            # Area and Building
+            'total_area', 'building_area', 'area',
+            # Building Details
+            'facade', 'direction', 'year_built', 'building_condition', 'total_floors', 'floor_number',
+            'property_age', 'last_renovation',
+            # Additional Building Details
+            'floor_type', 'roof_type', 'wall_type', 'finish_condition', 'last_maintenance',
+            # Room Details
+            'bedrooms', 'living_rooms', 'dining_rooms', 'bathrooms', 'kitchens', 'balconies',
+            # Parking
+            'parking', 'parking_spaces', 'parking_type',
+            # Amenities
+            'furnished', 'has_pool', 'has_garden', 'has_elevator', 'has_generator',
+            'has_national_electricity', 'has_water', 'has_internet', 'has_sewerage',
+            'has_heating', 'has_cooling', 'has_solar_power',
+            # Security
+            'has_security_system', 'has_cctv', 'has_alarm',
+            # Hotel/Resort specific
+            'hotel_stars', 'hotel_rating', 'hotel_rooms', 'hotel_suites', 'hotel_family_rooms',
+            'has_restaurant', 'has_cafe', 'has_swimming_pool', 'has_gym', 'has_spa',
+            'has_conference_hall', 'has_wifi', 'has_parking', 'has_room_service',
+            'has_laundry', 'has_airport_shuttle',
+            'resort_capacity', 'resort_activities', 'booking_available', 'booking_url',
+            'min_booking_duration', 'max_booking_duration',
+            # Virtual Tour and Media
+            'virtual_tour_url', 'vr_tour_url', 'ar_available',
+            # Live Streaming
+            'live_stream_enabled', 'live_stream_url', 'live_stream_scheduled', 'live_stream_status',
+            # AI Features
+            'ai_generated_description', 'ai_suggested_price', 'ai_keywords', 'ai_image_enhanced',
+            # Additional fees
+            'maintenance_fee', 'hoa_fee',
+            # Accessibility
+            'wheelchair_accessible', 'has_ramp', 'has_elevator_accessibility',
+            # Green features
+            'energy_efficient', 'has_green_building_cert', 'has_smart_home',
+            'has_double_glazing', 'has_insulation',
+            # View
+            'view_type',
+            # Description
+            'description', 'phone',
+            # Publication
+            'publication_type', 'publication_days', 'is_featured', 'is_promoted',
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 5, 'class': 'form-control'}),
             'location': forms.TextInput(attrs={'placeholder': 'الحي، الشارع، أقرب معلم', 'class': 'form-control'}),
+            'foreign_ownership_laws': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'resort_activities': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'ai_keywords': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': 'كلمات مفتاحية مفصولة بفاصلة'}),
             'district': forms.TextInput(attrs={'placeholder': 'مثال: حي الشموخ', 'class': 'form-control'}),
             'street': forms.TextInput(attrs={'placeholder': 'مثال: شارع 40', 'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
-            'view_commission_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'publication_type': forms.Select(attrs={'class': 'form-control'}),
+            'publication_days': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'latitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
+            'longitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Add detailed property type choices
-        self.fields['type'].choices = [
+        # Add detailed property type choices with categories
+        type_choices = [
             ('', 'اختر نوع العقار'),
-            # سكني
+            # --- عقارات داخل العراق ---
+            ('inside_iraq_header', '🏠 عقارات داخل العراق'),
             ('apartment', 'شقة'),
             ('house', 'منزل'),
             ('villa', 'فيلا'),
             ('duplex', 'دوبلكس'),
             ('residential_complex', 'مجمع سكني'),
-            # تجاري
             ('shop', 'محل تجاري'),
             ('office', 'مكتب'),
             ('mall', 'مول / مركز تجاري'),
             ('car_showroom', 'معرض سيارات'),
             ('warehouse', 'مخزن'),
-            # استثماري
             ('residential_building', 'بناية سكنية'),
             ('commercial_building', 'عمارة تجارية'),
             ('investment_land', 'أرض للاستثمار'),
             ('apartment_complex', 'مجمع شقق'),
-            ('small_hotel', 'فندق صغير'),
-            # سياحي
-            ('chalet', 'شاليه'),
-            ('resort', 'منتجع'),
-            ('hotel', 'فندق'),
-            ('hotel_apartment', 'شقق فندقية'),
-            ('tourism_house', 'بيت سياحي'),
-            # أراضي
             ('residential_land', 'أرض سكنية'),
             ('agricultural_land', 'أرض زراعية'),
             ('commercial_land', 'أرض تجارية'),
-            ('investment_land', 'أرض استثمارية'),
+            # --- عقارات خارج العراق ---
+            ('outside_iraq_header', '🌍 عقارات خارج العراق'),
+            ('outside_apartment', 'شقة خارج العراق'),
+            ('outside_villa', 'فيلا خارج العراق'),
+            ('outside_palace', 'قصر خارج العراق'),
+            ('outside_house', 'منزل خارج العراق'),
+            ('outside_land', 'أرض خارج العراق'),
+            ('outside_commercial', 'عقار تجاري خارج العراق'),
+            # --- فنادق ---
+            ('hotels_header', '🏨 فنادق'),
+            ('hotel', 'فندق'),
+            ('small_hotel', 'فندق صغير'),
+            ('hotel_apartment', 'شقق فندقية'),
+            # --- منتجعات وأماكن سياحية ---
+            ('tourism_header', '🏖️ منتجعات وأماكن سياحية'),
+            ('resort', 'منتجع'),
+            ('chalet', 'شاليه'),
+            ('tourism_house', 'بيت سياحي'),
         ]
-        # Simplify status choices to only two options
+        
+        self.fields['type'].choices = type_choices
+        self.fields['type'].widget.attrs['class'] = 'form-control property-type-select'
+        
+        # Update status choices for new payment system
         self.fields['status'].choices = [
-            ('ready', 'كامل'),
-            ('under-construction', 'قيد البناء'),
-            ('rent', 'إيجار'),
+            (Property.STATUS_DRAFT, 'مسودة'),
+            (Property.STATUS_PAID, 'تم الدفع'),
+            (Property.STATUS_PENDING_APPROVAL, 'بانتظار الموافقة'),
+            (Property.STATUS_PUBLISHED, 'منشور'),
+            (Property.STATUS_REJECTED, 'مرفوض'),
+            (Property.STATUS_EXPIRED, 'منتهي'),
         ]
-        for field in self.fields.values():
+        # Set default status to draft
+        if 'status' in self.fields:
+            self.fields['status'].initial = Property.STATUS_DRAFT
+        
+        # Publication type choices
+        if 'publication_type' in self.fields:
+            self.fields['publication_type'].choices = [
+                ('normal', 'نشر عادي'),
+                ('featured', 'نشر مميز'),
+            ]
+            self.fields['publication_type'].initial = 'normal'
+            self.fields['publication_type'].required = False
+        if 'publication_days' in self.fields:
+            self.fields['publication_days'].required = False
+
+    def clean_type(self):
+        property_type = self.cleaned_data.get('type')
+        # Prevent selecting header options
+        header_options = ['inside_iraq_header', 'outside_iraq_header', 'hotels_header', 'tourism_header']
+        if property_type in header_options:
+            raise forms.ValidationError('يرجى اختيار نوع عقار محدد')
+        return property_type
+
+
+class OutsidePropertyForm(forms.ModelForm):
+    """Form for properties outside Iraq"""
+    class Meta:
+        model = OutsideProperty
+        fields = [
+            'state_province', 'local_currency', 'taxes', 'registration_fees',
+            'foreign_ownership_laws', 'hoa_fees', 'property_tax'
+        ]
+        widgets = {
+            'foreign_ownership_laws': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'taxes': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'registration_fees': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'hoa_fees': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'property_tax': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
             if 'class' not in field.widget.attrs:
                 field.widget.attrs['class'] = 'form-control'
 
-    def clean_image(self):
-        image = self.cleaned_data.get('image')
-        if image:
-            # Check file size (5MB limit)
-            if image.size > 5 * 1024 * 1024:
-                raise ValidationError('حجم الصورة يجب أن يكون أقل من 5MB')
-            
-            # Check file type using magic bytes
-            import imghdr
-            image.seek(0)
-            file_type = imghdr.what(image)
-            if file_type not in ['jpeg', 'png', 'gif', 'webp']:
-                raise ValidationError('نوع الملف غير مدعوم. يرجى رفع صورة بصيغة JPEG, PNG, GIF, أو WebP')
-            
-            # Check for malicious content
-            image.seek(0)
-            header = image.read(8)
-            if b'<script' in header.lower() or b'<?php' in header.lower():
-                raise ValidationError('الملف يحتوي على محتوى غير آمن')
-            
-            image.seek(0)
-        return image
+
+class PropertyHotelForm(forms.ModelForm):
+    """Form for hotel properties"""
+    class Meta:
+        model = PropertyHotel
+        fields = [
+            'hotel_name', 'star_rating', 'classification', 'total_rooms',
+            'suites', 'family_rooms', 'price_per_night', 'currency',
+            'has_restaurant', 'has_cafe', 'has_pool', 'has_gym', 'has_spa',
+            'has_conference_hall', 'direct_booking', 'booking_url'
+        ]
+        widgets = {
+            'price_per_night': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'booking_url': forms.URLInput(attrs={'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class PropertyResortForm(forms.ModelForm):
+    """Form for resort properties"""
+    class Meta:
+        model = PropertyResort
+        fields = [
+            'resort_type', 'resort_name', 'max_guests', 'min_guests',
+            'price_per_night', 'price_per_week', 'currency',
+            'min_booking_duration', 'max_booking_duration',
+            'has_wifi', 'has_kitchen', 'has_bbq', 'has_playground', 'has_parking',
+            'activities'
+        ]
+        widgets = {
+            'activities': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'price_per_night': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'price_per_week': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class PropertyImageForm(forms.ModelForm):
+    """Form for property images"""
+    class Meta:
+        model = PropertyImage
+        fields = ['image', 'caption', 'sort_order', 'is_primary', 'image_type']
+        widgets = {
+            'caption': forms.TextInput(attrs={'class': 'form-control'}),
+            'sort_order': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class PropertyVideoForm(forms.ModelForm):
+    """Form for property videos"""
+    class Meta:
+        model = PropertyVideo
+        fields = ['video', 'caption', 'sort_order', 'video_type', 'duration']
+        widgets = {
+            'caption': forms.TextInput(attrs={'class': 'form-control'}),
+            'sort_order': forms.NumberInput(attrs={'class': 'form-control'}),
+            'duration': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class VirtualTour360Form(forms.ModelForm):
+    """Form for 360 virtual tours"""
+    class Meta:
+        model = VirtualTour360
+        fields = ['title', 'tour_type', 'image', 'tour_file', 'external_url', 'external_service', 'description', 'order', 'is_active']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'external_url': forms.URLInput(attrs={'class': 'form-control'}),
+            'order': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class PropertyDocumentForm(forms.ModelForm):
+    """Form for property documents"""
+    class Meta:
+        model = PropertyDocument
+        fields = ['document_type', 'title', 'file', 'description']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class AppointmentBookingForm(forms.ModelForm):
+    """Form for appointment bookings"""
+    class Meta:
+        model = AppointmentBooking
+        fields = ['client_name', 'client_phone', 'client_email', 'appointment_date', 'notes']
+        widgets = {
+            'appointment_date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class PropertyInquiryForm(forms.ModelForm):
+    """Form for property inquiries"""
+    class Meta:
+        model = PropertyInquiry
+        fields = ['inquiry_type', 'name', 'email', 'phone', 'subject', 'message', 'preferred_contact_method']
+        widgets = {
+            'message': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
 
 
 class MessageForm(forms.ModelForm):
     class Meta:
         model = Message
-        fields = ['name', 'email', 'phone', 'message']
+        fields = ['content', 'message_type']
         widgets = {
-            'message': forms.Textarea(attrs={'rows': 4, 'placeholder': 'اكتب رسالتك...', 'class': 'form-control'}),
-            'name': forms.TextInput(attrs={'placeholder': 'الاسم الكامل', 'class': 'form-control'}),
-            'email': forms.EmailInput(attrs={'placeholder': 'example@email.com', 'class': 'form-control'}),
-            'phone': forms.TextInput(attrs={'placeholder': '07XXXXXXXXX', 'class': 'form-control'}),
+            'content': forms.Textarea(attrs={'rows': 4, 'placeholder': 'اكتب رسالتك...', 'class': 'form-control'}),
+            'message_type': forms.Select(attrs={'class': 'form-control'}),
         }
 
 
@@ -263,7 +512,7 @@ class AuctionForm(forms.ModelForm):
         model = Auction
         fields = ['property', 'auction_type', 'title', 'description', 'starting_price', 'minimum_increment',
                   'reserve_price', 'start_date', 'end_date', 'auto_extend_minutes', 'deposit_amount',
-                  'access_code', 'is_closed', 'is_featured', 'terms']
+                  'access_type', 'access_code', 'is_closed', 'is_featured', 'terms']
         widgets = {
             'title': forms.TextInput(attrs={'placeholder': 'عنوان المزاد', 'class': 'form-control'}),
             'description': forms.Textarea(attrs={'rows': 4, 'placeholder': 'وصف المزاد...', 'class': 'form-control'}),
@@ -274,6 +523,7 @@ class AuctionForm(forms.ModelForm):
             'end_date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
             'auto_extend_minutes': forms.NumberInput(attrs={'placeholder': 'دقائق التمديد التلقائي', 'class': 'form-control'}),
             'deposit_amount': forms.NumberInput(attrs={'placeholder': 'مبلغ التأمين', 'class': 'form-control'}),
+            'access_type': forms.Select(attrs={'class': 'form-control'}),
             'access_code': forms.TextInput(attrs={'placeholder': 'كود الدخول (اختياري)', 'class': 'form-control'}),
             'terms': forms.Textarea(attrs={'rows': 6, 'placeholder': 'شروط المزاد...', 'class': 'form-control'}),
         }
@@ -305,7 +555,8 @@ class BuildingRequestForm(forms.ModelForm):
         model = BuildingRequest
         fields = ['full_name', 'phone', 'email', 'governorate', 'city', 'district', 'address', 
                   'project_type', 'estimated_area', 'estimated_budget', 'expected_start_date', 
-                  'expected_completion_date', 'priority', 'description', 'requirements']
+                  'expected_completion_date', 'priority', 'description', 'requirements', 
+                  'is_public', 'is_featured']
         widgets = {
             'full_name': forms.TextInput(attrs={'placeholder': 'الاسم الكامل', 'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'placeholder': 'رقم الهاتف', 'class': 'form-control'}),
@@ -322,6 +573,90 @@ class BuildingRequestForm(forms.ModelForm):
             'priority': forms.Select(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'rows': 4, 'placeholder': 'وصف المشروع', 'class': 'form-control'}),
             'requirements': forms.Textarea(attrs={'rows': 3, 'placeholder': 'المتطلبات الخاصة', 'class': 'form-control'}),
+            'is_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class LandInfoForm(forms.ModelForm):
+    class Meta:
+        model = LandInfo
+        fields = ['plot_location', 'area', 'width', 'length', 'land_type', 'deed_image']
+        widgets = {
+            'plot_location': forms.TextInput(attrs={'placeholder': 'موقع القطعة', 'class': 'form-control'}),
+            'area': forms.NumberInput(attrs={'placeholder': 'مساحة الأرض (متر مربع)', 'class': 'form-control'}),
+            'width': forms.NumberInput(attrs={'placeholder': 'العرض (متر)', 'class': 'form-control'}),
+            'length': forms.NumberInput(attrs={'placeholder': 'الطول (متر)', 'class': 'form-control'}),
+            'land_type': forms.Select(attrs={'class': 'form-control'}),
+            'deed_image': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ServiceProviderForm(forms.ModelForm):
+    class Meta:
+        model = ServiceProvider
+        fields = ['business_name', 'service_type', 'description', 'phone', 'whatsapp', 'email', 
+                  'address', 'governorate', 'years_experience', 'team_size', 'working_hours',
+                  'min_price', 'max_price', 'price_unit', 'licenses', 'logo', 'cover_image']
+        widgets = {
+            'business_name': forms.TextInput(attrs={'placeholder': 'اسم العمل/الشركة', 'class': 'form-control'}),
+            'service_type': forms.Select(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'rows': 4, 'placeholder': 'وصف الخدمات', 'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'placeholder': 'رقم الهاتف', 'class': 'form-control'}),
+            'whatsapp': forms.TextInput(attrs={'placeholder': 'واتساب', 'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'placeholder': 'البريد الإلكتروني', 'class': 'form-control'}),
+            'address': forms.TextInput(attrs={'placeholder': 'العنوان', 'class': 'form-control'}),
+            'governorate': forms.Select(attrs={'class': 'form-control'}),
+            'years_experience': forms.NumberInput(attrs={'placeholder': 'سنوات الخبرة', 'class': 'form-control'}),
+            'team_size': forms.NumberInput(attrs={'placeholder': 'حجم الفريق', 'class': 'form-control'}),
+            'working_hours': forms.TextInput(attrs={'placeholder': 'ساعات العمل', 'class': 'form-control'}),
+            'min_price': forms.NumberInput(attrs={'placeholder': 'أقل سعر', 'class': 'form-control'}),
+            'max_price': forms.NumberInput(attrs={'placeholder': 'أعلى سعر', 'class': 'form-control'}),
+            'price_unit': forms.TextInput(attrs={'placeholder': 'وحدة السعر', 'class': 'form-control'}),
+            'licenses': forms.Textarea(attrs={'rows': 3, 'placeholder': 'التراخيص والشهادات', 'class': 'form-control'}),
+            'logo': forms.FileInput(attrs={'class': 'form-control'}),
+            'cover_image': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ServiceAdvertisementForm(forms.ModelForm):
+    class Meta:
+        model = ServiceAdvertisement
+        fields = ['title', 'description', 'service_type', 'project_type', 'location', 'governorate',
+                  'price', 'price_description', 'completion_time', 'includes', 'requirements', 
+                  'cover_image', 'is_featured']
+        widgets = {
+            'title': forms.TextInput(attrs={'placeholder': 'عنوان الإعلان', 'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'rows': 4, 'placeholder': 'وصف الإعلان', 'class': 'form-control'}),
+            'service_type': forms.Select(attrs={'class': 'form-control'}),
+            'project_type': forms.TextInput(attrs={'placeholder': 'نوع المشروع', 'class': 'form-control'}),
+            'location': forms.TextInput(attrs={'placeholder': 'الموقع', 'class': 'form-control'}),
+            'governorate': forms.Select(attrs={'class': 'form-control'}),
+            'price': forms.NumberInput(attrs={'placeholder': 'السعر', 'class': 'form-control'}),
+            'price_description': forms.TextInput(attrs={'placeholder': 'وصف السعر', 'class': 'form-control'}),
+            'completion_time': forms.TextInput(attrs={'placeholder': 'وقت الإنجاز', 'class': 'form-control'}),
+            'includes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'ما يشمله العرض', 'class': 'form-control'}),
+            'requirements': forms.Textarea(attrs={'rows': 3, 'placeholder': 'المتطلبات', 'class': 'form-control'}),
+            'cover_image': forms.FileInput(attrs={'class': 'form-control'}),
+            'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -609,6 +944,18 @@ class UserProfileForm(forms.ModelForm):
             'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'المدينة'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'العنوان الكامل'}),
             'bio': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'نبذة قصيرة عنك'}),
+        }
+
+
+class UserProfileImageForm(forms.ModelForm):
+    """Form for user profile images"""
+    
+    class Meta:
+        model = UserProfile
+        fields = ['profile_image', 'cover_image']
+        widgets = {
+            'profile_image': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'cover_image': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
         }
 
 
@@ -946,22 +1293,48 @@ class HotelSearchForm(forms.Form):
 class ResortSearchForm(forms.Form):
     """Form for searching resorts"""
     resort_type = forms.MultipleChoiceField(
-        choices=Resort.RESORT_TYPES,
+        choices=Resort.RESORT_TYPE_CHOICES,
         required=False,
         widget=forms.CheckboxSelectMultiple,
         label='نوع المنتجع'
     )
     price_range = forms.MultipleChoiceField(
-        choices=Hotel.PRICE_RANGES,
+        choices=[
+            ('0-50000', 'أقل من 50,000'),
+            ('50000-100000', '50,000 - 100,000'),
+            ('100000-200000', '100,000 - 200,000'),
+            ('200000-500000', '200,000 - 500,000'),
+            ('500000+', 'أكثر من 500,000'),
+        ],
         required=False,
         widget=forms.CheckboxSelectMultiple,
         label='السعر'
     )
-    accommodation_types = forms.MultipleChoiceField(
-        choices=Resort.ACCOMMODATION_TYPES,
+    governorate = forms.ChoiceField(
+        choices=[
+            ('', 'كل المحافظات'),
+            ('بغداد', 'بغداد'),
+            ('البصرة', 'البصرة'),
+            ('نينوى', 'نينوى'),
+            ('أربيل', 'أربيل'),
+            ('النجف', 'النجف'),
+            ('كربلاء', 'كربلاء'),
+            ('السليمانية', 'السليمانية'),
+            ('ديالى', 'ديالى'),
+            ('بابل', 'بابل'),
+            ('واسط', 'واسط'),
+            ('ميسان', 'ميسان'),
+            ('ذي قار', 'ذي قار'),
+            ('المثنى', 'المثنى'),
+            ('القادسية', 'القادسية'),
+            ('كركوك', 'كركوك'),
+            ('صلاح الدين', 'صلاح الدين'),
+            ('الأنبار', 'الأنبار'),
+            ('دهوك', 'دهوك'),
+            ('حلبجة', 'حلبجة'),
+        ],
         required=False,
-        widget=forms.CheckboxSelectMultiple,
-        label='الإقامة'
+        label='المحافظة'
     )
     facilities = forms.MultipleChoiceField(
         choices=[
@@ -983,15 +1356,858 @@ class ResortSearchForm(forms.Form):
         widget=forms.CheckboxSelectMultiple,
         label='المرافق'
     )
-    suitable_for = forms.MultipleChoiceField(
-        choices=Resort.SUITABLE_FOR,
+    rating = forms.ChoiceField(
+        choices=[
+            ('', 'كل التقييمات'),
+            ('5', '5 نجوم'),
+            ('4', '4 نجوم'),
+            ('3', '3 نجوم'),
+            ('2', 'نجمتان'),
+            ('1', 'نجمة'),
+        ],
         required=False,
-        widget=forms.CheckboxSelectMultiple,
-        label='مناسب لـ'
+        label='التقييم'
     )
-    governorate = forms.ChoiceField(
-        choices=[('', 'كل المحافظات')] + IRAQ_GOVERNORATES,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        label='المحافظة'
+
+
+# ==================== Payment System Forms ====================
+
+class PropertyPublicationForm(forms.Form):
+    """Form for choosing publication type and duration"""
+    
+    PUBLICATION_TYPE_CHOICES = [
+        ('normal', 'نشر عادي'),
+        ('featured', 'نشر مميز'),
+    ]
+    
+    DURATION_CHOICES = [
+        (1, 'يوم واحد'),
+        (7, '7 أيام'),
+        (15, '15 يوم'),
+        (30, '30 يوم'),
+        (60, '60 يوم'),
+        (90, '90 يوم'),
+        (180, '6 أشهر'),
+        (365, 'سنة'),
+        (1825, '5 سنوات'),
+    ]
+    
+    publication_type = forms.ChoiceField(
+        choices=PUBLICATION_TYPE_CHOICES,
+        label='نوع النشر',
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'})
     )
+    publication_days = forms.ChoiceField(
+        choices=DURATION_CHOICES,
+        label='مدة النشر',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    def __init__(self, *args, daily_price=50.00, featured_price=0.00, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.daily_price = daily_price
+        self.featured_price = featured_price
+    
+    def calculate_total(self):
+        """Calculate total cost"""
+        cleaned_data = self.cleaned_data
+        days = int(cleaned_data.get('publication_days', 1))
+        pub_type = cleaned_data.get('publication_type', 'normal')
+        
+        base_amount = days * self.daily_price
+        if pub_type == 'featured':
+            base_amount += self.featured_price
+        
+        return base_amount
+
+
+class PropertyPaymentForm(forms.ModelForm):
+    """Form for property payment"""
+    
+    class Meta:
+        model = PropertyPayment
+        fields = ['payment_method', 'payment_proof']
+        widgets = {
+            'payment_method': forms.Select(attrs={'class': 'form-control'}),
+            'payment_proof': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*,.pdf'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filter active payment methods
+        self.fields['payment_method'].queryset = PaymentMethod.objects.filter(is_active=True)
+        self.fields['payment_method'].label = 'طريقة الدفع'
+        self.fields['payment_proof'].label = 'إيصال الدفع (اختياري)'
+
+
+class PaymentMethodForm(forms.ModelForm):
+    """Form for admin to manage payment methods"""
+    
+    class Meta:
+        model = PaymentMethod
+        fields = ['name', 'is_active', 'icon', 'description']
+        widgets = {
+            'name': forms.Select(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'icon': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم الأيقونة (مثال: 💳)'}),
+            'description': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['name'].label = 'طريقة الدفع'
+        self.fields['is_active'].label = 'نشط'
+        self.fields['icon'].label = 'أيقونة'
+        self.fields['description'].label = 'الوصف'
+
+
+class SubscriptionRequestForm(forms.ModelForm):
+    """Form for brokers to request subscription via chat"""
+    
+    class Meta:
+        model = SubscriptionRequest
+        fields = ['custom_plan_name', 'custom_price', 'custom_duration', 'custom_properties_limit', 'message']
+        widgets = {
+            'custom_plan_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم الباقة المطلوبة'}),
+            'custom_price': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'السعر المطلوب'}),
+            'custom_duration': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: شهر، 3 أشهر، سنة'}),
+            'custom_properties_limit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'عدد العقارات المطلوب'}),
+            'message': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'رسالة إضافية للإدارة'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['custom_plan_name'].label = 'اسم الباقة'
+        self.fields['custom_price'].label = 'السعر (د.ع)'
+        self.fields['custom_duration'].label = 'المدة'
+        self.fields['custom_properties_limit'].label = 'عدد العقارات'
+        self.fields['message'].label = 'رسالة للإدارة'
+
+
+class ChannelRatingForm(forms.ModelForm):
+    """نموذج تقييم القنوات"""
+    
+    class Meta:
+        model = ChannelRating
+        fields = [
+            'rating', 'content_quality_rating', 'response_speed_rating',
+            'trust_rating', 'variety_rating', 'review'
+        ]
+        widgets = {
+            'rating': forms.Select(attrs={'class': 'form-control'}),
+            'content_quality_rating': forms.Select(attrs={'class': 'form-control'}),
+            'response_speed_rating': forms.Select(attrs={'class': 'form-control'}),
+            'trust_rating': forms.Select(attrs={'class': 'form-control'}),
+            'variety_rating': forms.Select(attrs={'class': 'form-control'}),
+            'review': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'اكتب مراجعتك...'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # إضافة خيارات التقييم 1-5
+        rating_choices = [(i, f'{i} ⭐') for i in range(1, 6)]
+        for field in ['rating', 'content_quality_rating', 'response_speed_rating', 'trust_rating', 'variety_rating']:
+            self.fields[field].choices = rating_choices
+            self.fields[field].required = False
+        
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ChannelReviewForm(forms.ModelForm):
+    """نموذج مراجعة القنوات"""
+    
+    class Meta:
+        model = ChannelReview
+        fields = ['title', 'content', 'overall_rating', 'would_recommend']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'عنوان المراجعة'}),
+            'content': forms.Textarea(attrs={'rows': 6, 'class': 'form-control', 'placeholder': 'اكتب تجربتك مع هذه القناة...'}),
+            'overall_rating': forms.Select(attrs={'class': 'form-control'}),
+            'would_recommend': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+    
+    # Add channel_id field separately (not in model)
+    channel_id = forms.IntegerField(widget=forms.HiddenInput())
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['overall_rating'].choices = [(i, f'{i} ⭐') for i in range(1, 6)]
+        
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ChannelReviewReplyForm(forms.ModelForm):
+    """نموذج الرد على مراجعة القناة"""
+    
+    class Meta:
+        model = ChannelReviewReply
+        fields = ['content']
+        widgets = {
+            'content': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'اكتب ردك...'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ChannelMilestoneForm(forms.ModelForm):
+    """نموذج إنجازات القنوات"""
+    
+    class Meta:
+        model = ChannelMilestone
+        fields = ['milestone_type', 'target_value']
+        widgets = {
+            'milestone_type': forms.Select(attrs={'class': 'form-control'}),
+            'target_value': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ChannelSearchForm(forms.Form):
+    """نموذج البحث في القنوات"""
+
+
+class LiveStreamForm(forms.ModelForm):
+    """نموذج البث المباشر"""
+    
+    class Meta:
+        model = LiveStream
+        fields = [
+            'property', 'broker', 'title', 'description', 'stream_url', 'stream_key',
+            'platform', 'scheduled_start', 'scheduled_end', 'notify_subscribers', 'thumbnail'
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'scheduled_start': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'scheduled_end': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class LiveStreamCommentForm(forms.ModelForm):
+    """نموذج تعليق البث المباشر"""
+    
+    class Meta:
+        model = LiveStreamComment
+        fields = ['author_name', 'author_phone', 'comment']
+        widgets = {
+            'comment': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': 'اكتب تعليقك...'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class PropertyDocumentForm(forms.ModelForm):
+    """نموذج مستندات العقار"""
+    
+    class Meta:
+        model = PropertyDocument
+        fields = ['document_type', 'title', 'file', 'description']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class PropertyVideoForm(forms.ModelForm):
+    """نموذج فيديوهات العقار"""
+    
+    class Meta:
+        model = PropertyVideo
+        fields = ['video', 'caption', 'sort_order', 'video_type', 'duration']
+        widgets = {
+            'caption': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'عنوان الفيديو'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ChannelSearchForm(forms.Form):
+    """نموذج البحث في القنوات"""
+    search_query = forms.CharField(required=False, label='بحث', widget=forms.TextInput(attrs={'placeholder': 'ابحث عن قناة...'}))
+    governorate = forms.ChoiceField(required=False, label='المحافظة', choices=[('', 'كل المحافظات')])
+    min_rating = forms.IntegerField(required=False, label='التقييم الأدنى', min_value=1, max_value=5)
+    min_followers = forms.IntegerField(required=False, label='الحد الأدنى للمتابعين', min_value=0)
+    is_verified = forms.BooleanField(required=False, label='الموثقة فقط')
+    sort_by = forms.ChoiceField(required=False, label='ترتيب حسب', choices=[
+        ('', 'الافتراضي'),
+        ('followers', 'عدد المتابعين'),
+        ('rating', 'التقييم'),
+        ('properties', 'عدد العقارات'),
+        ('views', 'عدد المشاهدات'),
+        ('newest', 'الأحدث'),
+    ])
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # إضافة خيارات المحافظات
+        from .constants import IRAQ_GOVERNORATES
+        self.fields['governorate'].choices = [('', 'كل المحافظات')] + list(IRAQ_GOVERNORATES)
+        
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+# ==================== Dynamic Category Forms ====================
+
+class PropertyInsideIraqForm(forms.ModelForm):
+    """نموذج عقارات داخل العراق"""
+    
+    class Meta:
+        model = Property
+        fields = [
+            'title', 'type', 'status',
+            # Property Purpose and Condition
+            'purpose', 'property_condition', 'ownership_status',
+            # Property ID and Owner
+            'property_number', 'owner_name',
+            # Price
+            'price', 'negotiable', 'currency',
+            # Additional Price Details
+            'price_per_meter', 'down_payment', 'installments', 'annual_maintenance_fee',
+            # Location - Iraq
+            'governorate', 'city', 'district', 'subdistrict', 'nahiyah', 'street', 'landmark', 'location',
+            # GPS
+            'latitude', 'longitude', 'nearest_landmark',
+            # Area and Building
+            'total_area', 'building_area', 'area',
+            # Building Details
+            'facade', 'direction', 'year_built', 'building_condition', 'total_floors', 'floor_number',
+            # Additional Building Details
+            'floor_type', 'roof_type', 'wall_type', 'finish_condition', 'last_maintenance',
+            # Room Details
+            'bedrooms', 'living_rooms', 'dining_rooms', 'bathrooms', 'kitchens', 'balconies',
+            # Parking
+            'parking', 'parking_spaces', 'parking_type',
+            # Amenities
+            'furnished', 'has_pool', 'has_garden', 'has_elevator', 'has_generator',
+            'has_national_electricity', 'has_water', 'has_internet', 'has_solar_power',
+            # Security
+            'has_security_system', 'has_cctv', 'has_alarm',
+            # Description
+            'description', 'phone',
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 5, 'class': 'form-control'}),
+            'location': forms.TextInput(attrs={'placeholder': 'الحي، الشارع، أقرب معلم', 'class': 'form-control'}),
+            'district': forms.TextInput(attrs={'placeholder': 'مثال: حي الشموخ', 'class': 'form-control'}),
+            'street': forms.TextInput(attrs={'placeholder': 'مثال: شارع 40', 'class': 'form-control'}),
+            'latitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
+            'longitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Property type choices for inside Iraq
+        type_choices = [
+            ('', 'اختر نوع العقار'),
+            ('apartment', 'شقة'),
+            ('house', 'منزل'),
+            ('villa', 'فيلا'),
+            ('duplex', 'دوبلكس'),
+            ('residential_complex', 'مجمع سكني'),
+            ('shop', 'محل تجاري'),
+            ('office', 'مكتب'),
+            ('mall', 'مول / مركز تجاري'),
+            ('warehouse', 'مخزن'),
+            ('residential_building', 'بناية سكنية'),
+            ('commercial_building', 'عمارة تجارية'),
+            ('residential_land', 'أرض سكنية'),
+            ('agricultural_land', 'أرض زراعية'),
+            ('commercial_land', 'أرض تجارية'),
+        ]
+        self.fields['type'].choices = type_choices
+        
+        # Status choices
+        self.fields['status'].choices = [
+            (Property.STATUS_DRAFT, 'مسودة'),
+            (Property.STATUS_PUBLISHED, 'منشور'),
+        ]
+        self.fields['status'].initial = Property.STATUS_DRAFT
+        
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class PropertyOutsideIraqForm(forms.ModelForm):
+    """نموذج عقارات خارج العراق"""
+    
+    class Meta:
+        model = Property
+        fields = [
+            'title', 'type', 'status',
+            # Property Purpose and Condition
+            'purpose', 'property_condition', 'ownership_status',
+            # Property ID and Owner
+            'property_number', 'owner_name',
+            # Price
+            'price', 'negotiable', 'currency', 'original_price',
+            # Additional Price Details
+            'price_per_meter', 'down_payment', 'installments', 'annual_maintenance_fee',
+            # Location - Outside Iraq
+            'country', 'city_outside', 'area_outside', 'postal_code', 'taxes', 'registration_fees', 'foreign_ownership_laws',
+            # GPS
+            'latitude', 'longitude', 'nearest_landmark',
+            # Area and Building
+            'total_area', 'building_area', 'area',
+            # Building Details
+            'facade', 'direction', 'year_built', 'building_condition', 'total_floors', 'floor_number',
+            # Additional Building Details
+            'floor_type', 'roof_type', 'wall_type', 'finish_condition', 'last_maintenance',
+            # Room Details
+            'bedrooms', 'living_rooms', 'dining_rooms', 'bathrooms', 'kitchens', 'balconies',
+            # Additional
+            'maintenance_fee', 'hoa_fee',
+            # Investment info
+            'description', 'phone',
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 5, 'class': 'form-control'}),
+            'foreign_ownership_laws': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'latitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
+            'longitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Property type choices for outside Iraq
+        type_choices = [
+            ('', 'اختر نوع العقار'),
+            ('outside_apartment', 'شقة خارج العراق'),
+            ('outside_villa', 'فيلا خارج العراق'),
+            ('outside_palace', 'قصر خارج العراق'),
+            ('outside_house', 'منزل خارج العراق'),
+            ('outside_land', 'أرض خارج العراق'),
+            ('outside_commercial', 'عقار تجاري خارج العراق'),
+        ]
+        self.fields['type'].choices = type_choices
+        
+        # Status choices
+        self.fields['status'].choices = [
+            (Property.STATUS_DRAFT, 'مسودة'),
+            (Property.STATUS_PUBLISHED, 'منشور'),
+        ]
+        self.fields['status'].initial = Property.STATUS_DRAFT
+        
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class PropertyHotelForm(forms.ModelForm):
+    """نموذج فنادق"""
+    
+    class Meta:
+        model = PropertyHotel
+        fields = [
+            'hotel_name', 'star_rating', 'classification', 'total_rooms',
+            'suites', 'family_rooms', 'price_per_night', 'currency',
+            'has_restaurant', 'has_cafe', 'has_pool', 'has_gym', 'has_spa',
+            'has_conference_hall', 'direct_booking', 'booking_url',
+        ]
+        widgets = {
+            'booking_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'رابط الحجز'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Star rating choices
+        STAR_RATING_CHOICES = [(i, f'{i} نجوم') for i in range(1, 6)]
+        self.fields['star_rating'].choices = STAR_RATING_CHOICES
+        
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class PropertyResortForm(forms.ModelForm):
+    """نموذج منتجعات"""
+    
+    class Meta:
+        model = PropertyResort
+        fields = [
+            'resort_name', 'resort_type', 'max_guests', 'min_guests', 'max_rooms',
+            # Location
+            'governorate', 'city', 'district', 'address', 'latitude', 'longitude',
+            # Pricing
+            'price_per_night', 'price_per_week', 'price_per_month', 'currency',
+            # Booking
+            'min_booking_duration', 'max_booking_duration', 'check_in_time', 'check_out_time',
+            # Services
+            'has_wifi', 'has_kitchen', 'has_bbq', 'has_playground', 'has_parking',
+            'has_pool', 'has_gym', 'has_spa', 'has_restaurant', 'has_ac', 'has_heating',
+            'has_security', 'has_laundry', 'has_room_service', 'has_concierge',
+            # Activities
+            'activities',
+            # Description
+            'description', 'rules',
+            # Contact
+            'phone', 'whatsapp', 'email', 'website',
+            # Status
+            'is_active', 'featured',
+        ]
+        widgets = {
+            'activities': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': 'الأنشطة المتاحة'}),
+            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'وصف المنتجع'}),
+            'rules': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': 'القواعد والشروط'}),
+            'address': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': 'العنوان التفصيلي'}),
+            'latitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
+            'longitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
+            'check_in_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'check_out_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Resort type choices - use the actual RESORT_TYPES from the model
+        self.fields['resort_type'].choices = PropertyResort.RESORT_TYPES
+        
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class DynamicPropertyForm(forms.Form):
+    """نموذج ديناميكي لاختيار الفئة"""
+    
+    CATEGORY_CHOICES = [
+        ('', 'اختر فئة العقار'),
+        ('inside_iraq', '🏠 عقارات داخل العراق'),
+        ('outside_iraq', '🌍 عقارات خارج العراق'),
+        ('hotel', '🏨 فنادق'),
+        ('resort', '🏖️ منتجعات وأماكن سياحية'),
+    ]
+    
+    category = forms.ChoiceField(
+        choices=CATEGORY_CHOICES,
+        label='فئة العقار',
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'category-select'})
+    )
+
+
+# ==================== Forms لنظام الفنادق والمنتجعات الجديد ====================
+
+class HotelPageForm(forms.ModelForm):
+    """نموذج إنشاء/تعديل صفحة الفندق"""
+    
+    class Meta:
+        model = HotelPage
+        fields = [
+            'page_type', 'name', 'description', 'cover_image', 'logo',
+            'governorate', 'city', 'district', 'address', 'latitude', 'longitude',
+            'phone', 'whatsapp', 'email', 'website', 'working_hours', 'working_days',
+            'meta_title', 'meta_description', 'keywords'
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'address': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'latitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
+            'longitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class HotelPostForm(forms.ModelForm):
+    """نموذج إنشاء/تعديل منشور الفندق"""
+    
+    class Meta:
+        model = HotelPost
+        fields = [
+            'post_type', 'title', 'content', 'images', 'video_url', 'tour_360_url',
+            'price', 'currency', 'discount_percentage', 'valid_from', 'valid_until'
+        ]
+        widgets = {
+            'content': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'images': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': 'أدخل روابط الصور JSON'}),
+            'valid_from': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'valid_until': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class HotelRoomForm(forms.ModelForm):
+    """نموذج إنشاء/تعديل غرفة الفندق"""
+    
+    class Meta:
+        model = HotelRoom
+        fields = [
+            'room_type', 'room_number', 'title', 'description',
+            'max_adults', 'max_children', 'max_guests',
+            'price_per_night', 'currency', 'amenities',
+            'images', 'video_url', 'tour_360_url',
+            'area', 'floor'
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'amenities': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': 'أدخل المرافق JSON'}),
+            'images': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': 'أدخل روابط الصور JSON'}),
+            'price_per_night': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'area': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class HotelOfferForm(forms.ModelForm):
+    """نموذج إنشاء/تعديل عرض الفندق"""
+    
+    class Meta:
+        model = HotelOffer
+        fields = [
+            'offer_type', 'title', 'description',
+            'original_price', 'discounted_price', 'discount_percentage', 'currency',
+            'valid_from', 'valid_until', 'images', 'terms_and_conditions'
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'terms_and_conditions': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'images': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': 'أدخل روابط الصور JSON'}),
+            'original_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'discounted_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'valid_from': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'valid_until': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class HotelBookingForm(forms.ModelForm):
+    """نموذج حجز الفندق"""
+    
+    class Meta:
+        model = HotelBooking
+        fields = [
+            'room', 'offer', 'check_in', 'check_out', 'guests',
+            'special_requests'
+        ]
+        widgets = {
+            'check_in': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'check_out': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'special_requests': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+# ==================== Service Provider Forms ====================
+
+class ServiceProviderPageForm(forms.ModelForm):
+    """Form for creating/editing service provider page"""
+    
+    class Meta:
+        model = ServiceProviderPage
+        fields = [
+            'page_type', 'name', 'description', 'profile_image', 'cover_image', 'logo',
+            'category', 'sub_categories', 'years_of_experience', 'projects_count', 'clients_count',
+            'governorate', 'city', 'working_areas', 'latitude', 'longitude',
+            'phone', 'whatsapp', 'telegram', 'facebook', 'instagram', 'website',
+            'working_hours', 'availability', 'meta_title', 'meta_description', 'meta_keywords'
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+            'working_areas': forms.Textarea(attrs={'rows': 3}),
+            'sub_categories': forms.CheckboxSelectMultiple(),
+            'meta_description': forms.Textarea(attrs={'rows': 3}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs and not isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ServiceProviderWorkForm(forms.ModelForm):
+    """Form for creating/editing service provider work"""
+    
+    class Meta:
+        model = ServiceProviderWork
+        fields = [
+            'title', 'description', 'location', 'execution_date', 'duration',
+            'estimated_price', 'before_image', 'after_image', 'is_featured', 'status'
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+            'execution_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ServiceProviderServiceForm(forms.ModelForm):
+    """Form for creating/editing service provider service"""
+    
+    class Meta:
+        model = ServiceProviderService
+        fields = ['name', 'description', 'price', 'price_unit', 'is_active', 'order']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 3}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ServiceProviderGalleryForm(forms.ModelForm):
+    """Form for adding images to service provider gallery"""
+    
+    class Meta:
+        model = ServiceProviderGallery
+        fields = ['image', 'caption', 'is_primary', 'order']
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ServiceProviderVideoForm(forms.ModelForm):
+    """Form for adding videos to service provider"""
+    
+    class Meta:
+        model = ServiceProviderVideo
+        fields = ['title', 'video_url', 'thumbnail', 'description', 'is_primary', 'order']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 3}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ServiceProvider360Form(forms.ModelForm):
+    """Form for adding 360 tours to service provider"""
+    
+    class Meta:
+        model = ServiceProvider360
+        fields = ['title', 'tour_url', 'thumbnail', 'description', 'is_primary', 'order']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 3}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ServiceProviderRatingForm(forms.ModelForm):
+    """Form for rating service provider"""
+    
+    class Meta:
+        model = ServiceProviderRating
+        fields = ['rating', 'review']
+        widgets = {
+            'review': forms.Textarea(attrs={'rows': 4}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ServiceProviderContactForm(forms.ModelForm):
+    """Form for contacting service provider"""
+    
+    class Meta:
+        model = ServiceProviderContact
+        fields = ['contact_type', 'name', 'email', 'phone', 'message']
+        widgets = {
+            'message': forms.Textarea(attrs={'rows': 4}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class ServiceProviderQuoteForm(forms.ModelForm):
+    """Form for requesting quote from service provider"""
+    
+    class Meta:
+        model = ServiceProviderQuote
+        fields = [
+            'project_title', 'project_description', 'location', 'budget',
+            'name', 'email', 'phone'
+        ]
+        widgets = {
+            'project_description': forms.Textarea(attrs={'rows': 4}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'

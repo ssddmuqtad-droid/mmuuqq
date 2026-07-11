@@ -1,1 +1,121 @@
 {% extends 'properties/_form_page.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: none;">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                    <h3 class="mb-0 text-center">🔨 إنشاء مزاد عقاري جديد</h3>
+                </div>
+                <div class="card-body p-4">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="POST" action="">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label class="form-label text-white fw-bold">العقار *</label>
+                            <select name="property" class="form-select" required>
+                                <option value="">اختر العقار</option>
+                                {% for property in properties %}
+                                    <option value="{{ property.id }}">{{ property.display_title }} - {{ property.price|floatformat:0 }} د.ع</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label text-white fw-bold">نوع المزاد *</label>
+                            <select name="auction_type" class="form-select" required>
+                                {% for type_value, type_label in auction_types %}
+                                    <option value="{{ type_value }}">{{ type_label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label text-white fw-bold">عنوان المزاد *</label>
+                            <input type="text" name="title" class="form-control" required placeholder="مثال: منزل فاخر في بغداد">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label text-white fw-bold">وصف المزاد *</label>
+                            <textarea name="description" class="form-control" rows="4" required placeholder="اكتب وصفاً تفصيلياً للمزاد..."></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label text-white fw-bold">سعر البداية (د.ع) *</label>
+                                <input type="number" name="starting_price" class="form-control" required placeholder="100000000">
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label text-white fw-bold">أقل زيادة (د.ع)</label>
+                                <input type="number" name="minimum_increment" class="form-control" value="100000" placeholder="100000">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label text-white fw-bold">السعر الاحتياطي (د.ع)</label>
+                                <input type="number" name="reserve_price" class="form-control" placeholder="اختياري">
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label text-white fw-bold">مبلغ التأمين (د.ع)</label>
+                                <input type="number" name="deposit_amount" class="form-control" value="0" placeholder="0">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label text-white fw-bold">تاريخ البداية *</label>
+                                <input type="datetime-local" name="start_date" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label text-white fw-bold">تاريخ النهاية *</label>
+                                <input type="datetime-local" name="end_date" class="form-control" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label text-white fw-bold">رقم التواصل</label>
+                                <input type="text" name="contact_phone" class="form-control" placeholder="07xxxxxxxxx">
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label text-white fw-bold">البريد الإلكتروني</label>
+                                <input type="email" name="contact_email" class="form-control" placeholder="email@example.com">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label text-white fw-bold">الحد الأقصى للمشاركين</label>
+                            <input type="number" name="max_participants" class="form-control" placeholder="اتركه فارغاً لعدم التحديد">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label text-white fw-bold">شروط المزاد *</label>
+                            <textarea name="terms" class="form-control" rows="4" required placeholder="اكتب شروط وأحكام المزاد..."></textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-lg text-white fw-bold" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                                إنشاء المزاد
+                            </button>
+                            <a href="{% url 'auctions_list' %}" class="btn btn-outline-light">
+                                إلغاء
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

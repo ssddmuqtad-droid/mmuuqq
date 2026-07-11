@@ -1,0 +1,160 @@
+{% extends 'properties/_form_page.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-lg" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: none;">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                    <h3 class="mb-0">🔨 إدارة موافقة المزادات</h3>
+                </div>
+                <div class="card-body p-4">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    {% if pending_auctions %}
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>العنوان</th>
+                                        <th>الدلال</th>
+                                        <th>سعر البداية</th>
+                                        <th>تاريخ البداية</th>
+                                        <th>تاريخ النهاية</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for auction in pending_auctions %}
+                                    <tr>
+                                        <td>{{ auction.title }}</td>
+                                        <td>
+                                            {% if auction.broker %}
+                                                {{ auction.broker.user.username }}
+                                            {% else %}
+                                                الإدارة
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ auction.starting_price|floatformat:0 }} د.ع</td>
+                                        <td>{{ auction.start_date|date:"Y-m-d H:i" }}</td>
+                                        <td>{{ auction.end_date|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            <span class="badge bg-warning">قيد المراجعة</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#approveModal{{ auction.id }}">
+                                                    ✓ موافقة
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal{{ auction.id }}">
+                                                    ✕ رفض
+                                                </button>
+                                                <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#revisionModal{{ auction.id }}">
+                                                    ✎ تعديل
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    
+                                    <!-- Modal الموافقة -->
+                                    <div class="modal fade" id="approveModal{{ auction.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content" style="background: #1a1a2e;">
+                                                <div class="modal-header border-0">
+                                                    <h5 class="modal-title text-white">موافقة على المزاد</h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p class="text-white">هل أنت متأكد من الموافقة على المزاد "{{ auction.title }}"؟</p>
+                                                </div>
+                                                <div class="modal-footer border-0">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                    <form method="POST" action="">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="auction_id" value="{{ auction.id }}">
+                                                        <input type="hidden" name="action" value="approve">
+                                                        <button type="submit" class="btn btn-success">موافقة</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Modal الرفض -->
+                                    <div class="modal fade" id="rejectModal{{ auction.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content" style="background: #1a1a2e;">
+                                                <div class="modal-header border-0">
+                                                    <h5 class="modal-title text-white">رفض المزاد</h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <form method="POST" action="">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="auction_id" value="{{ auction.id }}">
+                                                        <input type="hidden" name="action" value="reject">
+                                                        <div class="mb-3">
+                                                            <label class="form-label text-white">سبب الرفض</label>
+                                                            <textarea name="rejection_reason" class="form-control" rows="3" required></textarea>
+                                                        </div>
+                                                        <div class="modal-footer border-0 p-0">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                            <button type="submit" class="btn btn-danger">رفض</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Modal طلب التعديل -->
+                                    <div class="modal fade" id="revisionModal{{ auction.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content" style="background: #1a1a2e;">
+                                                <div class="modal-header border-0">
+                                                    <h5 class="modal-title text-white">طلب تعديل المزاد</h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <form method="POST" action="">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="auction_id" value="{{ auction.id }}">
+                                                        <input type="hidden" name="action" value="request_revision">
+                                                        <div class="mb-3">
+                                                            <label class="form-label text-white">ملاحظات التعديل</label>
+                                                            <textarea name="rejection_reason" class="form-control" rows="3" required></textarea>
+                                                        </div>
+                                                        <div class="modal-footer border-0 p-0">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                            <button type="submit" class="btn btn-warning">طلب تعديل</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="display-1 mb-3">📋</div>
+                            <h4 class="text-white">لا توجد مزادات قيد المراجعة</h4>
+                            <p class="text-muted">جميع المزادات الحالية تمت معالجتها</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

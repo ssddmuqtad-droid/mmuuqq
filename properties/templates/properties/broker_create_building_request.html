@@ -1,0 +1,247 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}إنشاء طلب بناء{% endblock %}
+{% block dashboard_title %}إنشاء طلب <span>بناء</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'broker_building_requests' %}" class="btn btn-outline">طلباتي</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="padding: 28px;">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" class="building-request-form">
+    {% csrf_token %}
+    
+    <div class="form-section">
+      <h3>👤 معلومات العميل</h3>
+      
+      <div class="form-group">
+        <label for="full_name">الاسم الكامل *</label>
+        <input type="text" name="full_name" id="full_name" class="form-control" required placeholder="أدخل الاسم الكامل">
+      </div>
+      
+      <div class="form-group">
+        <label for="phone">رقم الهاتف *</label>
+        <input type="tel" name="phone" id="phone" class="form-control" required placeholder="07XXXXXXXXX">
+      </div>
+      
+      <div class="form-group">
+        <label for="email">البريد الإلكتروني</label>
+        <input type="email" name="email" id="email" class="form-control" placeholder="example@email.com">
+      </div>
+    </div>
+    
+    <div class="form-section">
+      <h3>📍 معلومات المشروع</h3>
+      
+      <div class="form-group">
+        <label for="governorate">المحافظة *</label>
+        <select name="governorate" id="governorate" class="form-control" required>
+          <option value="">اختر المحافظة</option>
+          <option value="baghdad">بغداد</option>
+          <option value="basra">البصرة</option>
+          <option value="erbil">أربيل</option>
+          <option value="mosul">الموصل</option>
+          <option value="najaf">النجف</option>
+          <option value="karbala">كربلاء</option>
+          <option value="kirkuk">كركوك</option>
+          <option value="dhi_qar">ذي قار</option>
+          <option value="maysan">ميسان</option>
+          <option value="wassit">واسط</option>
+          <option value="babil">بابل</option>
+          <option value="anbar">الأنبار</option>
+          <option value="saladin">صلاح الدين</option>
+          <option value="dahuk">دهوك</option>
+          <option value="sulaymaniyah">السليمانية</option>
+          <option value="muthanna">المثنى</option>
+          <option value="qadisiyyah">القادسية</option>
+          <option value="diyala">ديالى</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="city">المدينة *</label>
+        <input type="text" name="city" id="city" class="form-control" required placeholder="المدينة">
+      </div>
+      
+      <div class="form-group">
+        <label for="district">المنطقة</label>
+        <input type="text" name="district" id="district" class="form-control" placeholder="المنطقة">
+      </div>
+      
+      <div class="form-group">
+        <label for="address">العنوان التفصيلي</label>
+        <textarea name="address" id="address" class="form-control" rows="2" placeholder="العنوان التفصيلي"></textarea>
+      </div>
+    </div>
+    
+    <div class="form-section">
+      <h3>🏗️ تفاصيل البناء</h3>
+      
+      <div class="form-group">
+        <label for="project_type">نوع المشروع *</label>
+        <select name="project_type" id="project_type" class="form-control" required>
+          <option value="">اختر نوع المشروع</option>
+          <option value="house">منزل سكني</option>
+          <option value="apartment">شقة</option>
+          <option value="villa">فيلا</option>
+          <option value="commercial">مبنى تجاري</option>
+          <option value="office">مكاتب</option>
+          <option value="industrial">مصنع</option>
+          <option value="other">أخرى</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="estimated_area">المساحة المقدرة (م²)</label>
+        <input type="number" name="estimated_area" id="estimated_area" class="form-control" placeholder="مثال: 200">
+      </div>
+      
+      <div class="form-group">
+        <label for="estimated_budget">الميزانية المقدرة (د.ع)</label>
+        <input type="number" name="estimated_budget" id="estimated_budget" class="form-control" placeholder="مثال: 50000000">
+      </div>
+      
+      <div class="form-group">
+        <label for="expected_start_date">تاريخ البدء المتوقع</label>
+        <input type="date" name="expected_start_date" id="expected_start_date" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="expected_completion_date">تاريخ الإنجاز المتوقع</label>
+        <input type="date" name="expected_completion_date" id="expected_completion_date" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="priority">الأولوية</label>
+        <select name="priority" id="priority" class="form-control">
+          <option value="low">منخفض</option>
+          <option value="medium" selected>متوسط</option>
+          <option value="high">عالي</option>
+          <option value="urgent">عاجل</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="form-section">
+      <h3>📝 وصف المشروع</h3>
+      
+      <div class="form-group">
+        <label for="description">وصف المشروع</label>
+        <textarea name="description" id="description" class="form-control" rows="4" placeholder="وصف تفصيلي للمشروع..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label for="requirements">المتطلبات الخاصة</label>
+        <textarea name="requirements" id="requirements" class="form-control" rows="3" placeholder="متطلبات خاصة للمشروع..."></textarea>
+      </div>
+    </div>
+    
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">🏗️ إنشاء الطلب</button>
+      <a href="{% url 'broker_building_requests' %}" class="btn btn-outline">إلغاء</a>
+    </div>
+  </form>
+</div>
+
+<style>
+.building-request-form {
+  max-width: 800px;
+}
+
+.form-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.form-section h3 {
+  margin: 0 0 20px 0;
+  color: var(--text);
+  font-size: 1.2rem;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: white;
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text);
+  border: 2px solid var(--border);
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.btn-outline:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+</style>
+{% endblock %}

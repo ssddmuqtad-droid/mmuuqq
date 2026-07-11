@@ -41,6 +41,9 @@ PROPERTY_TYPES = {
         ('villa', 'فيلا'),
         ('duplex', 'دوبلكس'),
         ('residential_complex', 'مجمع سكني'),
+        ('penthouse', 'بنتهاوس'),
+        ('studio', 'ستوديو'),
+        ('townhouse', 'تاون هاوس'),
     ],
     'commercial': [
         ('shop', 'محل'),
@@ -48,6 +51,12 @@ PROPERTY_TYPES = {
         ('mall', 'مول / مركز تجاري'),
         ('car_showroom', 'معرض سيارات'),
         ('warehouse', 'مخزن'),
+        ('tower', 'برج'),
+        ('factory', 'معمل'),
+        ('clinic', 'عيادة'),
+        ('pharmacy', 'صيدلية'),
+        ('restaurant', 'مطعم'),
+        ('cafe', 'مقهى'),
     ],
     'investment': [
         ('residential_building', 'بناية سكنية'),
@@ -55,6 +64,7 @@ PROPERTY_TYPES = {
         ('investment_land', 'أرض للاستثمار'),
         ('apartment_complex', 'مجمع شقق'),
         ('small_hotel', 'فندق صغير'),
+        ('investment_property', 'عقار استثماري'),
     ],
     'tourism': [
         ('chalet', 'شاليه'),
@@ -62,12 +72,26 @@ PROPERTY_TYPES = {
         ('hotel', 'فندق'),
         ('hotel_apartment', 'شقق فندقية'),
         ('tourism_house', 'بيت سياحي'),
+        ('tourist_farm', 'مزرعة سياحية'),
+        ('beach_house', 'بيت شاطئي'),
+        ('rest_house', 'استراحة'),
+        ('camp_site', 'مخيم'),
+        ('tourist_city', 'مدينة سياحية'),
+        ('cabin', 'كوخ'),
     ],
     'land': [
         ('residential_land', 'أرض سكنية'),
         ('agricultural_land', 'أرض زراعية'),
         ('commercial_land', 'أرض تجارية'),
         ('investment_land', 'أرض استثمارية'),
+    ],
+    'outside_iraq': [
+        ('outside_apartment', 'شقة خارج العراق'),
+        ('outside_villa', 'فيلا خارج العراق'),
+        ('outside_palace', 'قصر خارج العراق'),
+        ('outside_house', 'منزل خارج العراق'),
+        ('outside_land', 'أرض خارج العراق'),
+        ('outside_commercial', 'عقار تجاري خارج العراق'),
     ],
 }
 
