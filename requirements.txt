@@ -20,10 +20,6 @@ drf-yasg>=1.21.0
 # Optional: Redis cache/sessions (when REDIS_URL is set)
 django-redis>=5.4.0
 
-# Optional: WebSockets (when USE_WEBSOCKETS=True)
-channels>=4.0.0
-channels-redis>=4.2.0
-
 # File type validation for messaging
 python-magic>=0.4.27
 
