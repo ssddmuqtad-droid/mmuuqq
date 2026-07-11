@@ -4,6 +4,9 @@ import os
 import subprocess
 import sys
 
+# Force disable WebSockets to use Gunicorn instead of Daphne
+os.environ['USE_WEBSOCKETS'] = 'false'
+
 
 def run(cmd, allow_fail=False):
     print(f">>> {' '.join(str(c) for c in cmd)}", flush=True)
