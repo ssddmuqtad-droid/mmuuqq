@@ -3,7 +3,8 @@ FROM python:3.12-slim-bookworm
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8080 \
-    DJANGO_SETTINGS_MODULE=dalal_project.settings
+    DJANGO_SETTINGS_MODULE=dalal_project.settings \
+    USE_WEBSOCKETS=false
 
 WORKDIR /app
 
@@ -22,4 +23,4 @@ RUN mkdir -p /app/logs /app/media /app/staticfiles
 
 EXPOSE 8080
 
-CMD ["python", "run_server.py"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn dalal_project.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - --error-logfile - --forwarded-allow-ips *"]
