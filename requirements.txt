@@ -20,6 +20,10 @@ drf-yasg>=1.21.0
 # Optional: Redis cache/sessions (when REDIS_URL is set)
 django-redis>=5.4.0
 
+# Optional: WebSockets (when USE_WEBSOCKETS=True)
+channels>=4.0.0
+channels-redis>=4.2.0
+
 # File type validation for messaging
 python-magic>=0.4.27
 
@@ -32,4 +36,4 @@ social-auth-app-django>=6.0.0
 django-solo>=2.0.0
 django-leaflet>=0.28.0
 
-# Force rebuild - 2026-07-11-13-45
+# Force rebuild - 2026-07-11-13-50

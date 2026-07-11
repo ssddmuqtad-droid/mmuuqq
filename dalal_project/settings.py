@@ -159,7 +159,8 @@ USE_WEBSOCKETS = os.getenv('USE_WEBSOCKETS', 'False').lower() == 'true'
 if USE_WEBSOCKETS:
     try:
         import channels  # noqa: F401
-        INSTALLED_APPS.insert(0, 'channels')
+        if 'channels' not in INSTALLED_APPS:
+            INSTALLED_APPS.insert(0, 'channels')
         ASGI_APPLICATION = 'dalal_project.asgi.application'
         CHANNEL_LAYERS = {
             'default': {
