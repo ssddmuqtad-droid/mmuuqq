@@ -44,6 +44,13 @@ def main():
         from django.conf import settings
         print(f"INSTALLED_APPS: {settings.INSTALLED_APPS}", flush=True)
         print(f"Properties in INSTALLED_APPS: {'properties' in settings.INSTALLED_APPS}", flush=True)
+        
+        # Check if properties.urls can be imported
+        try:
+            from properties import urls as properties_urls
+            print(f"Properties URLs loaded successfully: {len(properties_urls.urlpatterns)} patterns", flush=True)
+        except Exception as e:
+            print(f"Error loading properties URLs: {e}", flush=True)
     except Exception as e:
         print(f"Error checking INSTALLED_APPS: {e}", flush=True)
 
