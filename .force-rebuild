@@ -3,3 +3,4 @@
 # Force rebuild - channel_users URL fix
 # Force rebuild - 2026-07-12-15-27 - Fix migrations
 # Force rebuild - 2026-07-12-16-39 - Fix properties app not in INSTALLED_APPS
+# Force rebuild - 2026-07-12-18-31 - Force rebuild without cache
