@@ -5,6 +5,7 @@ from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
 from django.views.generic import TemplateView
 from django.http import JsonResponse
+from django.utils import timezone
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -42,7 +43,9 @@ urlpatterns = [
     # Health check endpoint
     path('health/', health_check, name='health-check'),
     # Test endpoint
-    path('test/', lambda request: JsonResponse({'status': 'ok', 'app': 'dalal'}), name='test'),
+    path('test/', lambda request: JsonResponse({'status': 'ok', 'app': 'dalal', 'time': str(timezone.now())}), name='test'),
+    # Simple test page
+    path('simple/', TemplateView.as_view(template_name='properties/home.html'), name='simple'),
     # API Documentation
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
