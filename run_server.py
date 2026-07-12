@@ -39,7 +39,6 @@ def main():
 
     run([sys.executable, 'manage.py', 'migrate', '--noinput'])
     run([sys.executable, 'manage.py', 'collectstatic', '--noinput'])
-    run([sys.executable, 'manage.py', 'setup_site'], allow_fail=True)
 
     workers = os.getenv('GUNICORN_WORKERS', '2')
     log_level = os.getenv('GUNICORN_LOG_LEVEL', 'debug')
