@@ -1128,8 +1128,17 @@ class SubscriptionRenewalRequest(models.Model):
     
     approved_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_renewals', verbose_name='تمت الموافقة بواسطة')
     approved_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الموافقة')
+    approval_ip = models.GenericIPAddressField(null=True, blank=True, verbose_name='IP الموافقة')
+    
+    rejected_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='rejected_renewals', verbose_name='تم الرفض بواسطة')
+    rejected_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الرفض')
+    rejection_ip = models.GenericIPAddressField(null=True, blank=True, verbose_name='IP الرفض')
     
     notes = models.TextField(blank=True, verbose_name='ملاحظات')
+    
+    # Security tracking
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name='IP العنوان')
+    user_agent = models.TextField(blank=True, verbose_name='User Agent')
     
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
@@ -1717,12 +1726,83 @@ class Property(models.Model):
     def price_formatted(self):
         return f'{self.price:,}'
     
+    def is_expired(self):
+        """Check if property publication has expired"""
+        if not self.expiry_date:
+            return False
+        from django.utils import timezone
+        return timezone.now() > self.expiry_date
+    
+    def freeze(self, reason='انتهاء الاشتراك'):
+        """Freeze the property"""
+        from django.utils import timezone
+        self.is_frozen = True
+        self.frozen_at = timezone.now()
+        self.frozen_reason = reason
+        self.status = 'draft'  # Change status to draft to hide from public
+        self.save(update_fields=['is_frozen', 'frozen_at', 'frozen_reason', 'status'])
+    
+    def unfreeze(self):
+        """Unfreeze the property"""
+        self.is_frozen = False
+        self.frozen_at = None
+        self.frozen_reason = ''
+        self.status = 'published'  # Restore published status
+        self.save(update_fields=['is_frozen', 'frozen_at', 'frozen_reason', 'status'])
+    
+    def calculate_expiry_date(self, broker):
+        """Calculate expiry date based on broker's subscription"""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        if not broker or not broker.subscription_end_date:
+            # Default 30 days if no subscription
+            return timezone.now() + timedelta(days=30)
+        
+        # Use subscription end date as expiry
+        return broker.subscription_end_date
+    
+    def save(self, *args, **kwargs):
+        # Set publication date on first save if not set
+        if not self.pk and not self.publication_date:
+            from django.utils import timezone
+            self.publication_date = timezone.now()
+        
+        # Calculate expiry date on first save if not set
+        if not self.pk and not self.expiry_date and hasattr(self, 'owner'):
+            try:
+                from .models import Broker
+                broker = Broker.objects.filter(user=self.owner).first()
+                if broker:
+                    self.expiry_date = self.calculate_expiry_date(broker)
+            except:
+                pass
+        
+        # Check if property should be frozen due to expired subscription
+        if self.pk and not self.is_frozen:
+            try:
+                from .models import Broker
+                broker = Broker.objects.filter(user=self.owner).first()
+                if broker and broker.is_subscription_expired():
+                    self.freeze('انتهاء الاشتراك')
+            except:
+                pass
+        
+        super().save(*args, **kwargs)
+    
     # Hotel/Resort specific fields
     hotel_stars = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد النجوم')
     hotel_rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True, verbose_name='التقييم')
     hotel_rooms = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد الغرف')
     hotel_suites = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='عدد الأجنحة')
     hotel_family_rooms = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='الغرف العائلية')
+    
+    # Publication expiry and subscription tracking
+    publication_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ النشر')
+    expiry_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ انتهاء الصلاحية')
+    is_frozen = models.BooleanField(default=False, verbose_name='مجمد')
+    frozen_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ التجميد')
+    frozen_reason = models.CharField(max_length=200, blank=True, verbose_name='سبب التجميد')
     
     # Hotel services
     has_restaurant = models.BooleanField(default=False, verbose_name='مطعم')
@@ -4449,7 +4529,20 @@ class Broker(models.Model):
     is_verified = models.BooleanField(default=False, verbose_name='دلال موثق')
     is_active = models.BooleanField(default=True, verbose_name='نشط')
     slug = models.SlugField(max_length=100, unique=True, blank=True, null=True, allow_unicode=True, verbose_name='رابط الصفحة')
-    has_standalone_page = models.BooleanField(default=False, verbose_name='صفحة مستقلة', help_text='تفعيل صفحة مستقلة للدلال لا تظهر عقاراته في الصفحة الرئيسية')
+    
+    PAGE_DISPLAY_CHOICES = [
+        ('main_only', 'الصفحة الرئيسية فقط'),
+        ('standalone_only', 'الصفحة المستقلة فقط'),
+        ('both', 'الاثنين معاً'),
+    ]
+    
+    page_display_mode = models.CharField(
+        max_length=20,
+        choices=PAGE_DISPLAY_CHOICES,
+        default='main_only',
+        verbose_name='طريقة عرض الصفحة',
+        help_text='اختر أين تظهر عقاراتك'
+    )
     
     # Subscription plan (for chat-based subscriptions only)
     subscription_plan = models.ForeignKey(
@@ -4523,6 +4616,61 @@ class Broker(models.Model):
         upload_to='broker_ids/', null=True, blank=True, verbose_name='صورة الهوية'
     )
     bio = models.TextField(blank=True, verbose_name='نبذة')
+    
+    # Standalone page settings
+    site_name = models.CharField(max_length=200, blank=True, verbose_name='اسم الموقع')
+    logo = models.ImageField(upload_to='broker_logos/', blank=True, null=True, verbose_name='الشعار')
+    job_title = models.CharField(max_length=100, blank=True, verbose_name='المسمى الوظيفي')
+    mission = models.TextField(blank=True, verbose_name='رسالتنا')
+    vision = models.TextField(blank=True, verbose_name='رؤيتنا')
+    years_of_experience = models.PositiveIntegerField(default=0, verbose_name='سنوات الخبرة')
+    clients_count = models.PositiveIntegerField(default=0, verbose_name='عدد العملاء')
+    working_governorates = models.TextField(blank=True, verbose_name='المحافظات التي يعمل بها', help_text='افصل بين المحافظات بفاصلة')
+    
+    # Contact information
+    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
+    telegram = models.CharField(max_length=100, blank=True, verbose_name='تيليجرام')
+    email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    address = models.TextField(blank=True, verbose_name='العنوان')
+    working_hours = models.CharField(max_length=100, blank=True, verbose_name='ساعات العمل')
+    google_maps_url = models.URLField(blank=True, verbose_name='رابط Google Maps')
+    
+    # Social media
+    facebook = models.URLField(blank=True, verbose_name='فيسبوك')
+    instagram = models.URLField(blank=True, verbose_name='إنستغرام')
+    tiktok = models.URLField(blank=True, verbose_name='تيك توك')
+    snapchat = models.URLField(blank=True, verbose_name='سناب شات')
+    twitter = models.URLField(blank=True, verbose_name='تويتر (X)')
+    youtube = models.URLField(blank=True, verbose_name='يوتيوب')
+    linkedin = models.URLField(blank=True, verbose_name='لينكد إن')
+    
+    # SEO
+    seo_title = models.CharField(max_length=200, blank=True, verbose_name='عنوان الصفحة')
+    seo_description = models.TextField(blank=True, verbose_name='وصف SEO')
+    seo_keywords = models.CharField(max_length=500, blank=True, verbose_name='الكلمات المفتاحية', help_text='افصل بين الكلمات بفاصلة')
+    og_image = models.ImageField(upload_to='broker_og_images/', blank=True, null=True, verbose_name='صورة المشاركة')
+    
+    # Customization
+    page_color = models.CharField(max_length=7, blank=True, default='#FF7A00', verbose_name='لون الصفحة')
+    button_color = models.CharField(max_length=7, blank=True, default='#FF7A00', verbose_name='لون الأزرار')
+    text_color = models.CharField(max_length=7, blank=True, default='#333333', verbose_name='لون النص')
+    background_color = models.CharField(max_length=7, blank=True, default='#FFFFFF', verbose_name='لون الخلفية')
+    font_family = models.CharField(max_length=50, blank=True, default='Cairo', verbose_name='نوع الخط')
+    background_image = models.ImageField(upload_to='broker_backgrounds/', blank=True, null=True, verbose_name='صورة الخلفية')
+    banner_image = models.ImageField(upload_to='broker_banners/', blank=True, null=True, verbose_name='بانر الصفحة')
+    
+    # Display settings
+    show_phone = models.BooleanField(default=True, verbose_name='إظهار رقم الهاتف')
+    show_email = models.BooleanField(default=True, verbose_name='إظهار البريد الإلكتروني')
+    show_whatsapp = models.BooleanField(default=True, verbose_name='إظهار واتساب')
+    show_social_media = models.BooleanField(default=True, verbose_name='إظهار مواقع التواصل')
+    show_address = models.BooleanField(default=True, verbose_name='إظهار العنوان')
+    show_properties = models.BooleanField(default=True, verbose_name='إظهار العقارات')
+    show_stats = models.BooleanField(default=True, verbose_name='إظهار الإحصائيات')
+    show_ratings = models.BooleanField(default=True, verbose_name='إظهار التقييمات')
+    show_working_hours = models.BooleanField(default=True, verbose_name='إظهار ساعات العمل')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

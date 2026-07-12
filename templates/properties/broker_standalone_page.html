@@ -1,13 +1,60 @@
 {% extends 'properties/base.html' %}
 {% load static %}
 
-{% block title %}{{ broker.display_name }} - صفحة مستقلة{% endblock %}
+{% block title %}{% if broker.seo_title %}{{ broker.seo_title }}{% else %}{{ broker.display_name }} - صفحة مستقلة{% endif %}{% endblock %}
+
+{% block extra_head %}
+{% if broker.seo_description %}
+<meta name="description" content="{{ broker.seo_description }}">
+{% endif %}
+{% if broker.seo_keywords %}
+<meta name="keywords" content="{{ broker.seo_keywords }}">
+{% endif %}
+{% if broker.og_image %}
+<meta property="og:image" content="{{ broker.og_image.url }}">
+{% elif broker.cover_image %}
+<meta property="og:image" content="{{ broker.cover_image.url }}">
+{% endif %}
+<style>
+:root {
+  --broker-primary: {{ broker.page_color|default:'#FF7A00' }};
+  --broker-button: {{ broker.button_color|default:'#FF7A00' }};
+  --broker-text: {{ broker.text_color|default:'#333333' }};
+  --broker-bg: {{ broker.background_color|default:'#FFFFFF' }};
+  --broker-font: {{ broker.font_family|default:'Cairo' }}, 'Cairo', sans-serif;
+}
+
+body {
+  font-family: var(--broker-font);
+  color: var(--broker-text);
+  background-color: var(--broker-bg);
+}
+
+{% if broker.background_image %}
+body {
+  background-image: url('{{ broker.background_image.url }}');
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+}
+{% endif %}
+</style>
+{% endblock %}
 
 {% block content %}
+{% if broker.banner_image %}
+<section class="broker-banner" style="background-image: url('{{ broker.banner_image.url }}'); background-size: cover; background-position: center; height: 300px; position: relative;">
+  <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.4);"></div>
+</section>
+{% endif %}
+
 <section class="broker-standalone-header" {% if broker.cover_image %}style="background-image: url('{{ broker.cover_image.url }}'); background-size: cover; background-position: center;"{% endif %}>
   <div class="container">
     <div class="broker-info">
       <div class="broker-avatar">
+        {% if broker.logo %}
+        <img src="{{ broker.logo.url }}" alt="{{ broker.site_name|default:broker.display_name }}" class="logo-image">
+        {% endif %}
         {% if broker.profile_image %}
         <img src="{{ broker.profile_image.url }}" alt="{{ broker.display_name }}" class="avatar-image">
         {% else %}
@@ -15,34 +62,57 @@
         {% endif %}
       </div>
       <div class="broker-details">
+        {% if broker.site_name %}
+        <h1>{{ broker.site_name }}</h1>
+        {% else %}
         <h1>{{ broker.display_name }}</h1>
+        {% endif %}
+        {% if broker.job_title %}
+        <p class="broker-role">{{ broker.job_title }}</p>
+        {% else %}
         <p class="broker-role">{{ broker.get_role_display }}</p>
+        {% endif %}
         {% if broker.office_name %}
         <p class="broker-office">🏢 {{ broker.office_name }}</p>
         {% endif %}
-        {% if broker.phone %}
+        {% if broker.show_phone and broker.phone %}
         <p class="broker-phone">📞 {{ broker.phone }}</p>
         {% endif %}
         {% if broker.governorate %}
         <p class="broker-location">📍 {{ broker.governorate }}</p>
         {% endif %}
+        {% if broker.working_governorates %}
+        <p class="broker-governorates">🗺️ {{ broker.working_governorates }}</p>
+        {% endif %}
         {% if broker.bio %}
         <p class="broker-bio">{{ broker.bio }}</p>
+        {% endif %}
+        {% if broker.mission %}
+        <p class="broker-mission">🎯 {{ broker.mission }}</p>
+        {% endif %}
+        {% if broker.vision %}
+        <p class="broker-vision">👁️ {{ broker.vision }}</p>
         {% endif %}
         {% if broker.is_verified %}
         <span class="verified-badge">✓ دلال موثق</span>
         {% endif %}
       </div>
       <div class="broker-actions">
-        {% if broker.phone %}
-        <a href="tel:{{ broker.phone }}" class="btn btn-primary">📞 اتصل الآن</a>
+        {% if broker.show_phone and broker.phone %}
+        <a href="tel:{{ broker.phone }}" class="btn btn-primary" style="background: var(--broker-button);">📞 اتصل الآن</a>
         {% endif %}
-        <a href="https://wa.me/{{ broker.phone|replace:' ':'' }}" class="btn btn-whatsapp">💬 واتساب</a>
+        {% if broker.show_whatsapp and broker.whatsapp %}
+        <a href="https://wa.me/{{ broker.whatsapp|replace:' ':'' }}" class="btn btn-whatsapp">💬 واتساب</a>
+        {% endif %}
+        {% if broker.website %}
+        <a href="{{ broker.website }}" target="_blank" class="btn btn-website">🌐 الموقع</a>
+        {% endif %}
       </div>
     </div>
   </div>
 </section>
 
+{% if broker.show_stats %}
 <section class="broker-stats">
   <div class="container">
     <div class="stats-grid">
@@ -54,6 +124,18 @@
       <div class="stat-item">
         <div class="stat-number">{{ remaining_properties }}</div>
         <div class="stat-label">عقار متبقي</div>
+      </div>
+      {% endif %}
+      {% if broker.years_of_experience %}
+      <div class="stat-item">
+        <div class="stat-number">{{ broker.years_of_experience }}</div>
+        <div class="stat-label">سنوات خبرة</div>
+      </div>
+      {% endif %}
+      {% if broker.clients_count %}
+      <div class="stat-item">
+        <div class="stat-number">{{ broker.clients_count }}</div>
+        <div class="stat-label">عميل سعيد</div>
       </div>
       {% endif %}
       <div class="stat-item">
@@ -69,7 +151,76 @@
     </div>
   </div>
 </section>
+{% endif %}
 
+{% if broker.show_contact or broker.show_social_media %}
+<section class="broker-contact-section">
+  <div class="container">
+    <div class="contact-grid">
+      {% if broker.show_contact %}
+      <div class="contact-card">
+        <h3>📞 معلومات التواصل</h3>
+        {% if broker.show_phone and broker.phone %}
+        <p>📞 {{ broker.phone }}</p>
+        {% endif %}
+        {% if broker.show_whatsapp and broker.whatsapp %}
+        <p>📱 واتساب: {{ broker.whatsapp }}</p>
+        {% endif %}
+        {% if broker.telegram %}
+        <p>✈️ تيليجرام: {{ broker.telegram }}</p>
+        {% endif %}
+        {% if broker.show_email and broker.email %}
+        <p>📧 {{ broker.email }}</p>
+        {% endif %}
+        {% if broker.website %}
+        <p>🌐 <a href="{{ broker.website }}" target="_blank">{{ broker.website }}</a></p>
+        {% endif %}
+        {% if broker.show_address and broker.address %}
+        <p>📍 {{ broker.address }}</p>
+        {% endif %}
+        {% if broker.show_working_hours and broker.working_hours %}
+        <p>⏰ {{ broker.working_hours }}</p>
+        {% endif %}
+        {% if broker.google_maps_url %}
+        <a href="{{ broker.google_maps_url }}" target="_blank" class="btn btn-maps">🗺️ عرض على الخريطة</a>
+        {% endif %}
+      </div>
+      {% endif %}
+      
+      {% if broker.show_social_media %}
+      <div class="social-card">
+        <h3>🌐 تابعنا على</h3>
+        <div class="social-links">
+          {% if broker.facebook %}
+          <a href="{{ broker.facebook }}" target="_blank" class="social-link facebook">📘</a>
+          {% endif %}
+          {% if broker.instagram %}
+          <a href="{{ broker.instagram }}" target="_blank" class="social-link instagram">📷</a>
+          {% endif %}
+          {% if broker.twitter %}
+          <a href="{{ broker.twitter }}" target="_blank" class="social-link twitter">🐦</a>
+          {% endif %}
+          {% if broker.youtube %}
+          <a href="{{ broker.youtube }}" target="_blank" class="social-link youtube">📺</a>
+          {% endif %}
+          {% if broker.tiktok %}
+          <a href="{{ broker.tiktok }}" target="_blank" class="social-link tiktok">🎵</a>
+          {% endif %}
+          {% if broker.snapchat %}
+          <a href="{{ broker.snapchat }}" target="_blank" class="social-link snapchat">👻</a>
+          {% endif %}
+          {% if broker.linkedin %}
+          <a href="{{ broker.linkedin }}" target="_blank" class="social-link linkedin">💼</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if broker.show_properties %}
 <section class="broker-properties">
   <div class="container">
     <h2>عقارات {{ broker.display_name }}</h2>
@@ -128,11 +279,38 @@
     {% endif %}
   </div>
 </section>
+{% endif %}
+
+<section class="broker-share-section">
+  <div class="container">
+    <div class="share-card">
+      <h3>🔗 مشاركة الصفحة</h3>
+      <div class="share-buttons">
+        <button onclick="sharePage('facebook')" class="share-btn facebook">📘 فيسبوك</button>
+        <button onclick="sharePage('twitter')" class="share-btn twitter">🐦 تويتر</button>
+        <button onclick="sharePage('whatsapp')" class="share-btn whatsapp">💬 واتساب</button>
+        <button onclick="copyLink()" class="share-btn copy">📋 نسخ الرابط</button>
+      </div>
+      <div class="qr-code" id="qr-code">
+        <p>QR Code للصفحة</p>
+        {% if qr_code %}
+        <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" style="width: 200px; height: 200px; margin-top: 10px;">
+        {% else %}
+        <div id="qr-placeholder">📱</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
 
 <style>
+.broker-banner {
+  position: relative;
+}
+
 .broker-standalone-header {
   padding: 60px 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--broker-primary) 0%, #764ba2 100%);
   color: white;
   position: relative;
 }
@@ -157,6 +335,22 @@
   align-items: center;
   gap: 30px;
   flex-wrap: wrap;
+}
+
+.broker-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-image {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
 }
 
 .broker-avatar {
@@ -202,7 +396,10 @@
 .broker-office,
 .broker-phone,
 .broker-location,
-.broker-bio {
+.broker-governorates,
+.broker-bio,
+.broker-mission,
+.broker-vision {
   margin: 5px 0;
   font-size: 16px;
 }
@@ -245,13 +442,76 @@
 .stat-number {
   font-size: 32px;
   font-weight: bold;
-  color: #667eea;
+  color: var(--broker-primary);
   margin-bottom: 5px;
 }
 
 .stat-label {
   font-size: 14px;
   color: #666;
+}
+
+.broker-contact-section {
+  padding: 40px 0;
+  background: #f8f9fa;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+.contact-card,
+.social-card {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.contact-card h3,
+.social-card h3 {
+  margin-bottom: 20px;
+  color: var(--broker-primary);
+}
+
+.contact-card p {
+  margin: 10px 0;
+}
+
+.social-links {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.social-link {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--broker-primary);
+  color: white;
+  font-size: 24px;
+  text-decoration: none;
+  transition: transform 0.3s;
+}
+
+.social-link:hover {
+  transform: scale(1.1);
+}
+
+.btn-maps {
+  display: inline-block;
+  margin-top: 15px;
+  padding: 10px 20px;
+  background: #4285f4;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
 }
 
 .broker-properties {
@@ -261,6 +521,7 @@
 .broker-properties h2 {
   margin-bottom: 30px;
   text-align: center;
+  color: var(--broker-primary);
 }
 
 .properties-grid {
@@ -325,7 +586,7 @@
   margin: 0 0 10px 0;
   font-size: 20px;
   font-weight: bold;
-  color: #667eea;
+  color: var(--broker-primary);
 }
 
 .property-details {
@@ -373,6 +634,86 @@
   background: #128C7E;
 }
 
+.btn-website {
+  background: #007bff;
+  color: white;
+}
+
+.btn-website:hover {
+  background: #0056b3;
+}
+
+.broker-share-section {
+  padding: 40px 0;
+  background: #f8f9fa;
+}
+
+.share-card {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.share-card h3 {
+  margin-bottom: 20px;
+  color: var(--broker-primary);
+}
+
+.share-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.share-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.3s;
+}
+
+.share-btn:hover {
+  transform: scale(1.05);
+}
+
+.share-btn.facebook {
+  background: #1877f2;
+  color: white;
+}
+
+.share-btn.twitter {
+  background: #1da1f2;
+  color: white;
+}
+
+.share-btn.whatsapp {
+  background: #25D366;
+  color: white;
+}
+
+.share-btn.copy {
+  background: #6c757d;
+  color: white;
+}
+
+.qr-code {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 10px;
+}
+
+#qr-placeholder {
+  font-size: 48px;
+  margin-top: 10px;
+}
+
 @media (max-width: 768px) {
   .broker-info {
     flex-direction: column;
@@ -386,6 +727,42 @@
   .properties-grid {
     grid-template-columns: 1fr;
   }
+  
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
+
+<script>
+function sharePage(platform) {
+  const url = window.location.href;
+  const title = document.title;
+  
+  let shareUrl;
+  
+  switch(platform) {
+    case 'facebook':
+      shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+      break;
+    case 'twitter':
+      shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`;
+      break;
+    case 'whatsapp':
+      shareUrl = `https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`;
+      break;
+  }
+  
+  if (shareUrl) {
+    window.open(shareUrl, '_blank', 'width=600,height=400');
+  }
+}
+
+function copyLink() {
+  const url = window.location.href;
+  navigator.clipboard.writeText(url).then(() => {
+    alert('تم نسخ الرابط بنجاح!');
+  });
+}
+</script>
 {% endblock %}

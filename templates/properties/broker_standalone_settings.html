@@ -1,0 +1,948 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}إعدادات الصفحة المستقلة{% endblock %}
+
+{% block extra_css %}
+<style>
+.standalone-settings-container {
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.settings-card {
+  background: var(--card-bg, #1a1a1a);
+  border: 1px solid var(--border, rgba(255, 122, 0, 0.15));
+  border-radius: var(--radius-lg, 16px);
+  padding: 32px;
+  box-shadow: var(--shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.3));
+}
+
+.settings-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.settings-header h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+  margin: 0 0 12px 0;
+}
+
+.settings-header p {
+  color: var(--text-secondary, #b5b5b5);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.display-mode-section {
+  margin-bottom: 32px;
+}
+
+.section-label {
+  display: block;
+  margin-bottom: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #ffffff);
+  font-size: 1.1rem;
+}
+
+.display-options {
+  display: grid;
+  gap: 16px;
+}
+
+.display-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  background: var(--bg-accent, #252525);
+  border: 2px solid var(--border, rgba(255, 122, 0, 0.15));
+  border-radius: var(--radius-md, 12px);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.display-option:hover {
+  border-color: var(--primary, #ff7a00);
+  background: rgba(255, 122, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.display-option.selected {
+  border-color: var(--primary, #ff7a00);
+  background: rgba(255, 122, 0, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.2);
+}
+
+.display-option input[type="radio"] {
+  width: 24px;
+  height: 24px;
+  margin-top: 4px;
+  accent-color: var(--primary, #ff7a00);
+  cursor: pointer;
+}
+
+.option-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.option-content {
+  flex: 1;
+}
+
+.option-title {
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+}
+
+.option-description {
+  color: var(--text-secondary, #b5b5b5);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.standalone-config {
+  background: var(--bg-accent, #252525);
+  border: 1px solid var(--border, rgba(255, 122, 0, 0.15));
+  border-radius: var(--radius-lg, 16px);
+  padding: 24px;
+  margin-top: 24px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.config-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border, rgba(255, 122, 0, 0.15));
+}
+
+.config-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: var(--text-primary, #ffffff);
+}
+
+.config-header .icon {
+  font-size: 1.5rem;
+}
+
+/* Tabs */
+.settings-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border, rgba(255, 122, 0, 0.15));
+  padding-bottom: 16px;
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  background: transparent;
+  border: 2px solid var(--border, rgba(255, 122, 0, 0.15));
+  border-radius: var(--radius-md, 12px);
+  color: var(--text-secondary, #b5b5b5);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tab-btn:hover {
+  border-color: var(--primary, #ff7a00);
+  color: var(--text-primary, #ffffff);
+}
+
+.tab-btn.active {
+  background: var(--primary, #ff7a00);
+  border-color: var(--primary, #ff7a00);
+  color: white;
+}
+
+.tab-content {
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.form-field {
+  margin-bottom: 20px;
+}
+
+.form-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--text-primary, #ffffff);
+  font-size: 1rem;
+}
+
+.form-field input[type="text"],
+.form-field input[type="email"],
+.form-field input[type="url"],
+.form-field input[type="number"],
+.form-field textarea,
+.form-field select {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-primary, #0b0b0b);
+  border: 2px solid var(--border, rgba(255, 122, 0, 0.15));
+  border-radius: var(--radius-md, 12px);
+  color: var(--text-primary, #ffffff);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-field input[type="text"]:focus,
+.form-field input[type="email"]:focus,
+.form-field input[type="url"]:focus,
+.form-field input[type="number"]:focus,
+.form-field textarea:focus,
+.form-field select:focus {
+  outline: none;
+  border-color: var(--primary, #ff7a00);
+  box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.2);
+}
+
+.form-field input[type="file"] {
+  width: 100%;
+  padding: 12px;
+  background: var(--bg-primary, #0b0b0b);
+  border: 2px solid var(--border, rgba(255, 122, 0, 0.15));
+  border-radius: var(--radius-md, 12px);
+  color: var(--text-primary, #ffffff);
+  cursor: pointer;
+}
+
+.form-field input[type="file"]::file-selector-button {
+  background: var(--primary, #ff7a00);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  margin-right: 12px;
+  transition: background 0.3s ease;
+}
+
+.form-field input[type="file"]::file-selector-button:hover {
+  background: var(--primary-dark, #e66e00);
+}
+
+.form-field input[type="color"] {
+  width: 60px;
+  height: 40px;
+  padding: 4px;
+  background: var(--bg-primary, #0b0b0b);
+  border: 2px solid var(--border, rgba(255, 122, 0, 0.15));
+  border-radius: var(--radius-md, 12px);
+  cursor: pointer;
+}
+
+.form-field input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary, #ff7a00);
+  cursor: pointer;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.field-help {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #b5b5b5);
+}
+
+.slug-preview {
+  color: var(--primary, #ff7a00);
+  font-weight: 600;
+}
+
+.cover-preview {
+  margin-top: 12px;
+  border-radius: var(--radius-md, 12px);
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.cover-preview img {
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  object-fit: cover;
+}
+
+.page-link-card {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-md, 12px);
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.page-link-card strong {
+  color: #10b981;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.page-link-card a {
+  color: #10b981;
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.3s ease;
+}
+
+.page-link-card a:hover {
+  color: #059669;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  flex: 1;
+  min-width: 150px;
+  padding: 14px 28px;
+  border-radius: var(--radius-md, 12px);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary, #ff7a00) 0%, var(--primary-dark, #e66e00) 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 122, 0, 0.4);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-primary, #ffffff);
+  border: 2px solid var(--border, rgba(255, 122, 0, 0.15));
+}
+
+.btn-secondary:hover {
+  border-color: var(--primary, #ff7a00);
+  background: rgba(255, 122, 0, 0.05);
+}
+
+.alert {
+  padding: 16px 20px;
+  border-radius: var(--radius-md, 12px);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.alert-success {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.alert-error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.alert-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.alert-info {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.alert-icon {
+  font-size: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .standalone-settings-container {
+    margin: 20px auto;
+    padding: 0 16px;
+  }
+
+  .settings-card {
+    padding: 24px;
+  }
+
+  .display-option {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .display-option input[type="radio"] {
+    margin-top: 0;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .settings-tabs {
+    flex-direction: column;
+  }
+
+  .tab-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="standalone-settings-container">
+  <div class="settings-card">
+    <div class="settings-header">
+      <h2>🌐 إعدادات الصفحة المستقلة</h2>
+      <p>اختر أين تريد أن تظهر عقاراتك - في الصفحة الرئيسية، في صفحة خاصة، أو في الاثنين معاً</p>
+    </div>
+    
+    {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">
+        <span class="alert-icon">
+          {% if message.tags == 'success' %}✅{% elif message.tags == 'error' %}❌{% elif message.tags == 'warning' %}⚠️{% else %}ℹ️{% endif %}
+        </span>
+        <span>{{ message }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    
+    <form method="POST" action="{% url 'broker_standalone_settings' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      
+      <div class="display-mode-section">
+        <label class="section-label">طريقة عرض الصفحة</label>
+        
+        <div class="display-options">
+          <label class="display-option {% if broker.page_display_mode == 'main_only' or not broker.page_display_mode %}selected{% endif %}">
+            <input type="radio" name="page_display_mode" value="main_only" {% if broker.page_display_mode == 'main_only' or not broker.page_display_mode %}checked{% endif %}>
+            <div class="option-content">
+              <div class="option-title">🏠 الصفحة الرئيسية فقط</div>
+              <p class="option-description">عقاراتك تظهر في الصفحة الرئيسية للموقع فقط</p>
+            </div>
+          </label>
+          
+          <label class="display-option {% if broker.page_display_mode == 'standalone_only' %}selected{% endif %}">
+            <input type="radio" name="page_display_mode" value="standalone_only" {% if broker.page_display_mode == 'standalone_only' %}checked{% endif %}>
+            <div class="option-content">
+              <div class="option-title">🌐 الصفحة المستقلة فقط</div>
+              <p class="option-description">عقاراتك تظهر في صفحة خاصة بك فقط</p>
+            </div>
+          </label>
+          
+          <label class="display-option {% if broker.page_display_mode == 'both' %}selected{% endif %}">
+            <input type="radio" name="page_display_mode" value="both" {% if broker.page_display_mode == 'both' %}checked{% endif %}>
+            <div class="option-content">
+              <div class="option-title">🔄 الاثنين معاً</div>
+              <p class="option-description">عقاراتك تظهر في الصفحة الرئيسية وفي صفحة خاصة</p>
+            </div>
+          </label>
+        </div>
+      </div>
+      
+      <div id="standalone-config" class="standalone-config" {% if broker.page_display_mode != 'standalone_only' and broker.page_display_mode != 'both' %}style="display: none;"{% endif %}>
+        <div class="config-header">
+          <span class="icon">⚙️</span>
+          <h3>إعدادات الصفحة المستقلة</h3>
+        </div>
+        
+        <div class="settings-tabs">
+          <button type="button" class="tab-btn active" data-tab="basic">📝 معلومات أساسية</button>
+          <button type="button" class="tab-btn" data-tab="contact">📞 التواصل</button>
+          <button type="button" class="tab-btn" data-tab="social">🌐 التواصل الاجتماعي</button>
+          <button type="button" class="tab-btn" data-tab="seo">🔍 SEO</button>
+          <button type="button" class="tab-btn" data-tab="design">🎨 التصميم</button>
+          <button type="button" class="tab-btn" data-tab="display">⚙️ العرض</button>
+        </div>
+        
+        <!-- Basic Info Tab -->
+        <div class="tab-content active" id="basic">
+          <div class="form-field">
+            <label for="slug">🔗 رابط الصفحة (Slug)</label>
+            <input type="text" name="slug" id="slug" value="{{ broker.slug|default:broker_slug_auto }}" placeholder="مثال: ahmed-broker" pattern="[a-zA-Z0-9-_]+" title="أحرف إنجليزية وأرقام وشرطات فقط" readonly style="background: var(--bg-accent, #252525); cursor: not-allowed;">
+            <small class="field-help">رابط صفحتك سيكون بهذا الشكل: <br>
+              <span style="color: var(--primary, #FF7A00); font-weight: 600; direction: ltr; display: inline-block; margin-top: 4px;">
+                {{ request.get_host }}/d/<span class="slug-preview" id="slug-preview">{{ broker.slug|default:broker_slug_auto }}</span>
+              </span>
+            </small>
+            <small class="field-help" style="color: var(--text-secondary, #b5b5b5); margin-top: 8px;">
+              ⚠️ الرابط يتم توليده تلقائياً من اسمك ولا يمكن تغييره
+            </small>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-field">
+              <label for="site_name">🏢 اسم الموقع</label>
+              <input type="text" name="site_name" id="site_name" value="{{ broker.site_name|default:'' }}" placeholder="مثال: دلال">
+            </div>
+            <div class="form-field">
+              <label for="job_title">💼 المسمى الوظيفي</label>
+              <input type="text" name="job_title" id="job_title" value="{{ broker.job_title|default:'' }}" placeholder="مثال: دلال عقاري">
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-field">
+              <label for="logo">🖼️ الشعار</label>
+              <input type="file" name="logo" id="logo" accept="image/*">
+              {% if broker.logo %}
+              <div class="cover-preview">
+                <img src="{{ broker.logo.url }}" alt="الشعار">
+              </div>
+              {% endif %}
+            </div>
+            <div class="form-field">
+              <label for="cover_image">🖼️ صورة الغلاف</label>
+              <input type="file" name="cover_image" id="cover_image" accept="image/*">
+              {% if broker.cover_image %}
+              <div class="cover-preview">
+                <img src="{{ broker.cover_image.url }}" alt="غلاف الصفحة">
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-field">
+            <label for="profile_image">👤 صورة شخصية</label>
+            <input type="file" name="profile_image" id="profile_image" accept="image/*">
+            {% if broker.profile_image %}
+            <div class="cover-preview">
+              <img src="{{ broker.profile_image.url }}" alt="الصورة الشخصية">
+            </div>
+            {% endif %}
+          </div>
+          
+          <div class="form-field">
+            <label for="bio">📝 نبذة عن الدلال</label>
+            <textarea name="bio" id="bio" rows="4" placeholder="اكتب نبذة عنك وعن خدماتك...">{{ broker.bio|default:'' }}</textarea>
+          </div>
+          
+          <div class="form-field">
+            <label for="mission">🎯 رسالتنا</label>
+            <textarea name="mission" id="mission" rows="3" placeholder="رسالتك في العمل...">{{ broker.mission|default:'' }}</textarea>
+          </div>
+          
+          <div class="form-field">
+            <label for="vision">👁️ رؤيتنا</label>
+            <textarea name="vision" id="vision" rows="3" placeholder="رؤيتك للمستقبل...">{{ broker.vision|default:'' }}</textarea>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-field">
+              <label for="years_of_experience">📅 سنوات الخبرة</label>
+              <input type="number" name="years_of_experience" id="years_of_experience" value="{{ broker.years_of_experience|default:0 }}" min="0">
+            </div>
+            <div class="form-field">
+              <label for="clients_count">👥 عدد العملاء</label>
+              <input type="number" name="clients_count" id="clients_count" value="{{ broker.clients_count|default:0 }}" min="0">
+            </div>
+          </div>
+          
+          <div class="form-field">
+            <label for="working_governorates">📍 المحافظات التي تعمل بها</label>
+            <textarea name="working_governorates" id="working_governorates" rows="2" placeholder="افصل بين المحافظات بفاصلة (بغداد، البصرة، أربيل...)">{{ broker.working_governorates|default:'' }}</textarea>
+          </div>
+        </div>
+        
+        <!-- Contact Tab -->
+        <div class="tab-content" id="contact">
+          <div class="form-field">
+            <label for="whatsapp">📱 واتساب</label>
+            <input type="text" name="whatsapp" id="whatsapp" value="{{ broker.whatsapp|default:'' }}" placeholder="07701234567">
+          </div>
+          
+          <div class="form-field">
+            <label for="telegram">✈️ تيليجرام</label>
+            <input type="text" name="telegram" id="telegram" value="{{ broker.telegram|default:'' }}" placeholder="@username">
+          </div>
+          
+          <div class="form-field">
+            <label for="email">📧 البريد الإلكتروني</label>
+            <input type="email" name="email" id="email" value="{{ broker.email|default:'' }}" placeholder="example@email.com">
+          </div>
+          
+          <div class="form-field">
+            <label for="website">🌐 الموقع الإلكتروني</label>
+            <input type="url" name="website" id="website" value="{{ broker.website|default:'' }}" placeholder="https://example.com">
+          </div>
+          
+          <div class="form-field">
+            <label for="address">📍 العنوان</label>
+            <textarea name="address" id="address" rows="3" placeholder="العنوان الكامل...">{{ broker.address|default:'' }}</textarea>
+          </div>
+          
+          <div class="form-field">
+            <label for="working_hours">⏰ ساعات العمل</label>
+            <input type="text" name="working_hours" id="working_hours" value="{{ broker.working_hours|default:'' }}" placeholder="9:00 ص - 5:00 م">
+          </div>
+          
+          <div class="form-field">
+            <label for="google_maps_url">🗺️ رابط Google Maps</label>
+            <input type="url" name="google_maps_url" id="google_maps_url" value="{{ broker.google_maps_url|default:'' }}" placeholder="https://maps.google.com/...">
+          </div>
+        </div>
+        
+        <!-- Social Media Tab -->
+        <div class="tab-content" id="social">
+          <div class="form-field">
+            <label for="facebook">📘 فيسبوك</label>
+            <input type="url" name="facebook" id="facebook" value="{{ broker.facebook|default:'' }}" placeholder="https://facebook.com/...">
+          </div>
+          
+          <div class="form-field">
+            <label for="instagram">📷 إنستغرام</label>
+            <input type="url" name="instagram" id="instagram" value="{{ broker.instagram|default:'' }}" placeholder="https://instagram.com/...">
+          </div>
+          
+          <div class="form-field">
+            <label for="tiktok">🎵 تيك توك</label>
+            <input type="url" name="tiktok" id="tiktok" value="{{ broker.tiktok|default:'' }}" placeholder="https://tiktok.com/@...">
+          </div>
+          
+          <div class="form-field">
+            <label for="snapchat">👻 سناب شات</label>
+            <input type="url" name="snapchat" id="snapchat" value="{{ broker.snapchat|default:'' }}" placeholder="https://snapchat.com/add/...">
+          </div>
+          
+          <div class="form-field">
+            <label for="twitter">🐦 تويتر (X)</label>
+            <input type="url" name="twitter" id="twitter" value="{{ broker.twitter|default:'' }}" placeholder="https://twitter.com/...">
+          </div>
+          
+          <div class="form-field">
+            <label for="youtube">📺 يوتيوب</label>
+            <input type="url" name="youtube" id="youtube" value="{{ broker.youtube|default:'' }}" placeholder="https://youtube.com/...">
+          </div>
+          
+          <div class="form-field">
+            <label for="linkedin">💼 لينكد إن</label>
+            <input type="url" name="linkedin" id="linkedin" value="{{ broker.linkedin|default:'' }}" placeholder="https://linkedin.com/in/...">
+          </div>
+        </div>
+        
+        <!-- SEO Tab -->
+        <div class="tab-content" id="seo">
+          <div class="form-field">
+            <label for="seo_title">📌 عنوان الصفحة</label>
+            <input type="text" name="seo_title" id="seo_title" value="{{ broker.seo_title|default:'' }}" placeholder="عنوان الصفحة لمحركات البحث">
+          </div>
+          
+          <div class="form-field">
+            <label for="seo_description">📝 وصف SEO</label>
+            <textarea name="seo_description" id="seo_description" rows="4" placeholder="وصف الصفحة لمحركات البحث...">{{ broker.seo_description|default:'' }}</textarea>
+          </div>
+          
+          <div class="form-field">
+            <label for="seo_keywords">🔑 الكلمات المفتاحية</label>
+            <input type="text" name="seo_keywords" id="seo_keywords" value="{{ broker.seo_keywords|default:'' }}" placeholder="افصل بين الكلمات بفاصلة">
+          </div>
+          
+          <div class="form-field">
+            <label for="og_image">🖼️ صورة المشاركة (OG Image)</label>
+            <input type="file" name="og_image" id="og_image" accept="image/*">
+            {% if broker.og_image %}
+            <div class="cover-preview">
+              <img src="{{ broker.og_image.url }}" alt="صورة المشاركة">
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <!-- Design Tab -->
+        <div class="tab-content" id="design">
+          <div class="form-row">
+            <div class="form-field">
+              <label for="page_color">🎨 لون الصفحة</label>
+              <input type="color" name="page_color" id="page_color" value="{{ broker.page_color|default:'#FF7A00' }}">
+            </div>
+            <div class="form-field">
+              <label for="button_color">🔘 لون الأزرار</label>
+              <input type="color" name="button_color" id="button_color" value="{{ broker.button_color|default:'#FF7A00' }}">
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-field">
+              <label for="text_color">📝 لون النص</label>
+              <input type="color" name="text_color" id="text_color" value="{{ broker.text_color|default:'#333333' }}">
+            </div>
+            <div class="form-field">
+              <label for="background_color">🖼️ لون الخلفية</label>
+              <input type="color" name="background_color" id="background_color" value="{{ broker.background_color|default:'#FFFFFF' }}">
+            </div>
+          </div>
+          
+          <div class="form-field">
+            <label for="font_family">🔤 نوع الخط</label>
+            <select name="font_family" id="font_family">
+              <option value="Cairo" {% if broker.font_family == 'Cairo' %}selected{% endif %}>Cairo</option>
+              <option value="Tajawal" {% if broker.font_family == 'Tajawal' %}selected{% endif %}>Tajawal</option>
+              <option value="Almarai" {% if broker.font_family == 'Almarai' %}selected{% endif %}>Almarai</option>
+              <option value="Amiri" {% if broker.font_family == 'Amiri' %}selected{% endif %}>Amiri</option>
+              <option value="Noto Sans Arabic" {% if broker.font_family == 'Noto Sans Arabic' %}selected{% endif %}>Noto Sans Arabic</option>
+            </select>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-field">
+              <label for="background_image">🖼️ صورة الخلفية</label>
+              <input type="file" name="background_image" id="background_image" accept="image/*">
+              {% if broker.background_image %}
+              <div class="cover-preview">
+                <img src="{{ broker.background_image.url }}" alt="صورة الخلفية">
+              </div>
+              {% endif %}
+            </div>
+            <div class="form-field">
+              <label for="banner_image">🎪 بانر الصفحة</label>
+              <input type="file" name="banner_image" id="banner_image" accept="image/*">
+              {% if broker.banner_image %}
+              <div class="cover-preview">
+                <img src="{{ broker.banner_image.url }}" alt="بانر الصفحة">
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Display Settings Tab -->
+        <div class="tab-content" id="display">
+          <div class="form-field">
+            <label>
+              <input type="checkbox" name="show_phone" {% if broker.show_phone %}checked{% endif %}>
+              📞 إظهار رقم الهاتف
+            </label>
+          </div>
+          
+          <div class="form-field">
+            <label>
+              <input type="checkbox" name="show_email" {% if broker.show_email %}checked{% endif %}>
+              📧 إظهار البريد الإلكتروني
+            </label>
+          </div>
+          
+          <div class="form-field">
+            <label>
+              <input type="checkbox" name="show_whatsapp" {% if broker.show_whatsapp %}checked{% endif %}>
+              📱 إظهار واتساب
+            </label>
+          </div>
+          
+          <div class="form-field">
+            <label>
+              <input type="checkbox" name="show_social_media" {% if broker.show_social_media %}checked{% endif %}>
+              🌐 إظهار مواقع التواصل
+            </label>
+          </div>
+          
+          <div class="form-field">
+            <label>
+              <input type="checkbox" name="show_address" {% if broker.show_address %}checked{% endif %}>
+              📍 إظهار العنوان
+            </label>
+          </div>
+          
+          <div class="form-field">
+            <label>
+              <input type="checkbox" name="show_properties" {% if broker.show_properties %}checked{% endif %}>
+              🏠 إظهار العقارات
+            </label>
+          </div>
+          
+          <div class="form-field">
+            <label>
+              <input type="checkbox" name="show_stats" {% if broker.show_stats %}checked{% endif %}>
+              📊 إظهار الإحصائيات
+            </label>
+          </div>
+          
+          <div class="form-field">
+            <label>
+              <input type="checkbox" name="show_ratings" {% if broker.show_ratings %}checked{% endif %}>
+              ⭐ إظهار التقييمات
+            </label>
+          </div>
+          
+          <div class="form-field">
+            <label>
+              <input type="checkbox" name="show_working_hours" {% if broker.show_working_hours %}checked{% endif %}>
+              ⏰ إظهار ساعات العمل
+            </label>
+          </div>
+        </div>
+        
+        {% if broker.slug %}
+        <div class="page-link-card">
+          <strong>🔗 رابط صفحتك:</strong>
+          <a href="{% url 'broker_standalone_page' broker.slug %}" target="_blank">
+            {{ request.get_host }}/d/{{ broker.slug }}
+            <span>↗️</span>
+          </a>
+        </div>
+        {% endif %}
+      </div>
+      
+      <div class="action-buttons">
+        <button type="submit" class="btn btn-primary">
+          <span>💾</span>
+          <span>حفظ الإعدادات</span>
+        </button>
+        {% if broker.slug %}
+        <a href="{% url 'broker_standalone_page' slug=broker.slug %}" target="_blank" class="btn btn-success" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; padding: 12px 24px; border-radius: var(--radius-md, 12px); cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; transition: all 0.3s ease;">
+          <span>🌐</span>
+          <span>عرض الصفحة المستقلة</span>
+          <span style="font-size: 12px;">↗</span>
+        </a>
+        {% endif %}
+        <a href="{% url 'broker_panel' %}" class="btn btn-secondary">
+          <span>←</span>
+          <span>عودة للوحة التحكم</span>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Display option selection styling
+document.querySelectorAll('.display-option').forEach(option => {
+  const radio = option.querySelector('input[type="radio"]');
+  
+  radio.addEventListener('change', function() {
+    document.querySelectorAll('.display-option').forEach(opt => {
+      opt.classList.remove('selected');
+    });
+    option.classList.add('selected');
+    
+    // Show/hide standalone config
+    const standaloneConfig = document.getElementById('standalone-config');
+    if (this.value === 'standalone_only' || this.value === 'both') {
+      standaloneConfig.style.display = 'block';
+    } else {
+      standaloneConfig.style.display = 'none';
+    }
+  });
+});
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    // Remove active class from all tabs
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    // Add active class to clicked tab
+    this.classList.add('active');
+    const tabId = this.getAttribute('data-tab');
+    document.getElementById(tabId).classList.add('active');
+  });
+});
+
+// Image previews
+['cover_image', 'logo', 'profile_image', 'og_image', 'background_image', 'banner_image'].forEach(fieldId => {
+  const input = document.getElementById(fieldId);
+  if (input) {
+    input.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          let preview = input.parentNode.querySelector('.cover-preview');
+          if (!preview) {
+            preview = document.createElement('div');
+            preview.className = 'cover-preview';
+            input.parentNode.appendChild(preview);
+          }
+          preview.innerHTML = '<img src="' + e.target.result + '" alt="معاينة">';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+});
+</script>
+{% endblock %}
+

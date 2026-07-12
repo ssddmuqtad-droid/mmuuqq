@@ -195,7 +195,7 @@ def broker_panel(request):
     pending_payments = PropertyPayment.objects.filter(broker=broker, status=PropertyPayment.STATUS_PENDING).count()
     completed_payments = PropertyPayment.objects.filter(broker=broker, status=PropertyPayment.STATUS_COMPLETED).count()
     total_spent = PropertyPayment.objects.filter(broker=broker, status=PropertyPayment.STATUS_COMPLETED).aggregate(
-        total=models.Sum('total_amount')
+        total=Sum('total_amount')
     )['total'] or 0
     
     # Get sub-brokers if main broker
@@ -214,9 +214,10 @@ def broker_panel(request):
     unread_messages = get_accessible_messages(request.user).filter(is_read=False).count()
     
     # Get notifications
+    from .models import NotificationRecipient
     notifications = Notification.objects.filter(
-        user=request.user
-    ).select_related('property').order_by('-created_at')[:5]
+        recipients__user=request.user
+    ).order_by('-created_at')[:5]
     
     # Get property notifications
     from .models import PropertyNotification
@@ -338,6 +339,29 @@ def broker_list(request):
     verified_brokers = sum(1 for item in broker_data if item['broker'].is_verified)
     total_properties = sum(item['property_count'] for item in broker_data)
     active_brokers = sum(1 for item in broker_data if item['broker'].is_active)
+    
+    # Calculate additional stats
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+    
+    one_month_ago = timezone.now() - timedelta(days=30)
+    monthly_new_brokers = brokers.filter(created_at__gte=one_month_ago).count()
+    monthly_properties = Property.objects.filter(
+        Q(owner__in=[b.user for b in brokers]) | Q(broker__in=brokers),
+        created_at__gte=one_month_ago
+    ).count()
+    
+    verified_percentage = (verified_brokers / total_brokers * 100) if total_brokers > 0 else 0
+    active_percentage = (active_brokers / total_brokers * 100) if total_brokers > 0 else 0
+    
+    # Calculate expired subscriptions
+    expired_subscriptions = brokers.filter(
+        subscription_end_date__lt=timezone.now().date(),
+        is_active=True
+    ).count()
+    
+    # Calculate total revenue (this would need to be implemented based on your payment system)
+    total_revenue = 0  # Placeholder - implement based on your payment model
 
     return render(request, 'properties/broker_list.html', {
         'broker_data': broker_data,
@@ -346,6 +370,12 @@ def broker_list(request):
         'verified_brokers': verified_brokers,
         'total_properties': total_properties,
         'active_brokers': active_brokers,
+        'monthly_new_brokers': monthly_new_brokers,
+        'monthly_properties': monthly_properties,
+        'verified_percentage': round(verified_percentage, 1),
+        'active_percentage': round(active_percentage, 1),
+        'expired_subscriptions': expired_subscriptions,
+        'total_revenue': total_revenue,
         'plans': SubscriptionPlan.objects.filter(is_active=True),
     })
 

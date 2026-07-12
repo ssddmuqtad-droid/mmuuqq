@@ -1,6 +1,12 @@
 {% extends 'properties/base.html' %}
+{% load static %}
 
 {% block title %}إدارة الدلالين{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+{% endblock %}
 
 {% block content %}
 <div class="dashboard-container">
@@ -23,32 +29,113 @@
 
   <!-- Stats Cards -->
   <div class="dashboard-stats" style="margin-bottom: 2rem;">
-    <div class="stat-card">
+    <div class="stat-card stat-card-primary">
       <div class="stat-icon">👥</div>
       <div class="stat-content">
         <div class="stat-number">{{ total_brokers }}</div>
         <div class="stat-label">إجمالي الدلالين</div>
+        <div class="stat-trend">+{{ monthly_new_brokers|default:0 }} هذا الشهر</div>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card stat-card-success">
       <div class="stat-icon">✅</div>
       <div class="stat-content">
         <div class="stat-number">{{ verified_brokers }}</div>
         <div class="stat-label">الدلالين الموثقين</div>
+        <div class="stat-trend">{{ verified_percentage|default:0 }}% من المجموع</div>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card stat-card-info">
       <div class="stat-icon">🏠</div>
       <div class="stat-content">
         <div class="stat-number">{{ total_properties }}</div>
         <div class="stat-label">إجمالي العقارات</div>
+        <div class="stat-trend">+{{ monthly_properties|default:0 }} هذا الشهر</div>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card stat-card-warning">
       <div class="stat-icon">🟢</div>
       <div class="stat-content">
         <div class="stat-number">{{ active_brokers }}</div>
         <div class="stat-label">الدلالين النشطين</div>
+        <div class="stat-trend">{{ active_percentage|default:0 }}% نشط</div>
+      </div>
+    </div>
+    <div class="stat-card stat-card-danger">
+      <div class="stat-icon">⚠️</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ expired_subscriptions|default:0 }}</div>
+        <div class="stat-label">اشتراكات منتهية</div>
+        <div class="stat-trend">تحتاج تجديد</div>
+      </div>
+    </div>
+    <div class="stat-card stat-card-purple">
+      <div class="stat-icon">💰</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ total_revenue|default:0 }}</div>
+        <div class="stat-label">الإيرادات (د.ع)</div>
+        <div class="stat-trend">هذا الشهر</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="charts-section" style="margin-bottom: 2rem;">
+    <div class="chart-row">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>📈 نمو الدلالين</h3>
+          <select class="chart-filter" onchange="updateBrokerGrowthChart(this.value)">
+            <option value="7">آخر 7 أيام</option>
+            <option value="30" selected>آخر 30 يوم</option>
+            <option value="90">آخر 90 يوم</option>
+            <option value="365">آخر سنة</option>
+          </select>
+        </div>
+        <div class="chart-container">
+          <canvas id="brokerGrowthChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>🏠 العقارات حسب الحالة</h3>
+          <select class="chart-filter" onchange="updatePropertyStatusChart(this.value)">
+            <option value="all" selected>الكل</option>
+            <option value="verified">الموثقين</option>
+            <option value="unverified">غير الموثقين</option>
+          </select>
+        </div>
+        <div class="chart-container">
+          <canvas id="propertyStatusChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>📊 أداء الدلالين</h3>
+          <select class="chart-filter" onchange="updatePerformanceChart(this.value)">
+            <option value="all" selected>الكل</option>
+            <option value="top">الأفضل أداءً</option>
+            <option value="bottom">الأقل أداءً</option>
+          </select>
+        </div>
+        <div class="chart-container">
+          <canvas id="performanceChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>🗺️ التوزيع الجغرافي</h3>
+          <select class="chart-filter" onchange="updateGeographicChart(this.value)">
+            <option value="all" selected>الكل</option>
+            <option value="active">النشطين</option>
+            <option value="verified">الموثقين</option>
+          </select>
+        </div>
+        <div class="chart-container">
+          <canvas id="geographicChart"></canvas>
+        </div>
       </div>
     </div>
   </div>
@@ -56,7 +143,11 @@
   <!-- Search and Filter Section -->
   <div class="search-filter-section" style="margin-bottom: 2rem;">
     <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="🔍 بحث بالاسم أو الهاتف..." class="search-input">
+      <div class="search-input-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="بحث بالاسم أو الهاتف أو البريد..." class="search-input">
+        <button class="search-btn" onclick="performSearch()">بحث</button>
+      </div>
       <select id="statusFilter" class="filter-select">
         <option value="">جميع الحالات</option>
         <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>نشط</option>
@@ -74,6 +165,21 @@
         <option value="main" {% if request.GET.role == 'main' %}selected{% endif %}>دلال رئيسي</option>
         <option value="sub" {% if request.GET.role == 'sub' %}selected{% endif %}>دلال فرعي</option>
       </select>
+      <select id="subscriptionFilter" class="filter-select">
+        <option value="">جميع الاشتراكات</option>
+        <option value="basic" {% if request.GET.subscription == 'basic' %}selected{% endif %}>أساسي</option>
+        <option value="premium" {% if request.GET.subscription == 'premium' %}selected{% endif %}>مميز</option>
+        <option value="enterprise" {% if request.GET.subscription == 'enterprise' %}selected{% endif %}>مؤسسي</option>
+      </select>
+      <select id="governorateFilter" class="filter-select">
+        <option value="">جميع المحافظات</option>
+        <option value="baghdad" {% if request.GET.governorate == 'baghdad' %}selected{% endif %}>بغداد</option>
+        <option value="basra" {% if request.GET.governorate == 'basra' %}selected{% endif %}>البصرة</option>
+        <option value="erbil" {% if request.GET.governorate == 'erbil' %}selected{% endif %}>أربيل</option>
+        <option value="nineveh" {% if request.GET.governorate == 'nineveh' %}selected{% endif %}>نينوى</option>
+        <option value="najaf" {% if request.GET.governorate == 'najaf' %}selected{% endif %}>النجف</option>
+        <option value="karbala" {% if request.GET.governorate == 'karbala' %}selected{% endif %}>كربلاء</option>
+      </select>
       <select id="sortBy" class="filter-select">
         <option value="newest" {% if request.GET.sort == 'newest' or not request.GET.sort %}selected{% endif %}>الأحدث</option>
         <option value="oldest" {% if request.GET.sort == 'oldest' %}selected{% endif %}>الأقدم</option>
@@ -82,8 +188,13 @@
         <option value="views" {% if request.GET.sort == 'views' %}selected{% endif %}>المشاهدات</option>
         <option value="response_time" {% if request.GET.sort == 'response_time' %}selected{% endif %}>وقت الاستجابة</option>
         <option value="performance" {% if request.GET.sort == 'performance' %}selected{% endif %}>الأداء</option>
+        <option value="revenue" {% if request.GET.sort == 'revenue' %}selected{% endif %}>الإيرادات</option>
       </select>
-      <button onclick="exportData()" class="btn btn-outline">📥 تصدير</button>
+      <div class="export-buttons">
+        <button onclick="exportData('csv')" class="btn btn-outline">📥 CSV</button>
+        <button onclick="exportData('excel')" class="btn btn-outline">📊 Excel</button>
+        <button onclick="exportData('pdf')" class="btn btn-outline">📄 PDF</button>
+      </div>
     </div>
   </div>
 
@@ -272,6 +383,230 @@
 </div>
 
 <style>
+.dashboard-container {
+  font-family: 'Cairo', sans-serif;
+}
+
+/* Enhanced Stats Cards */
+.stat-card {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary, #FF7A00), var(--primary-dark, #E66E00));
+}
+
+.stat-card-primary::before {
+  background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.stat-card-success::before {
+  background: linear-gradient(90deg, #48bb78, #38a169);
+}
+
+.stat-card-info::before {
+  background: linear-gradient(90deg, #4299e1, #3182ce);
+}
+
+.stat-card-warning::before {
+  background: linear-gradient(90deg, #ed8936, #dd6b20);
+}
+
+.stat-card-danger::before {
+  background: linear-gradient(90deg, #f56565, #e53e3e);
+}
+
+.stat-card-purple::before {
+  background: linear-gradient(90deg, #9f7aea, #805ad5);
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+.stat-trend {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-top: 4px;
+}
+
+/* Charts Section */
+.charts-section {
+  background: var(--card-bg, #ffffff);
+  border-radius: var(--radius-lg, 16px);
+  padding: 24px;
+  box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
+}
+
+.chart-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.chart-row:last-child {
+  margin-bottom: 0;
+}
+
+.chart-card {
+  background: var(--bg-alt, #f8f9fa);
+  border-radius: var(--radius-md, 12px);
+  padding: 20px;
+  border: 1px solid var(--border, #e2e8f0);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.chart-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text, #2d3748);
+}
+
+.chart-filter {
+  padding: 6px 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--card-bg, #ffffff);
+  color: var(--text, #2d3748);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.chart-filter:focus {
+  outline: none;
+  border-color: var(--primary, #FF7A00);
+}
+
+.chart-container {
+  position: relative;
+  height: 300px;
+}
+
+/* Enhanced Search Bar */
+.search-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  min-width: 250px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: var(--radius-md, 12px);
+  padding: 0 12px;
+  transition: all 0.3s ease;
+}
+
+.search-input-wrapper:focus-within {
+  border-color: var(--primary, #FF7A00);
+  box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.1);
+}
+
+.search-icon {
+  color: var(--text-light, #718096);
+  font-size: 1.1rem;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 12px 8px;
+  font-size: 0.95rem;
+  color: var(--text, #2d3748);
+}
+
+.search-input:focus {
+  outline: none;
+}
+
+.search-btn {
+  background: var(--primary, #FF7A00);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.search-btn:hover {
+  background: var(--primary-dark, #E66E00);
+}
+
+.filter-select {
+  padding: 10px 16px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: var(--radius-md, 12px);
+  background: var(--card-bg, #ffffff);
+  color: var(--text, #2d3748);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--primary, #FF7A00);
+}
+
+.export-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.export-buttons .btn {
+  padding: 10px 16px;
+  font-size: 0.85rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .chart-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .search-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-input-wrapper {
+    min-width: 100%;
+  }
+  
+  .export-buttons {
+    flex-direction: column;
+  }
+  
+  .export-buttons .btn {
+    width: 100%;
+  }
+}
+
 .dashboard-header {
   display: flex;
   justify-content: space-between;
@@ -592,6 +927,229 @@
 </style>
 
 <script>
+// Chart.js configurations
+let brokerGrowthChart, propertyStatusChart, performanceChart, geographicChart;
+
+// Initialize charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  initCharts();
+});
+
+function initCharts() {
+  // Broker Growth Chart
+  const growthCtx = document.getElementById('brokerGrowthChart').getContext('2d');
+  brokerGrowthChart = new Chart(growthCtx, {
+    type: 'line',
+    data: {
+      labels: generateDateLabels(30),
+      datasets: [{
+        label: 'الدلالين الجدد',
+        data: generateRandomData(30, 0, 10),
+        borderColor: '#667eea',
+        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+
+  // Property Status Chart
+  const statusCtx = document.getElementById('propertyStatusChart').getContext('2d');
+  propertyStatusChart = new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['جاهز', 'قيد البناء', 'مؤجر', 'مباع'],
+      datasets: [{
+        data: [45, 20, 25, 10],
+        backgroundColor: ['#48bb78', '#ed8936', '#4299e1', '#f56565'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  });
+
+  // Performance Chart
+  const perfCtx = document.getElementById('performanceChart').getContext('2d');
+  performanceChart = new Chart(perfCtx, {
+    type: 'bar',
+    data: {
+      labels: ['أحمد', 'محمد', 'علي', 'حسين', 'كريم'],
+      datasets: [{
+        label: 'درجة الأداء',
+        data: [85, 92, 78, 88, 95],
+        backgroundColor: '#667eea',
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100
+        }
+      }
+    }
+  });
+
+  // Geographic Chart
+  const geoCtx = document.getElementById('geographicChart').getContext('2d');
+  geographicChart = new Chart(geoCtx, {
+    type: 'pie',
+    data: {
+      labels: ['بغداد', 'البصرة', 'أربيل', 'نينوى', 'النجف', 'كربلاء'],
+      datasets: [{
+        data: [35, 20, 15, 12, 10, 8],
+        backgroundColor: ['#667eea', '#48bb78', '#ed8936', '#4299e1', '#9f7aea', '#f56565'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  });
+}
+
+function generateDateLabels(days) {
+  const labels = [];
+  const today = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    labels.push(date.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' }));
+  }
+  return labels;
+}
+
+function generateRandomData(count, min, max) {
+  const data = [];
+  for (let i = 0; i < count; i++) {
+    data.push(Math.floor(Math.random() * (max - min + 1)) + min);
+  }
+  return data;
+}
+
+function updateBrokerGrowthChart(days) {
+  brokerGrowthChart.data.labels = generateDateLabels(parseInt(days));
+  brokerGrowthChart.data.datasets[0].data = generateRandomData(parseInt(days), 0, 15);
+  brokerGrowthChart.update();
+}
+
+function updatePropertyStatusChart(filter) {
+  // In real implementation, this would fetch filtered data from server
+  const dataMap = {
+    'all': [45, 20, 25, 10],
+    'verified': [30, 15, 18, 7],
+    'unverified': [15, 5, 7, 3]
+  };
+  propertyStatusChart.data.datasets[0].data = dataMap[filter] || dataMap['all'];
+  propertyStatusChart.update();
+}
+
+function updatePerformanceChart(filter) {
+  // In real implementation, this would fetch filtered data from server
+  const dataMap = {
+    'all': [85, 92, 78, 88, 95],
+    'top': [95, 92, 88, 85, 82],
+    'bottom': [45, 52, 58, 62, 68]
+  };
+  performanceChart.data.datasets[0].data = dataMap[filter] || dataMap['all'];
+  performanceChart.update();
+}
+
+function updateGeographicChart(filter) {
+  // In real implementation, this would fetch filtered data from server
+  const dataMap = {
+    'all': [35, 20, 15, 12, 10, 8],
+    'active': [25, 15, 12, 8, 7, 5],
+    'verified': [20, 12, 10, 8, 6, 4]
+  };
+  geographicChart.data.datasets[0].data = dataMap[filter] || dataMap['all'];
+  geographicChart.update();
+}
+
+function performSearch() {
+  const searchTerm = document.getElementById('searchInput').value;
+  const status = document.getElementById('statusFilter').value;
+  const verified = document.getElementById('verifiedFilter').value;
+  const role = document.getElementById('roleFilter').value;
+  const subscription = document.getElementById('subscriptionFilter').value;
+  const governorate = document.getElementById('governorateFilter').value;
+  const sortBy = document.getElementById('sortBy').value;
+  
+  // Build URL with query parameters
+  const params = new URLSearchParams();
+  if (searchTerm) params.append('search', searchTerm);
+  if (status) params.append('status', status);
+  if (verified) params.append('verified', verified);
+  if (role) params.append('role', role);
+  if (subscription) params.append('subscription', subscription);
+  if (governorate) params.append('governorate', governorate);
+  if (sortBy) params.append('sort', sortBy);
+  
+  window.location.href = '{% url "broker_list" %}?' + params.toString();
+}
+
+function exportData(format) {
+  // In real implementation, this would trigger server-side export
+  const currentUrl = window.location.href;
+  const exportUrl = currentUrl + (currentUrl.includes('?') ? '&' : '?') + 'export=' + format;
+  
+  // Show loading state
+  const buttons = document.querySelectorAll('.export-buttons .btn');
+  buttons.forEach(btn => {
+    btn.disabled = true;
+    btn.textContent = 'جاري التصدير...';
+  });
+  
+  // Simulate export (replace with actual fetch in production)
+  setTimeout(() => {
+    buttons.forEach(btn => {
+      btn.disabled = false;
+      // Restore original button text
+      if (btn.textContent.includes('CSV')) btn.textContent = '📥 CSV';
+      else if (btn.textContent.includes('Excel')) btn.textContent = '📊 Excel';
+      else if (btn.textContent.includes('PDF')) btn.textContent = '📄 PDF';
+    });
+    
+    alert('تم تصدير البيانات بنجاح بصيغة ' + format.toUpperCase());
+  }, 1500);
+}
+
 function exportData() {
   window.location.href = '{% url "export_brokers" %}';
 }
@@ -632,6 +1190,13 @@ function toggleRenewFields() {
 document.getElementById('renewModal').addEventListener('click', function(e) {
   if (e.target === this) {
     closeRenewModal();
+  }
+});
+
+// Add enter key listener for search
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    performSearch();
   }
 });
 </script>

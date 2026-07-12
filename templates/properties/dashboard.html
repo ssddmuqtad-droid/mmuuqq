@@ -613,12 +613,6 @@
       <span class="tab-icon">📧</span>
       <span>الرسائل</span>
     </button>
-    {% if broker %}
-    <a href="{% url 'broker_panel' %}#standalone-settings" class="tab-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: transparent; border: none; color: var(--text-light); cursor: pointer; border-radius: var(--radius); transition: all 0.3s ease;">
-      <span class="tab-icon">🌐</span>
-      <span>إدارة لوحته الخاصة</span>
-    </a>
-    {% endif %}
     {% if can_access_admin_panel %}
     <a href="{% url 'notification_center' %}" class="tab-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: transparent; border: none; color: var(--text-light); cursor: pointer; border-radius: var(--radius); transition: all 0.3s ease;">
       <span class="tab-icon">🔔</span>
@@ -630,6 +624,12 @@
       <span class="tab-icon">📧</span>
       <span>مراسلة الإدارة</span>
     </a>
+    {% if broker %}
+    <a href="{% url 'broker_standalone_settings' %}" class="tab-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: linear-gradient(135deg, rgba(255, 122, 0, 0.2) 0%, rgba(255, 122, 0, 0.1) 100%); border: 2px solid var(--primary, #FF7A00); color: var(--primary, #FF7A00); cursor: pointer; border-radius: var(--radius); transition: all 0.3s ease; box-shadow: 0 0 15px rgba(255, 122, 0, 0.3); font-weight: 600;">
+      <span class="tab-icon">🌐</span>
+      <span>إدارة الصفحة المستقلة</span>
+    </a>
+    {% endif %}
     <button type="button" class="tab-btn" data-tab="activity">
       <span class="tab-icon">📋</span>
       <span>سجل النشاطات</span>

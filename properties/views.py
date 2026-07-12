@@ -8089,35 +8089,77 @@ def dynamic_add_property(request):
         DynamicPropertyForm, PropertyInsideIraqForm, 
         PropertyOutsideIraqForm, PropertyHotelForm, PropertyResortForm
     )
-    from .models import PropertyImage, PropertyVideo, BrokerPlanSubscription
+    from .models import PropertyImage, PropertyVideo, BrokerPlanSubscription, Broker
     from django.utils import timezone
     from datetime import timedelta
+    from django.core.exceptions import ValidationError
     
     category_form = DynamicPropertyForm(request.POST or None)
     property_form = None
     template_name = 'properties/dynamic_add_property.html'
+    
+    # Get broker and check subscription
+    broker = None
+    try:
+        broker = Broker.objects.get(user=request.user)
+    except Broker.DoesNotExist:
+        pass
     
     if request.method == 'POST':
         category = request.POST.get('category')
         publication_type = request.POST.get('publication_type', 'normal')
         publication_days = request.POST.get('publication_days')
         
+        # Check if user has broker account
+        if not broker:
+            messages.error(request, 'يجب أن يكون لديك حساب دلال لإضافة عقارات')
+            return render(request, template_name, {
+                'category_form': category_form,
+                'property_form': property_form,
+                'category': category,
+            })
+        
+        # Check if subscription is active
+        if broker.is_subscription_expired():
+            messages.error(request, 'اشتراكك منتهي. يرجى تجديد الاشتراك لإضافة عقارات')
+            return render(request, template_name, {
+                'category_form': category_form,
+                'property_form': property_form,
+                'category': category,
+            })
+        
+        # Check property limit
+        property_limit = broker.get_property_limit()
+        published_count = broker.get_published_properties_count()
+        remaining_properties = broker.get_remaining_properties()
+        
+        if remaining_properties <= 0:
+            messages.error(
+                request, 
+                f'وصلت للحد الأقصى من العقارات ({published_count}/{property_limit}). '
+                f'يرجى ترقية اشتراكك لإضافة المزيد.'
+            )
+            return render(request, template_name, {
+                'category_form': category_form,
+                'property_form': property_form,
+                'category': category,
+            })
+        
         # Check if user has premium subscription for featured/pinned ads
         if publication_type in ['featured', 'pinned']:
-            if hasattr(request.user, 'broker'):
-                active_subscription = BrokerPlanSubscription.objects.filter(
-                    broker=request.user.broker,
-                    status='active',
-                    end_date__gt=timezone.now()
-                ).first()
-                
-                if not active_subscription or active_subscription.plan.tier != 'premium':
-                    messages.error(request, 'يتطلب الإعلان المميز أو المثبت اشتراك مميز. يرجى ترقية اشتراكك.')
-                    return render(request, template_name, {
-                        'category_form': category_form,
-                        'property_form': property_form,
-                        'category': category,
-                    })
+            active_subscription = BrokerPlanSubscription.objects.filter(
+                broker=broker,
+                status='active',
+                end_date__gt=timezone.now()
+            ).first()
+            
+            if not active_subscription or active_subscription.plan.tier != 'premium':
+                messages.error(request, 'يتطلب الإعلان المميز أو المثبت اشتراك مميز. يرجى ترقية اشتراكك.')
+                return render(request, template_name, {
+                    'category_form': category_form,
+                    'property_form': property_form,
+                    'category': category,
+                })
         
         if category == 'inside_iraq':
             property_form = PropertyInsideIraqForm(request.POST, request.FILES)
@@ -8125,6 +8167,10 @@ def dynamic_add_property(request):
                 property = property_form.save(commit=False)
                 property.category = 'property_iraq'
                 property.owner = request.user
+                property.broker = broker
+                
+                # Set expiry date based on subscription
+                property.expiry_date = broker.subscription_end_date if broker.subscription_end_date else timezone.now() + timedelta(days=30)
                 
                 # Handle publication type
                 if publication_type == 'featured':
@@ -8150,6 +8196,10 @@ def dynamic_add_property(request):
                 property = property_form.save(commit=False)
                 property.category = 'property_outside'
                 property.owner = request.user
+                property.broker = broker
+                
+                # Set expiry date based on subscription
+                property.expiry_date = broker.subscription_end_date if broker.subscription_end_date else timezone.now() + timedelta(days=30)
                 
                 # Handle publication type
                 if publication_type == 'featured':
@@ -8177,9 +8227,11 @@ def dynamic_add_property(request):
                     title=property_form.cleaned_data['hotel_name'],
                     category='hotel',
                     owner=request.user,
+                    broker=broker,
                     status='published',
                     price=property_form.cleaned_data.get('price_per_night') or 0,
                     currency=property_form.cleaned_data.get('currency', 'USD'),
+                    expiry_date=broker.subscription_end_date if broker.subscription_end_date else timezone.now() + timedelta(days=30),
                 )
                 
                 # Handle publication type for hotel
@@ -10042,6 +10094,8 @@ def delete_user(request, user_id):
 @login_required
 def subscription_renewal_request(request):
     """طلب تجديد اشتراك"""
+    from django.core.exceptions import ValidationError
+    
     broker = get_broker(request.user)
     if not broker:
         messages.error(request, 'يجب أن تكون دلالاً للوصول إلى هذه الصفحة')
@@ -10054,84 +10108,115 @@ def subscription_renewal_request(request):
     ).first()
     
     if request.method == 'POST':
-        property_types = request.POST.getlist('property_types')
-        regular_count = int(request.POST.get('regular_count', 0))
-        premium_count = int(request.POST.get('premium_count', 0))
-        days_requested = int(request.POST.get('days_requested', 0))
-        notes = request.POST.get('notes', '')
-        
-        # property_types now only includes property types (iraq, outside, hotels, resorts)
-        # building_requests and auctions are handled separately
-        
-        if regular_count < 0 or premium_count < 0:
-            messages.error(request, 'يجب إدخال أعداد صحيحة')
-            return render(request, 'properties/subscription_renewal_request.html', {
-                'current_subscription': current_subscription
-            })
-        
-        if regular_count == 0 and premium_count == 0:
-            messages.error(request, 'يجب تحديد عدد عقارات واحد على الأقل')
-            return render(request, 'properties/subscription_renewal_request.html', {
-                'current_subscription': current_subscription
-            })
-        
-        if days_requested < 1:
-            messages.error(request, 'يجب إدخال عدد أيام صحيح')
-            return render(request, 'properties/subscription_renewal_request.html', {
-                'current_subscription': current_subscription
-            })
-        
-        # Calculate cost
-        regular_price = 50
-        premium_price = 1000
-        regular_cost = regular_price * regular_count * days_requested
-        premium_cost = premium_price * premium_count * days_requested
-        estimated_cost = regular_cost + premium_cost
-        total_properties = regular_count + premium_count
-        
-        # Create combined plan name
-        plan_name_parts = []
-        if regular_count > 0:
-            plan_name_parts.append(f'{regular_count} عادي')
-        if premium_count > 0:
-            plan_name_parts.append(f'{premium_count} مميز')
-        plan_name = f'اشتراك مركب - {", ".join(plan_name_parts)}'
-        
-        # Find or create appropriate plan
-        plan = AdvancedSubscriptionPlan.objects.filter(
-            plan_type='combined',
-            name=plan_name
-        ).first()
-        
-        if not plan:
-            # Create plan if it doesn't exist
-            plan = AdvancedSubscriptionPlan.objects.create(
-                name=plan_name,
+        try:
+            property_types = request.POST.getlist('property_types')
+            regular_count = int(request.POST.get('regular_count', 0))
+            premium_count = int(request.POST.get('premium_count', 0))
+            days_requested = int(request.POST.get('days_requested', 0))
+            notes = request.POST.get('notes', '')
+            
+            # Validate input ranges
+            if regular_count < 0 or premium_count < 0:
+                raise ValidationError('يجب إدخال أعداد صحيحة')
+            
+            if regular_count > 1000 or premium_count > 1000:
+                raise ValidationError('عدد العقارات يتجاوز الحد المسموح')
+            
+            if regular_count == 0 and premium_count == 0:
+                raise ValidationError('يجب تحديد عدد عقارات واحد على الأقل')
+            
+            if days_requested < 1 or days_requested > 3650:  # Max 10 years
+                raise ValidationError('يجب إدخال عدد أيام صحيح (1-3650 يوم)')
+            
+            # Validate notes length
+            if len(notes) > 500:
+                raise ValidationError('الملاحظات طويلة جداً')
+            
+            # Sanitize notes to prevent XSS
+            from django.utils.safestring import mark_safe
+            from django.utils.html import strip_tags
+            notes = strip_tags(notes)
+            
+            # Get prices from plan configuration instead of hardcoded values
+            regular_price = 50  # Should come from configuration
+            premium_price = 1000  # Should come from configuration
+            
+            # Calculate cost with validation
+            regular_cost = regular_price * regular_count * days_requested
+            premium_cost = premium_price * premium_count * days_requested
+            estimated_cost = regular_cost + premium_cost
+            
+            # Validate cost doesn't exceed reasonable limits
+            if estimated_cost > 10000000:  # 10 million IQD max
+                raise ValidationError('التكلفة تتجاوز الحد المسموح')
+            
+            total_properties = regular_count + premium_count
+            
+            # Create combined plan name
+            plan_name_parts = []
+            if regular_count > 0:
+                plan_name_parts.append(f'{regular_count} عادي')
+            if premium_count > 0:
+                plan_name_parts.append(f'{premium_count} مميز')
+            plan_name = f'اشتراك مركب - {", ".join(plan_name_parts)}'
+            
+            # Find or create appropriate plan
+            plan = AdvancedSubscriptionPlan.objects.filter(
                 plan_type='combined',
-                tier='mixed',
-                price_per_day=estimated_cost // days_requested if days_requested > 0 else 0,
-                max_properties=total_properties,
-                allow_property_replacement=True,
-                is_active=True
+                name=plan_name
+            ).first()
+            
+            if not plan:
+                # Create plan if it doesn't exist
+                plan = AdvancedSubscriptionPlan.objects.create(
+                    name=plan_name,
+                    plan_type='combined',
+                    tier='mixed',
+                    price_per_day=estimated_cost // days_requested if days_requested > 0 else 0,
+                    max_properties=total_properties,
+                    allow_property_replacement=True,
+                    is_active=True
+                )
+            
+            # Create renewal request
+            renewal_request = SubscriptionRenewalRequest.objects.create(
+                broker=broker,
+                current_subscription=current_subscription,
+                plan=plan,
+                days_requested=days_requested,
+                property_count=total_properties,
+                regular_count=regular_count,
+                premium_count=premium_count,
+                property_types=property_types,
+                estimated_cost=estimated_cost,
+                notes=notes,
+                status='pending',
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
             )
-        
-        # Create renewal request
-        renewal_request = SubscriptionRenewalRequest.objects.create(
-            broker=broker,
-            current_subscription=current_subscription,
-            plan=plan,
-            days_requested=days_requested,
-            property_count=total_properties,
-            regular_count=regular_count,
-            premium_count=premium_count,
-            property_types=property_types,
-            estimated_cost=estimated_cost,
-            notes=notes,
-            status='pending'
-        )
-        
-        messages.success(request, 'تم إرسال طلب التجديد بنجاح')
-        return redirect('dashboard')
+            
+            # Log the renewal request
+            from django.contrib.admin.models import LogEntry
+            LogEntry.objects.log_action(
+                user_id=request.user.id,
+                content_type_id=None,
+                object_id=renewal_request.id,
+                object_repr=f'Renewal request for {broker.display_name}',
+                action_flag=1,  # ADDITION
+                change_message=f'Subscription renewal request: {estimated_cost} IQD for {days_requested} days'
+            )
+            
+            messages.success(request, 'تم إرسال طلب التجديد بنجاح')
+            return redirect('dashboard')
+            
+        except ValidationError as e:
+            messages.error(request, str(e))
+        except Exception as e:
+            messages.error(request, 'حدث خطأ أثناء معالجة الطلب')
+            # Log the error for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'Subscription renewal error: {str(e)}')
     
     return render(request, 'properties/subscription_renewal_request.html', {
         'current_subscription': current_subscription
@@ -10155,63 +10240,133 @@ def subscription_renewal_requests_list(request):
 
 
 @login_required
+@require_http_methods(["POST"])
 def approve_subscription_renewal(request, request_id):
     """الموافقة على طلب تجديد اشتراك"""
     from .permissions import is_platform_admin
+    from django.core.exceptions import ValidationError
     
     if not is_platform_admin(request.user):
         return JsonResponse({'success': False, 'error': 'ليس لديك صلاحية'})
     
-    renewal_request = get_object_or_404(SubscriptionRenewalRequest, id=request_id)
+    # Validate CSRF token
+    if not request.META.get('CSRF_COOKIE'):
+        return JsonResponse({'success': False, 'error': 'Invalid CSRF token'})
     
-    if renewal_request.status != 'pending':
-        return JsonResponse({'success': False, 'error': 'الطلب ليس في حالة انتظار'})
-    
-    # Create or update subscription
-    subscription = renewal_request.current_subscription
-    if not subscription:
-        # Create new subscription
-        subscription = BrokerPlanSubscription.objects.create(
-            broker=renewal_request.broker,
-            plan=renewal_request.plan,
-            start_date=timezone.now(),
-            end_date=timezone.now() + timezone.timedelta(days=renewal_request.days_requested),
-            status='active',
-            total_paid=renewal_request.estimated_cost
+    try:
+        renewal_request = get_object_or_404(SubscriptionRenewalRequest, id=request_id)
+        
+        if renewal_request.status != 'pending':
+            return JsonResponse({'success': False, 'error': 'الطلب ليس في حالة انتظار'})
+        
+        # Validate the request is not too old (prevent replay attacks)
+        from django.utils import timezone
+        if (timezone.now() - renewal_request.created_at).days > 30:
+            return JsonResponse({'success': False, 'error': 'الطلب منتهي الصلاحية'})
+        
+        # Validate cost doesn't exceed reasonable limits
+        if renewal_request.estimated_cost > 10000000:
+            return JsonResponse({'success': False, 'error': 'التكلفة تتجاوز الحد المسموح'})
+        
+        # Create or update subscription
+        subscription = renewal_request.current_subscription
+        if not subscription:
+            # Create new subscription
+            subscription = BrokerPlanSubscription.objects.create(
+                broker=renewal_request.broker,
+                plan=renewal_request.plan,
+                start_date=timezone.now(),
+                end_date=timezone.now() + timezone.timedelta(days=renewal_request.days_requested),
+                status='active',
+                total_paid=renewal_request.estimated_cost
+            )
+        else:
+            # Renew existing subscription
+            subscription.renew(renewal_request.days_requested)
+            subscription.total_paid += renewal_request.estimated_cost
+            subscription.save()
+        
+        # Update request status
+        renewal_request.status = 'approved'
+        renewal_request.approved_by = request.user
+        renewal_request.approved_at = timezone.now()
+        renewal_request.approval_ip = request.META.get('REMOTE_ADDR')
+        renewal_request.save()
+        
+        # Log the approval
+        from django.contrib.admin.models import LogEntry
+        LogEntry.objects.log_action(
+            user_id=request.user.id,
+            content_type_id=None,
+            object_id=renewal_request.id,
+            object_repr=f'Approved renewal for {renewal_request.broker.display_name}',
+            action_flag=2,  # CHANGE
+            change_message=f'Approved subscription renewal: {renewal_request.estimated_cost} IQD'
         )
-    else:
-        # Renew existing subscription
-        subscription.renew(renewal_request.days_requested)
-        subscription.total_paid += renewal_request.estimated_cost
-        subscription.save()
-    
-    # Update request status
-    renewal_request.status = 'approved'
-    renewal_request.approved_by = request.user
-    renewal_request.approved_at = timezone.now()
-    renewal_request.save()
-    
-    return JsonResponse({'success': True})
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'Subscription approval error: {str(e)}')
+        return JsonResponse({'success': False, 'error': 'حدث خطأ أثناء المعالجة'})
 
 
 @login_required
+@require_http_methods(["POST"])
 def reject_subscription_renewal(request, request_id):
     """رفض طلب تجديد اشتراك"""
     from .permissions import is_platform_admin
+    from django.core.exceptions import ValidationError
     
     if not is_platform_admin(request.user):
         return JsonResponse({'success': False, 'error': 'ليس لديك صلاحية'})
     
-    renewal_request = get_object_or_404(SubscriptionRenewalRequest, id=request_id)
+    # Validate CSRF token
+    if not request.META.get('CSRF_COOKIE'):
+        return JsonResponse({'success': False, 'error': 'Invalid CSRF token'})
     
-    if renewal_request.status != 'pending':
-        return JsonResponse({'success': False, 'error': 'الطلب ليس في حالة انتظار'})
-    
-    renewal_request.status = 'rejected'
-    renewal_request.rejection_reason = request.POST.get('reason', '')
-    renewal_request.save()
-    
-    return JsonResponse({'success': True})
+    try:
+        renewal_request = get_object_or_404(SubscriptionRenewalRequest, id=request_id)
+        
+        if renewal_request.status != 'pending':
+            return JsonResponse({'success': False, 'error': 'الطلب ليس في حالة انتظار'})
+        
+        # Validate and sanitize rejection reason
+        rejection_reason = request.POST.get('reason', '')
+        if len(rejection_reason) > 500:
+            return JsonResponse({'success': False, 'error': 'سبب الرفض طويل جداً'})
+        
+        # Sanitize rejection reason to prevent XSS
+        from django.utils.html import strip_tags
+        rejection_reason = strip_tags(rejection_reason)
+        
+        renewal_request.status = 'rejected'
+        renewal_request.rejection_reason = rejection_reason
+        renewal_request.rejected_by = request.user
+        renewal_request.rejected_at = timezone.now()
+        renewal_request.rejection_ip = request.META.get('REMOTE_ADDR')
+        renewal_request.save()
+        
+        # Log the rejection
+        from django.contrib.admin.models import LogEntry
+        LogEntry.objects.log_action(
+            user_id=request.user.id,
+            content_type_id=None,
+            object_id=renewal_request.id,
+            object_repr=f'Rejected renewal for {renewal_request.broker.display_name}',
+            action_flag=2,  # CHANGE
+            change_message=f'Rejected subscription renewal: {rejection_reason}'
+        )
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'Subscription rejection error: {str(e)}')
+        return JsonResponse({'success': False, 'error': 'حدث خطأ أثناء المعالجة'})
 
 
 @login_required
