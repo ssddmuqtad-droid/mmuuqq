@@ -55,6 +55,7 @@ if not ALLOWED_HOSTS:
     ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 ALLOWED_HOSTS = _unique(ALLOWED_HOSTS + [
+    '*',
     '.railway.app',
     'mup.up.railway.app',
     'muq.up.railway.app',
