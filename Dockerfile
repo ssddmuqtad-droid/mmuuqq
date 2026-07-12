@@ -19,10 +19,18 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
-COPY . .
-
-# Explicitly copy properties app to ensure it's included
-RUN if [ -d properties ]; then echo "Properties directory found locally"; else echo "ERROR: Properties directory not found locally"; exit 1; fi
+# Explicitly copy all important directories
+COPY dalal_project /app/dalal_project/
+COPY properties /app/properties/
+COPY templates /app/templates/
+COPY static /app/static/
+COPY locale /app/locale/
+COPY manage.py /app/
+COPY run_server.py /app/
+COPY entrypoint.sh /app/
+COPY nixpacks.toml /app/
+COPY railway.toml /app/
+COPY railway.json /app/
 
 RUN mkdir -p /app/logs /app/media /app/staticfiles
 
