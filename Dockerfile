@@ -22,13 +22,15 @@ RUN pip install --upgrade pip && \
 # Explicitly copy all important directories
 COPY dalal_project /app/dalal_project/
 COPY properties /app/properties/
-COPY templates /app/templates/
 COPY manage.py /app/
 COPY run_server.py /app/
 COPY entrypoint.sh /app/
 COPY nixpacks.toml /app/
 COPY railway.toml /app/
 COPY railway.json /app/
+
+# Copy templates directory if it exists, otherwise create it
+RUN if [ -d templates ]; then cp -r templates /app/templates/; else mkdir -p /app/templates; fi
 
 # Copy static directory if it exists
 RUN if [ -d static ]; then cp -r static /app/static/; else mkdir -p /app/static; fi
