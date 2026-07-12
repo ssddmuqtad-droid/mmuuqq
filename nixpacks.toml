@@ -1,0 +1,23 @@
+[phases.setup]
+nixPkgs = ["python311", "gcc", "pkg-config", "postgresql"]
+
+[phases.build]
+cmds = [
+    "pip install --upgrade pip",
+    "pip install -r requirements.txt",
+    "python manage.py collectstatic --noinput"
+]
+
+[phases.start]
+cmd = "python run_server.py"
+
+[variables]
+DEBUG = "False"
+PORT = "8080"
+PYTHONUNBUFFERED = "1"
+PYTHONPATH = "/app"
+DJANGO_SETTINGS_MODULE = "dalal_project.settings"
+ALLOW_SQLITE_FALLBACK = "False"
+GUNICORN_WORKERS = "2"
+GUNICORN_TIMEOUT = "120"
+GUNICORN_LOG_LEVEL = "debug"
