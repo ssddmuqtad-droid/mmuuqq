@@ -1,4 +1,4 @@
-# Force Railway rebuild - 2026-07-12-19-06
+# Force Railway rebuild - 2026-07-12-16-21-with-app-copy
 FROM python:3.12-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
@@ -15,12 +15,12 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy only files that exist in the repository
+# Copy configuration files first (most stable layer)
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
-# Copy configuration and entry files
+# Copy all application code and configuration
 COPY manage.py /app/
 COPY run_server.py /app/
 COPY entrypoint.sh /app/
@@ -28,8 +28,13 @@ COPY nixpacks.toml /app/
 COPY railway.toml /app/
 COPY railway.json /app/
 
-# Create necessary application directories
-RUN mkdir -p /app/logs /app/media /app/staticfiles /app/templates /app/static /app/locale /app/dalal_project /app/properties
+# Copy Django project and apps
+COPY dalal_project /app/dalal_project/
+COPY properties /app/properties/
+COPY templates /app/templates/
+
+# Create necessary directories for runtime
+RUN mkdir -p /app/logs /app/media /app/staticfiles /app/static /app/locale
 
 # Make entrypoint executable
 RUN chmod +x /app/entrypoint.sh
