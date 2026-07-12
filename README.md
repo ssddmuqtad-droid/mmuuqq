@@ -4,32 +4,59 @@
 
 ## 🏠 المميزات
 
+### نظام العقارات
 - **نظام عقارات كامل**: إدارة كاملة للعقارات مع معلومات تفصيلية وصور
 - **فلترة متقدمة**: بحث وفلترة حسب النوع، الحالة، السعر، الموقع، والمزيد
-- **لوحة تحكم الدلال**: إدارة كاملة للعقارات والرسائل
-- **نظام المفضلة والمقارنة**: حفظ العقارات المفضلة ومقارنة بينها
 - **خرائط تفاعلية**: دعم خرائط Leaflet لعرض المواقع
+- **أنواع متعددة**: أراضي، بيوت، بنايات، شقق، محلات تجارية، مستودعات
+- **فنادق ومنتجعات**: نظام حجز الفنادق والمنتجعات
+
+### نظام الدلالين
+- **لوحة تحكم الدلال**: إدارة كاملة للعقارات والرسائل
+- **نظام الاشتراكات**: خطط اشتراك متعددة مع إدارة التجديدات
+- **إحصائيات متقدمة**: رسوم بيانية تفاعلية لتتبع الأداء
+- **حماية المنشورات**: نظام تجميد وحذف تلقائي للمنشورات المنتهية
+- **منع تجاوز الحدود**: حماية ضد تجاوز عدد العقارات المسموح به
+
+### الأمان والحماية
+- **حماية شاملة**: CSRF، XSS، SQL injection
+- **تتبع الأنشطة**: تسجيل جميع العمليات الحساسة
+- **إدارة الصلاحيات**: نظام صلاحيات متقدم
+- **تأمين الاشتراكات**: حماية ضد تجاوز وقت الاشتراك
+
+### الميزات التقنية
 - **تصميم متجاوب**: واجهة عربية RTL بالكامل مع دعم الجوال
 - **SEO محسن**: sitemap.xml و robots.txt و meta tags
 - **أمان متقدم**: حماية CSRF، rate limiting، وسياسات أمان محدثة
+- **نظام المهام المجدولة**: أوامر إدارة للحذف التلقائي
+- **دعم PostgreSQL**: جاهز للاستضافة على Railway
 
 ## 📁 هيكل المشروع
 
 ```
-acakar/
+moq-main/
 ├── dalal_project/          # إعدادات Django الرئيسية
+│   ├── settings.py         # إعدادات المشروع
+│   ├── urls.py             # مسارات URL
+│   └── wsgi.py             # WSGI configuration
 ├── properties/             # تطبيق العقارات
 │   ├── models.py          # نماذج البيانات
 │   ├── views.py           # الوظائف الرئيسية
 │   ├── forms.py           # النماذج
+│   ├── admin.py           # لوحة التحكم
+│   ├── management/        # أوامر الإدارة
+│   │   └── commands/      # أوامر الحذف التلقائي
 │   └── templates/         # قوالب HTML
 ├── static/                # الملفات الثابتة (CSS, JS)
 ├── templates/             # القوالب الإضافية
 ├── media/                 # الصور والملفات المرفوعة
 ├── logs/                  # سجلات النظام
 ├── requirements.txt       # المكتبات المطلوبة
-├── railway.toml          # تكوين Railway
 ├── Procfile              # تكوين Heroku/Railway
+├── runtime.txt           # إصدار Python
+├── .env.example          # مثال متغيرات البيئة
+├── railway.toml          # تكوين Railway
+├── docker-compose.yml    # تكوين Docker
 └── manage.py             # أوامر Django
 ```
 
@@ -39,6 +66,7 @@ acakar/
 - Python 3.10+
 - Django 5.0+
 - virtualenv
+- Git
 
 ### خطوات التشغيل:
 
@@ -87,32 +115,29 @@ http://localhost:8000
 - **اسم المستخدم الافتراضي**: admin
 - **كلمة المرور الافتراضية**: admin123
 
-## �️ قاعدة البيانات
+## 🗄️ قاعدة البيانات
 
-يدعم المشروع ثلاثة أنواع من قواعد البيانات:
+يدعم المشروع نوعين من قواعد البيانات:
 
 1. **SQLite** (الافتراضي للتنمية):
 ```env
-DB_ENGINE=sqlite
+# يستخدم تلقائياً في وضع التطوير
+DEBUG=True
 ```
 
-2. **MySQL** (للإنتاج على Railway):
+2. **PostgreSQL** (للإنتاج على Railway):
 ```env
-DB_ENGINE=mysql
-DATABASE_URL=mysql://user:password@host:3306/dbname
+# Railway يضيف DATABASE_URL تلقائياً عند إضافة خدمة PostgreSQL
+# أو يمكنك تحديده يدوياً:
+DATABASE_URL=postgres://user:password@host:5432/dbname
 ```
 
-3. **MySQL** (اختياري):
-```env
-DB_ENGINE=mysql
-DB_NAME=dalal_db
-DB_USER=root
-DB_PASSWORD=
-DB_HOST=localhost
-DB_PORT=3306
-```
+### إعدادات قاعدة البيانات في Railway:
+- سيقوم Railway تلقائياً بإضافة `DATABASE_URL` عند إنشاء خدمة PostgreSQL
+- المشروع يدعم الاتصال التلقائي بقاعدة بيانات PostgreSQL
+- يمكن استخدام SQLite كخيار احتياطي بتعيين `ALLOW_SQLITE_FALLBACK=True`
 
-## 🌐 النشر على Railway عبر GitHub
+## 🌐 النشر على Railway
 
 ### خطوات النشر:
 
@@ -121,14 +146,15 @@ DB_PORT=3306
    - سجل الدخول باستخدام GitHub
    - اضغط على "New Project"
    - اختر "Deploy from GitHub repo"
-   - حدد مستودع `acakar`
+   - حدد مستودع `mmuuqq`
 
-2. **إعدادات البناء التلقائية:**
-   - سيقوم Railway تلقائياً بكشف مشروع Django
-   - سيستخدم ملف `railway.toml` للتكوين
-   - سيتم بناء المشروع تلقائياً
+2. **إضافة خدمة PostgreSQL:**
+   - في مشروع Railway، اضغط على "New Service"
+   - اختر "Database"
+   - اختر "PostgreSQL"
+   - سيتم إضافة `DATABASE_URL` تلقائياً
 
-3. **إضافة متغيرات البيئة في Railway:**
+3. **إعدادات متغيرات البيئة:**
    - اذهب إلى إعدادات المشروع في Railway
    - أضف المتغيرات التالية:
      ```
@@ -136,9 +162,8 @@ DB_PORT=3306
      DEBUG=False
      ALLOWED_HOSTS=*
      CSRF_TRUSTED_ORIGINS=https://*
-     DB_ENGINE=mysql
      ```
-   - Railway سيقوم تلقائياً بإضافة `DATABASE_URL` عند إنشاء قاعدة بيانات MySQL
+   - Railway سيقوم تلقائياً بإضافة `DATABASE_URL`
 
 4. **النشر التلقائي:**
    - سيقوم Railway ببناء ونشر المشروع تلقائياً عند كل دفع إلى GitHub
@@ -148,7 +173,8 @@ DB_PORT=3306
 - `railway.toml` - تكوين Railway الرئيسي
 - `Procfile` - أمر بدء التشغيل
 - `requirements.txt` - المكتبات المطلوبة
-- `runtime.txt` - إصدار Python (3.10)
+- `runtime.txt` - إصدار Python (3.12)
+- `.env.example` - مثال متغيرات البيئة
 
 ## 📊 أنواع العقارات
 
@@ -168,14 +194,29 @@ DB_PORT=3306
 
 ## 🛠️ التقنيات المستخدمة
 
+### Backend
 - **Django 5.0+**: إطار العمل الرئيسي
-- **Python 3.10+**: لغة البرمجة
-- **MySQL**: قاعدة البيانات (الإنتاج على Railway)
+- **Python 3.12**: لغة البرمجة
+- **PostgreSQL**: قاعدة البيانات (الإنتاج على Railway)
 - **SQLite**: قاعدة البيانات (التنمية)
+- **Gunicorn**: خادم WSGI للإنتاج
 - **WhiteNoise**: تقديم الملفات الثابتة
-- **Gunicorn**: خادم WSGI
-- **Leaflet**: الخرائط التفاعلية
+
+### Frontend
 - **HTML5/CSS3/JavaScript**: الواجهة الأمامية
+- **Chart.js**: الرسوم البيانية التفاعلية
+- **Leaflet**: الخرائط التفاعلية
+- **Bootstrap**: إطار العمل CSS
+
+### الأمان والصلاحيات
+- **python-social-auth**: المصادقة الاجتماعية (Google, Facebook)
+- **django-cors-headers**: دعم CORS
+- **django-filter**: فلترة متقدمة
+- **Django REST Framework**: API REST
+
+### المهام المجدولة
+- **auto_freeze_expired**: تجميد المنشورات المنتهية
+- **cleanup_expired_properties**: حذف المنشورات المجمدة
 
 ## 🎨 المميزات التصميمية
 
@@ -186,7 +227,7 @@ DB_PORT=3306
 - شريط تنقل سفلي للجوال
 - أزرار واتساب للتواصل
 
-## � أوامر Django المفيدة
+## 🔧 أوامر Django المفيدة
 
 ```bash
 # تشغيل الخادم
@@ -207,18 +248,34 @@ python manage.py createsuperuser
 # فحص المشروع
 python manage.py check
 
-# استيراد بيانات تجريبية
-python manage.py load_sample_data
+# تجميد المنشورات المنتهية
+python manage.py auto_freeze_expired
+
+# حذف المنشورات المجمدة (وضع التجربة)
+python manage.py cleanup_expired_properties --dry-run
+
+# حذف المنشورات المجمدة (وضع فعلي)
+python manage.py cleanup_expired_properties --days=7
 ```
 
-## � الأمان
+## 🔒 الأمان
 
+### حماية شاملة
 - حماية CSRF مفعلة
+- حماية XSS ضد الهجمات
+- حماية SQL injection
 - Rate limiting للنماذج
 - تأمين الكوكيز
 - SSL Redirect في الإنتاج
 - HSTS Headers
 - Content Security Headers
+
+### حماية الاشتراكات
+- منع تجاوز عدد العقارات
+- نظام تجميد المنشورات المنتهية
+- حذف تلقائي للمنشورات المجمدة
+- تتبع IP و User Agent
+- تسجيل جميع العمليات الحساسة
 
 ## 📱 التواصل
 
@@ -226,7 +283,7 @@ python manage.py load_sample_data
 - عرض أرقام الهاتف
 - دعم واتساب
 
-## � استكشاف الأخطاء
+## 🔧 استكشاف الأخطاء
 
 ### مشاكل شائعة:
 
@@ -252,6 +309,26 @@ python manage.py migrate
 # إعادة جمع الملفات الثابتة
 python manage.py collectstatic --noinput --clear
 ```
+
+4. **مشاكل الاشتراكات:**
+```bash
+# تجميد المنشورات المنتهية يدوياً
+python manage.py auto_freeze_expired
+
+# حذف المنشورات المجمدة
+python manage.py cleanup_expired_properties --dry-run
+```
+
+## 📚 ملفات إضافية
+
+- `DEPLOYMENT.md` - دليل النشر التفصيلي
+- `DEPLOYMENT_GUIDE.md` - دليل النشر على Railway
+- `INSTALLATION_GUIDE.md` - دليل التثبيت
+- `QUICKSTART.md` - بدء سريع
+- `RAILWAY_DOMAIN_SETUP.md` - إعداد النطاق المخصص
+- `ROUTES_API.md` - وثائق API
+- `SCHEDULED_TASKS_SETUP.md` - إعداد المهام المجدولة
+- `SETUP.md` - إعداد المشروع
 
 ## 📄 الترخيص
 
