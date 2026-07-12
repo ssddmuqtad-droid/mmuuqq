@@ -1,0 +1,40 @@
+# Core Django
+Django>=5.0,<7.0
+python-dotenv>=1.0.0
+Pillow>=10.0.0
+
+# Production server & static files
+gunicorn>=21.0.0
+whitenoise>=6.6.0
+
+# Database
+dj-database-url>=2.1.0
+psycopg2-binary>=2.9.9
+
+# API
+django-cors-headers>=4.0.0
+django-filter>=23.0
+djangorestframework>=3.14.0
+drf-yasg>=1.21.0
+
+# Optional: Redis cache/sessions (when REDIS_URL is set)
+django-redis>=5.4.0
+
+# Optional: WebSockets (when USE_WEBSOCKETS=True)
+channels>=4.0.0
+channels-redis>=4.2.0
+
+# File type validation for messaging
+python-magic>=0.4.27
+
+# Social Authentication
+python-social-auth[django]>=0.3.6
+social-auth-core>=5.0.0
+social-auth-app-django>=6.0.0
+
+# Additional dependencies
+django-solo>=2.0.0
+django-leaflet>=0.28.0
+qrcode>=7.4.0
+
+# Force rebuild - 2026-07-11-13-50

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "healthcheckPath": "/health/",
+    "healthcheckTimeout": 100,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  },
+  "services": {
+    "web": {
+      "environment": {
+        "ALLOW_SQLITE_FALLBACK": "false",
+        "RAILWAY_DEPLOY_TIMESTAMP": "2026-07-05-15-00",
+        "USE_WEBSOCKETS": "false"
+      }
+    }
+  }
+}

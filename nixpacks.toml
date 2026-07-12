@@ -1,0 +1,37 @@
+[phases.setup]
+nixPkgs = ["python312", "gcc", "pkg-config", "postgresql"]
+
+[phases.build]
+cmds = [
+    "pip install --upgrade pip",
+    "pip install -r requirements.txt",
+    "echo '=== Checking files before build ==='",
+    "echo 'Checking if dalal_project directory exists:'",
+    "ls -la dalal_project/",
+    "echo 'Checking if settings_production.py exists:'",
+    "ls -la dalal_project/settings_production.py",
+    "echo 'Checking if properties directory exists:'",
+    "ls -la properties/",
+    "echo 'Checking if settings_production.py contains properties:'",
+    "grep -c 'properties' dalal_project/settings_production.py || echo '0'",
+    "echo 'Checking if settings_production.py contains INSTALLED_APPS:'",
+    "grep -c 'INSTALLED_APPS' dalal_project/settings_production.py || echo '0'",
+    "echo '=== Running Django commands ==='",
+    "python manage.py makemigrations --noinput",
+    "python manage.py migrate --noinput",
+    "python manage.py collectstatic --noinput"
+]
+
+[phases.start]
+cmd = "python run_server.py"
+
+[variables]
+DEBUG = "False"
+PORT = "8080"
+PYTHONUNBUFFERED = "1"
+PYTHONPATH = "/app"
+DJANGO_SETTINGS_MODULE = "dalal_project.settings"
+ALLOW_SQLITE_FALLBACK = "False"
+GUNICORN_WORKERS = "2"
+GUNICORN_TIMEOUT = "120"
+GUNICORN_LOG_LEVEL = "debug"

@@ -1,0 +1,20 @@
+[build]
+builder = "DOCKERFILE"
+
+[deploy]
+startCommand = "python run_server.py"
+healthcheckPath = "/health/"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[variables]
+DEBUG = "False"
+PORT = "8080"
+PYTHONUNBUFFERED = "1"
+PYTHONPATH = "/app"
+DJANGO_SETTINGS_MODULE = "dalal_project.settings_production"
+ALLOW_SQLITE_FALLBACK = "False"
+GUNICORN_WORKERS = "2"
+GUNICORN_TIMEOUT = "120"
+FORCE_SETTINGS_RELOAD = "2026-07-12-17-08"
