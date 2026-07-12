@@ -56,6 +56,18 @@ def get_client_ip(request):
 
 def home(request):
     logger.info(f"Home view called - Path: {request.path}, Host: {request.get_host()}")
+    
+    # Check if migrations are applied
+    try:
+        from django.core.management import call_command
+        from io import StringIO
+        output = StringIO()
+        call_command('showmigrations', 'properties', verbosity=0, stdout=output)
+        migrations_status = output.getvalue()
+        logger.info(f"Properties migrations: {migrations_status[:100]}")
+    except Exception as e:
+        logger.error(f"Error checking migrations: {e}")
+    
     try:
         properties = get_public_properties()
         form = PropertySearchForm(request.GET)
