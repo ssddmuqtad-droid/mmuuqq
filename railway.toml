@@ -1,5 +1,5 @@
 [build]
-builder = "NIXPACKS"
+builder = "DOCKERFILE"
 
 [deploy]
 startCommand = "python run_server.py"
@@ -17,4 +17,4 @@ DJANGO_SETTINGS_MODULE = "dalal_project.settings_production"
 ALLOW_SQLITE_FALLBACK = "False"
 GUNICORN_WORKERS = "2"
 GUNICORN_TIMEOUT = "120"
-FORCE_SETTINGS_RELOAD = "2026-07-12-16-39"
+FORCE_SETTINGS_RELOAD = "2026-07-12-17-08"
