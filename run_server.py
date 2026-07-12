@@ -51,6 +51,13 @@ def main():
             print(f"Properties URLs loaded successfully: {len(properties_urls.urlpatterns)} patterns", flush=True)
         except Exception as e:
             print(f"Error loading properties URLs: {e}", flush=True)
+        
+        # Check if home view can be imported
+        try:
+            from properties.views import home
+            print(f"Home view imported successfully", flush=True)
+        except Exception as e:
+            print(f"Error importing home view: {e}", flush=True)
     except Exception as e:
         print(f"Error checking INSTALLED_APPS: {e}", flush=True)
 
