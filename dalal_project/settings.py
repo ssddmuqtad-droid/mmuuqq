@@ -80,6 +80,8 @@ if DEBUG:
         'http://127.0.0.1:3000',
         'http://127.0.0.1:62950',
         'http://localhost:62950',
+        'http://127.0.0.1:65407',
+        'http://localhost:65407',
     ]
     CSRF_COOKIE_SECURE = False
     SESSION_COOKIE_SECURE = False
@@ -113,6 +115,7 @@ INSTALLED_APPS = [
     'django_filters',
     'rest_framework',
     'drf_yasg',
+    'dalal_project',
     'properties',
     'social_django',
 ]
