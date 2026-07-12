@@ -37,6 +37,16 @@ def main():
     print(f"DJANGO_SETTINGS_MODULE={os.getenv('DJANGO_SETTINGS_MODULE')}", flush=True)
     print(f"PYTHONPATH={os.getenv('PYTHONPATH')}", flush=True)
 
+    # Check if properties app is in INSTALLED_APPS
+    try:
+        import django
+        django.setup()
+        from django.conf import settings
+        print(f"INSTALLED_APPS: {settings.INSTALLED_APPS}", flush=True)
+        print(f"Properties in INSTALLED_APPS: {'properties' in settings.INSTALLED_APPS}", flush=True)
+    except Exception as e:
+        print(f"Error checking INSTALLED_APPS: {e}", flush=True)
+
     # Run makemigrations first to ensure all migrations are detected
     print("Running makemigrations...", flush=True)
     run([sys.executable, 'manage.py', 'makemigrations', '--noinput'])
