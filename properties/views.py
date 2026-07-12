@@ -56,39 +56,51 @@ def get_client_ip(request):
 
 def home(request):
     logger.info(f"Home view called - Path: {request.path}, Host: {request.get_host()}")
-    properties = get_public_properties()
-    form = PropertySearchForm(request.GET)
-    properties = filter_properties(properties, request.GET)
-    properties = sort_properties(properties, request.GET.get('sort'))
-    
-    # Get featured and promoted before pagination to avoid N+1 queries
-    featured_properties = [p for p in properties if p.is_featured][:6]
-    promoted_properties = [p for p in properties if p.is_promoted][:4]
-    
-    # Get dallal properties if system is enabled
-    dallal_properties = []
     try:
-        from .dallal_logic import get_dallal_properties_for_display
-        dallal_properties = get_dallal_properties_for_display()[:8]
-    except Exception:
+        properties = get_public_properties()
+        form = PropertySearchForm(request.GET)
+        properties = filter_properties(properties, request.GET)
+        properties = sort_properties(properties, request.GET.get('sort'))
+        
+        # Get featured and promoted before pagination to avoid N+1 queries
+        featured_properties = [p for p in properties if p.is_featured][:6]
+        promoted_properties = [p for p in properties if p.is_promoted][:4]
+        
+        # Get dallal properties if system is enabled
         dallal_properties = []
-    
-    paginator = Paginator(properties, 12)
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
-    
-    query_string = request.GET.urlencode()
-    
-    logger.info(f"Rendering home.html with {len(page_obj)} properties")
-    return render(request, 'properties/home.html', {
-        'properties': page_obj,
-        'page_obj': page_obj,
-        'form': form,
-        'featured_properties': featured_properties,
-        'promoted_properties': promoted_properties,
-        'dallal_properties': dallal_properties,
-        'query_string': query_string,
-    })
+        try:
+            from .dallal_logic import get_dallal_properties_for_display
+            dallal_properties = get_dallal_properties_for_display()[:8]
+        except Exception:
+            dallal_properties = []
+        
+        paginator = Paginator(properties, 12)
+        page_number = request.GET.get('page', 1)
+        page_obj = paginator.get_page(page_number)
+        
+        query_string = request.GET.urlencode()
+        
+        logger.info(f"Rendering home.html with {len(page_obj)} properties")
+        return render(request, 'properties/home.html', {
+            'properties': page_obj,
+            'page_obj': page_obj,
+            'form': form,
+            'featured_properties': featured_properties,
+            'promoted_properties': promoted_properties,
+            'dallal_properties': dallal_properties,
+            'query_string': query_string,
+        })
+    except Exception as e:
+        logger.error(f"Error in home view: {str(e)}")
+        return render(request, 'properties/home.html', {
+            'properties': [],
+            'page_obj': None,
+            'form': PropertySearchForm(),
+            'featured_properties': [],
+            'promoted_properties': [],
+            'dallal_properties': [],
+            'query_string': '',
+        })
 
 
 def property_detail(request, slug):
