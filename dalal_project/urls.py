@@ -34,9 +34,15 @@ schema_view = get_schema_view(
     permission_classes=(permissions.AllowAny,),
 )
 
+def simple_home(request):
+    """Simple home view for testing"""
+    return JsonResponse({'status': 'ok', 'message': 'Home works', 'time': str(timezone.now())})
+
 urlpatterns = [
     # Simple test endpoint
     path('simple-test/', lambda request: JsonResponse({'status': 'ok', 'message': 'Simple test works'}), name='simple-test'),
+    # Simple home view
+    path('simple-home/', simple_home, name='simple-home'),
     # Direct path to home view with error handling
     path('', lambda request: __import__('properties.views').home(request) if True else JsonResponse({'error': 'Home view failed'}), name='home'),
     # Direct test of properties.home view
