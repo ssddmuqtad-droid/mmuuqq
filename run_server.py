@@ -37,7 +37,14 @@ def main():
     print(f"DJANGO_SETTINGS_MODULE={os.getenv('DJANGO_SETTINGS_MODULE')}", flush=True)
     print(f"PYTHONPATH={os.getenv('PYTHONPATH')}", flush=True)
 
+    # Run makemigrations first to ensure all migrations are detected
+    print("Running makemigrations...", flush=True)
+    run([sys.executable, 'manage.py', 'makemigrations', '--noinput'])
+    
+    print("Running migrate...", flush=True)
     run([sys.executable, 'manage.py', 'migrate', '--noinput'])
+    
+    print("Running collectstatic...", flush=True)
     run([sys.executable, 'manage.py', 'collectstatic', '--noinput'])
 
     workers = os.getenv('GUNICORN_WORKERS', '2')
