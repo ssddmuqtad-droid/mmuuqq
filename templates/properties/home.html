@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dalal Platform - Real Estate</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1 { color: #333; margin-bottom: 30px; }
+        .properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .property-card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 20px; }
+        .property-card h3 { color: #2c3e50; margin-bottom: 10px; }
+        .price { font-size: 24px; font-weight: bold; color: #27ae60; margin: 10px 0; }
+        .location { color: #7f8c8d; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dalal Platform - Real Estate Properties</h1>
+        <div class="properties-grid">
+            {% for property in properties %}
+            <div class="property-card">
+                <h3>{{ property.title }}</h3>
+                <p class="location">{{ property.location }}</p>
+                <p class="price">${{ property.price }}</p>
+                {% if property.description %}
+                <p>{{ property.description }}</p>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p>No properties available at the moment.</p>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
