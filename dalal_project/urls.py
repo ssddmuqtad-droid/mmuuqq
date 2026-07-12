@@ -35,8 +35,10 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    # Direct path to home view
-    path('', lambda request: __import__('properties.views').home(request), name='home'),
+    # Simple test endpoint
+    path('simple-test/', lambda request: JsonResponse({'status': 'ok', 'message': 'Simple test works'}), name='simple-test'),
+    # Direct path to home view with error handling
+    path('', lambda request: __import__('properties.views').home(request) if True else JsonResponse({'error': 'Home view failed'}), name='home'),
     # Direct test of properties.home view
     path('direct-home/', lambda request: __import__('properties.views').home(request), name='direct-home'),
     # Test if properties app is loaded
