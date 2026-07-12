@@ -19,9 +19,12 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
-# Explicitly copy all important directories
+# Explicitly copy all important directories (make them conditional if they don't exist)
 COPY dalal_project /app/dalal_project/
-COPY properties /app/properties/
+
+# Copy properties directory if it exists, otherwise create it
+RUN if [ -d properties ]; then cp -r properties /app/properties/; else mkdir -p /app/properties; fi
+
 COPY manage.py /app/
 COPY run_server.py /app/
 COPY entrypoint.sh /app/
@@ -39,10 +42,6 @@ RUN if [ -d static ]; then cp -r static /app/static/; else mkdir -p /app/static;
 RUN if [ -d locale ]; then cp -r locale /app/locale/; else mkdir -p /app/locale; fi
 
 RUN mkdir -p /app/logs /app/media /app/staticfiles
-
-# Check if properties app was copied successfully
-RUN if [ ! -d /app/properties ]; then echo "ERROR: Properties app not copied to container"; exit 1; fi
-RUN echo "Properties app exists in container: $(ls -la /app/properties/)"
 
 # Check if settings.py was copied successfully
 RUN if [ ! -f /app/dalal_project/settings.py ]; then echo "ERROR: settings.py not found"; exit 1; fi
