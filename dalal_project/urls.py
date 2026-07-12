@@ -45,6 +45,8 @@ urlpatterns = [
     path('home-test/', lambda request: __import__('properties.views').home(request), name='home-test'),
     # Direct path to home view
     path('home-direct/', lambda request: __import__('properties.views').home(request), name='home-direct'),
+    # Check if properties models can be imported
+    path('check-models/', lambda request: JsonResponse({'models': 'Property' in dir(__import__('properties.models'))}), name='check-models'),
     # Include properties URLs
     path('', include('properties.urls')),
     path('admin/', admin.site.urls),
