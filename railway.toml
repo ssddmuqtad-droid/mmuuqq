@@ -12,6 +12,7 @@ restartPolicyMaxRetries = 10
 DEBUG = "False"
 PORT = "8080"
 PYTHONUNBUFFERED = "1"
+PYTHONPATH = "/app"
 DJANGO_SETTINGS_MODULE = "dalal_project.settings"
 ALLOW_SQLITE_FALLBACK = "False"
 GUNICORN_WORKERS = "2"
