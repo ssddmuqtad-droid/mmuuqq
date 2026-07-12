@@ -130,6 +130,12 @@ INSTALLED_APPS = [
     'social_django',
 ]
 
+# Force logging to verify INSTALLED_APPS
+import sys
+print(f"=== SETTINGS_PRODUCTION.PY LOADED ===", file=sys.stderr)
+print(f"INSTALLED_APPS: {INSTALLED_APPS}", file=sys.stderr)
+print(f"Properties in INSTALLED_APPS: {'properties' in INSTALLED_APPS}", file=sys.stderr)
+
 # Log INSTALLED_APPS for debugging
 logger.info(f"INSTALLED_APPS: {INSTALLED_APPS}")
 logger.info(f"Properties in INSTALLED_APPS: {'properties' in INSTALLED_APPS}")

@@ -37,13 +37,20 @@ def main():
     print(f"DJANGO_SETTINGS_MODULE={os.getenv('DJANGO_SETTINGS_MODULE')}", flush=True)
     print(f"PYTHONPATH={os.getenv('PYTHONPATH')}", flush=True)
     
+    # Check which settings file is being used
+    import django.conf
+    print(f"Django settings module: {django.conf.settings.SETTINGS_MODULE}", flush=True)
+    
     # Check if settings.py file contains properties app
-    settings_file = os.path.join(project_root, 'dalal_project', 'settings.py')
+    settings_file = os.path.join(project_root, 'dalal_project', 'settings_production.py')
     if os.path.exists(settings_file):
         with open(settings_file, 'r') as f:
             settings_content = f.read()
-            print(f"Settings.py contains 'properties': {'properties' in settings_content}", flush=True)
-            print(f"Settings.py contains 'INSTALLED_APPS': {'INSTALLED_APPS' in settings_content}", flush=True)
+            print(f"Settings_production.py exists: True", flush=True)
+            print(f"Settings_production.py contains 'properties': {'properties' in settings_content}", flush=True)
+            print(f"Settings_production.py contains 'INSTALLED_APPS': {'INSTALLED_APPS' in settings_content}", flush=True)
+    else:
+        print(f"Settings_production.py exists: False", flush=True)
 
     # Check if properties app is in INSTALLED_APPS
     try:
