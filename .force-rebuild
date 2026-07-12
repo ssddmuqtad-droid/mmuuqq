@@ -1,3 +1,4 @@
 # Force Railway to rebuild with latest configuration
 # Updated to force rebuild after ALLOWED_HOSTS changes
 # Force rebuild - channel_users URL fix
+# Force rebuild - 2026-07-12-15-27 - Fix migrations
