@@ -39,8 +39,8 @@ urlpatterns = [
     path('direct-home/', lambda request: __import__('properties.views').home(request), name='direct-home'),
     # Test if properties app is loaded
     path('check-apps/', lambda request: JsonResponse({'apps': [app.name for app in __import__('django.conf').settings.INSTALLED_APPS], 'properties': 'properties' in [app.name for app in __import__('django.conf').settings.INSTALLED_APPS]}), name='check-apps'),
-    # Check migrations
-    path('check-migrations/', lambda request: JsonResponse({'migrations': __import__('django.core.management').call_command('showmigrations', 'properties', verbosity=0)}), name='check-migrations'),
+    # Check database connection
+    path('check-db/', lambda request: JsonResponse({'db': str(__import__('django.conf').settings.DATABASES['default']['ENGINE'])}), name='check-db'),
     path('', include('properties.urls')),
     path('admin/', admin.site.urls),
     path('api/', include('properties.api_urls')),
