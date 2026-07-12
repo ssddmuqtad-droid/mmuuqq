@@ -55,6 +55,7 @@ if not ALLOWED_HOSTS:
 
 ALLOWED_HOSTS = _unique(ALLOWED_HOSTS + [
     '.railway.app',
+    'mup.up.railway.app',
     'muq.up.railway.app',
     'muqq.up.railway.app',
     'healthcheck.railway.app',
@@ -87,6 +88,7 @@ if DEBUG:
     SESSION_COOKIE_SECURE = False
 else:
     CSRF_TRUSTED_ORIGINS = _unique([
+        'https://mup.up.railway.app',
         'https://muq.up.railway.app',
         'https://muqq.up.railway.app',
     ] + _parse_csv_env('CSRF_TRUSTED_ORIGINS'))
