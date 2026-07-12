@@ -35,6 +35,8 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    # Direct path to home view
+    path('', lambda request: __import__('properties.views').home(request), name='home'),
     # Direct test of properties.home view
     path('direct-home/', lambda request: __import__('properties.views').home(request), name='direct-home'),
     # Test if properties app is loaded
@@ -48,7 +50,7 @@ urlpatterns = [
     # Check if properties models can be imported
     path('check-models/', lambda request: JsonResponse({'models': 'Property' in dir(__import__('properties.models'))}), name='check-models'),
     # Include properties URLs
-    path('', include('properties.urls')),
+    path('properties/', include('properties.urls')),
     path('admin/', admin.site.urls),
     path('api/', include('properties.api_urls')),
     # Social Authentication
