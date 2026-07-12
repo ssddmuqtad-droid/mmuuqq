@@ -22,6 +22,12 @@ COPY . .
 
 RUN mkdir -p /app/logs /app/media /app/staticfiles
 
+# Check if settings.py was copied successfully
+RUN if [ ! -f /app/dalal_project/settings.py ]; then echo "ERROR: settings.py not found"; exit 1; fi
+RUN echo "Settings.py exists: $(ls -la /app/dalal_project/settings.py)"
+RUN echo "Properties app exists: $(ls -la /app/properties/ 2>/dev/null || echo 'NOT FOUND')"
+RUN echo "Settings.py contains properties: $(grep -c 'properties' /app/dalal_project/settings.py || echo '0')"
+
 EXPOSE 8080
 
 ENTRYPOINT ["./entrypoint.sh"]
