@@ -43,6 +43,9 @@ urlpatterns = [
     path('check-db/', lambda request: JsonResponse({'db': str(__import__('django.conf').settings.DATABASES['default']['ENGINE'])}), name='check-db'),
     # Direct home test
     path('home-test/', lambda request: __import__('properties.views').home(request), name='home-test'),
+    # Direct path to home view
+    path('home-direct/', lambda request: __import__('properties.views').home(request), name='home-direct'),
+    # Include properties URLs
     path('', include('properties.urls')),
     path('admin/', admin.site.urls),
     path('api/', include('properties.api_urls')),
