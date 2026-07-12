@@ -129,6 +129,10 @@ INSTALLED_APPS = [
     'social_django',
 ]
 
+# Log INSTALLED_APPS for debugging
+logger.info(f"INSTALLED_APPS: {INSTALLED_APPS}")
+logger.info(f"Properties in INSTALLED_APPS: {'properties' in INSTALLED_APPS}")
+
 MIDDLEWARE = [
     'properties.middleware.HealthCheckMiddleware',
     'django.middleware.security.SecurityMiddleware',
