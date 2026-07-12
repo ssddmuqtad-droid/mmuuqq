@@ -13,7 +13,10 @@ from drf_yasg import openapi
 from properties.sitemaps import PropertySitemap, StaticViewSitemap
 
 def health_check(request):
-    return JsonResponse({'status': 'healthy', 'service': 'dalal-backend'})
+    try:
+        return JsonResponse({'status': 'healthy', 'service': 'dalal-backend', 'time': str(timezone.now())})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'error': str(e)}, status=500)
 
 sitemaps = {
     'properties': PropertySitemap,
@@ -43,6 +46,8 @@ urlpatterns = [
     path('simple-test/', lambda request: JsonResponse({'status': 'ok', 'message': 'Simple test works'}), name='simple-test'),
     # Simple home view as main path
     path('', simple_home, name='home'),
+    # Health check endpoint (move to top for Railway healthcheck)
+    path('health/', health_check, name='health-check'),
     # Direct path to properties.home view
     path('properties-home/', lambda request: __import__('properties.views').home(request), name='properties-home'),
     # Direct test of properties.home view
@@ -63,8 +68,6 @@ urlpatterns = [
     path('api/', include('properties.api_urls')),
     # Social Authentication
     path('social/', include('social_django.urls', namespace='social')),
-    # Health check endpoint
-    path('health/', health_check, name='health-check'),
     # Test endpoint
     path('test/', lambda request: JsonResponse({'status': 'ok', 'app': 'dalal', 'time': str(timezone.now())}), name='test'),
     # Simple test page
