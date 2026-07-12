@@ -1,6 +1,7 @@
 """
 Django settings for dalal_project — production-ready configuration.
 Supports SQLite (dev) and PostgreSQL (production) via environment variables.
+Updated: 2026-07-12-16-22 - Force Railway rebuild
 """
 
 import os
