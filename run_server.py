@@ -44,6 +44,16 @@ def main():
     print("Running migrate...", flush=True)
     run([sys.executable, 'manage.py', 'migrate', '--noinput'])
     
+    # Check if properties migrations were applied
+    try:
+        from django.core.management import call_command
+        from io import StringIO
+        output = StringIO()
+        call_command('showmigrations', 'properties', verbosity=0, stdout=output)
+        print(f"Properties migrations status: {output.getvalue()[:200]}", flush=True)
+    except Exception as e:
+        print(f"Error checking migrations: {e}", flush=True)
+    
     print("Running collectstatic...", flush=True)
     run([sys.executable, 'manage.py', 'collectstatic', '--noinput'])
 
