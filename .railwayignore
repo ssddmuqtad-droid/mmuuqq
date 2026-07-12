@@ -6,3 +6,6 @@ server.js
 package.json.backup
 *.lnk
 *.backup
+
+# DO NOT IGNORE properties app
+!properties/

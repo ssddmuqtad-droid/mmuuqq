@@ -80,10 +80,3 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
-# DO NOT IGNORE THESE - they are needed for Railway
-!dalal_project/settings_production.py
-!dalal_project/settings.py
-!properties/
-!nixpacks.toml
-!railway.toml
