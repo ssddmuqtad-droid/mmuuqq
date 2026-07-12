@@ -82,8 +82,12 @@ class MaintenanceModeMiddleware:
             return self.get_response(request)
 
         # Check maintenance mode status
-        from .models import SiteSettings
-        settings = SiteSettings.get_solo()
+        try:
+            from .models import SiteSettings
+            settings = SiteSettings.get_solo()
+        except Exception:
+            # If SiteSettings doesn't exist or database error, skip maintenance check
+            return self.get_response(request)
 
         if settings.maintenance_mode:
             # Check if admins are allowed during maintenance
