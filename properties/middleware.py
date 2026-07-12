@@ -17,6 +17,12 @@ class HealthCheckMiddleware:
                 'version': os.getenv('RAILWAY_GIT_COMMIT_SHA', 'unknown'),
                 'timestamp': timezone.now().isoformat(),
             }, status=200)
+        
+        # Log all requests for debugging
+        import logging
+        logger = logging.getLogger('django.request')
+        logger.info(f"HealthCheckMiddleware: Processing {request.path} - Host: {request.get_host()}")
+        
         return self.get_response(request)
 
 

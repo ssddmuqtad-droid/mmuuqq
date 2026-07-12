@@ -55,6 +55,7 @@ def get_client_ip(request):
 
 
 def home(request):
+    logger.info(f"Home view called - Path: {request.path}, Host: {request.get_host()}")
     properties = get_public_properties()
     form = PropertySearchForm(request.GET)
     properties = filter_properties(properties, request.GET)
@@ -78,6 +79,7 @@ def home(request):
     
     query_string = request.GET.urlencode()
     
+    logger.info(f"Rendering home.html with {len(page_obj)} properties")
     return render(request, 'properties/home.html', {
         'properties': page_obj,
         'page_obj': page_obj,
@@ -280,7 +282,14 @@ def broker_profile(request, username):
 
 def broker_standalone_page(request, slug):
     """Display broker's standalone page with their properties only."""
-    broker = get_object_or_404(Broker, slug=slug, has_standalone_page=True)
+    broker = get_object_or_404(Broker, slug=slug)
+    
+    # Check if broker has standalone page enabled
+    if broker.page_display_mode not in ['standalone_only', 'both']:
+        # If not, show a message or redirect
+        from django.contrib import messages
+        messages.warning(request, 'هذا الدلال لم يفعّل الصفحة المستقلة بعد')
+        return redirect('home')
     
     # Get only this broker's properties
     properties = Property.objects.filter(
@@ -306,6 +315,33 @@ def broker_standalone_page(request, slug):
     days_elapsed = broker.get_days_elapsed()
     days_remaining = broker.get_days_remaining()
     
+    # Generate QR Code
+    import qrcode
+    from io import BytesIO
+    import base64
+    
+    # Build the full URL for the broker's standalone page
+    protocol = 'https' if request.is_secure() else 'http'
+    broker_url = f"{protocol}://{request.get_host()}/d/{broker.slug}/"
+    
+    # Generate QR code
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(broker_url)
+    qr.make(fit=True)
+    
+    # Create image
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Convert to base64
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    qr_image_base64 = base64.b64encode(buffer.getvalue()).decode()
+    
     return render(request, 'properties/broker_standalone_page.html', {
         'broker': broker,
         'properties': page_obj,
@@ -316,6 +352,7 @@ def broker_standalone_page(request, slug):
         'remaining_properties': remaining_properties,
         'days_elapsed': days_elapsed,
         'days_remaining': days_remaining,
+        'qr_code': qr_image_base64,
     })
 
 
@@ -325,38 +362,120 @@ def broker_standalone_settings(request):
     """Handle broker standalone page settings."""
     broker = get_broker(request.user)
     
+    # Generate auto slug if not exists
+    if not broker.slug:
+        # Generate slug from display name
+        import re
+        slug = re.sub(r'[^a-zA-Z0-9\s_-]', '', broker.display_name.lower())
+        slug = re.sub(r'\s+', '-', slug)
+        slug = re.sub(r'-+', '-', slug)
+        slug = slug.strip('-')
+        
+        # If still empty, use random
+        if not slug:
+            import random
+            import string
+            slug = 'broker-' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+        
+        # Ensure uniqueness
+        base_slug = slug
+        counter = 1
+        while Broker.objects.filter(slug=slug).exclude(id=broker.id).exists():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        
+        broker.slug = slug
+        broker.save()
+    
     if request.method == 'POST':
-        # Toggle standalone page
-        has_standalone_page = request.POST.get('has_standalone_page') == 'on'
-        broker.has_standalone_page = has_standalone_page
+        # Update page display mode
+        page_display_mode = request.POST.get('page_display_mode', 'main_only')
+        broker.page_display_mode = page_display_mode
         
-        # Update slug if provided
-        slug = request.POST.get('slug', '').strip()
-        if slug:
-            # Check if slug is unique
-            if Broker.objects.filter(slug=slug).exclude(id=broker.id).exists():
-                messages.error(request, 'هذا الرابط مستخدم بالفعل، اختر رابطاً آخر')
-                return redirect('broker_panel')
-            broker.slug = slug
+        # Update site information
+        broker.site_name = request.POST.get('site_name', '')
+        broker.job_title = request.POST.get('job_title', '')
+        broker.mission = request.POST.get('mission', '')
+        broker.vision = request.POST.get('vision', '')
+        broker.years_of_experience = int(request.POST.get('years_of_experience', 0)) if request.POST.get('years_of_experience') else 0
+        broker.clients_count = int(request.POST.get('clients_count', 0)) if request.POST.get('clients_count') else 0
+        broker.working_governorates = request.POST.get('working_governorates', '')
         
-        # Update cover image if provided
+        # Update contact information
+        broker.whatsapp = request.POST.get('whatsapp', '')
+        broker.telegram = request.POST.get('telegram', '')
+        broker.email = request.POST.get('email', '')
+        broker.website = request.POST.get('website', '')
+        broker.address = request.POST.get('address', '')
+        broker.working_hours = request.POST.get('working_hours', '')
+        broker.google_maps_url = request.POST.get('google_maps_url', '')
+        
+        # Update social media
+        broker.facebook = request.POST.get('facebook', '')
+        broker.instagram = request.POST.get('instagram', '')
+        broker.tiktok = request.POST.get('tiktok', '')
+        broker.snapchat = request.POST.get('snapchat', '')
+        broker.twitter = request.POST.get('twitter', '')
+        broker.youtube = request.POST.get('youtube', '')
+        broker.linkedin = request.POST.get('linkedin', '')
+        
+        # Update SEO
+        broker.seo_title = request.POST.get('seo_title', '')
+        broker.seo_description = request.POST.get('seo_description', '')
+        broker.seo_keywords = request.POST.get('seo_keywords', '')
+        
+        # Update customization
+        broker.page_color = request.POST.get('page_color', '#FF7A00')
+        broker.button_color = request.POST.get('button_color', '#FF7A00')
+        broker.text_color = request.POST.get('text_color', '#333333')
+        broker.background_color = request.POST.get('background_color', '#FFFFFF')
+        broker.font_family = request.POST.get('font_family', 'Cairo')
+        
+        # Update display settings
+        broker.show_phone = request.POST.get('show_phone') == 'on'
+        broker.show_email = request.POST.get('show_email') == 'on'
+        broker.show_whatsapp = request.POST.get('show_whatsapp') == 'on'
+        broker.show_social_media = request.POST.get('show_social_media') == 'on'
+        broker.show_address = request.POST.get('show_address') == 'on'
+        broker.show_properties = request.POST.get('show_properties') == 'on'
+        broker.show_stats = request.POST.get('show_stats') == 'on'
+        broker.show_ratings = request.POST.get('show_ratings') == 'on'
+        broker.show_working_hours = request.POST.get('show_working_hours') == 'on'
+        
+        # Update images if provided
+        if 'logo' in request.FILES:
+            broker.logo = request.FILES['logo']
         if 'cover_image' in request.FILES:
             broker.cover_image = request.FILES['cover_image']
+        if 'profile_image' in request.FILES:
+            broker.profile_image = request.FILES['profile_image']
+        if 'og_image' in request.FILES:
+            broker.og_image = request.FILES['og_image']
+        if 'background_image' in request.FILES:
+            broker.background_image = request.FILES['background_image']
+        if 'banner_image' in request.FILES:
+            broker.banner_image = request.FILES['banner_image']
         
         # Update bio
-        bio = request.POST.get('bio', '').strip()
-        broker.bio = bio
+        broker.bio = request.POST.get('bio', '').strip()
         
         broker.save()
         
-        if has_standalone_page:
-            messages.success(request, 'تم تفعيل الصفحة المستقلة بنجاح')
-        else:
-            messages.success(request, 'تم إلغاء الصفحة المستقلة')
+        messages.success(request, 'تم حفظ الإعدادات بنجاح')
         
         return redirect('broker_panel')
     
-    return redirect('broker_panel')
+    # Generate auto slug for display
+    import re
+    broker_slug_auto = re.sub(r'[^a-zA-Z0-9\s_-]', '', broker.display_name.lower())
+    broker_slug_auto = re.sub(r'\s+', '-', broker_slug_auto)
+    broker_slug_auto = re.sub(r'-+', '-', broker_slug_auto)
+    broker_slug_auto = broker_slug_auto.strip('-') or 'ahmed-broker'
+    
+    return render(request, 'properties/broker_standalone_settings.html', {
+        'broker': broker,
+        'broker_slug_auto': broker_slug_auto,
+    })
 
 
 def login_view(request):
