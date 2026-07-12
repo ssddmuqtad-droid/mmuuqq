@@ -10,8 +10,10 @@ os.environ['USE_WEBSOCKETS'] = 'false'
 
 def run(cmd, allow_fail=False):
     print(f">>> {' '.join(str(c) for c in cmd)}", flush=True)
+    env = os.environ.copy()
+    env['PYTHONPATH'] = '/app'
     try:
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, env=env)
     except subprocess.CalledProcessError as e:
         if allow_fail:
             print(f"Warning: command failed (non-fatal): {e}. Continuing.", flush=True)
