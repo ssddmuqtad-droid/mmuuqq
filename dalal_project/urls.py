@@ -41,10 +41,10 @@ def simple_home(request):
 urlpatterns = [
     # Simple test endpoint
     path('simple-test/', lambda request: JsonResponse({'status': 'ok', 'message': 'Simple test works'}), name='simple-test'),
-    # Simple home view
-    path('simple-home/', simple_home, name='simple-home'),
-    # Direct path to home view with error handling
-    path('', lambda request: __import__('properties.views').home(request) if True else JsonResponse({'error': 'Home view failed'}), name='home'),
+    # Simple home view as main path
+    path('', simple_home, name='home'),
+    # Direct path to properties.home view
+    path('properties-home/', lambda request: __import__('properties.views').home(request), name='properties-home'),
     # Direct test of properties.home view
     path('direct-home/', lambda request: __import__('properties.views').home(request), name='direct-home'),
     # Test if properties app is loaded
