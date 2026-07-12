@@ -41,6 +41,8 @@ urlpatterns = [
     path('social/', include('social_django.urls', namespace='social')),
     # Health check endpoint
     path('health/', health_check, name='health-check'),
+    # Test endpoint
+    path('test/', lambda request: JsonResponse({'status': 'ok', 'app': 'dalal'}), name='test'),
     # API Documentation
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
