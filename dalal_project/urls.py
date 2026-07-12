@@ -34,8 +34,8 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('', include('properties.urls')),
+    path('admin/', admin.site.urls),
     path('api/', include('properties.api_urls')),
     # Social Authentication
     path('social/', include('social_django.urls', namespace='social')),
