@@ -42,12 +42,12 @@ def simple_home(request):
     return JsonResponse({'status': 'ok', 'message': 'Home works', 'time': str(timezone.now())})
 
 urlpatterns = [
+    # Health check endpoint (must be first for Railway healthcheck)
+    path('health/', health_check, name='health-check'),
     # Simple test endpoint
     path('simple-test/', lambda request: JsonResponse({'status': 'ok', 'message': 'Simple test works'}), name='simple-test'),
     # Simple home view as main path
     path('', simple_home, name='home'),
-    # Health check endpoint (move to top for Railway healthcheck)
-    path('health/', health_check, name='health-check'),
     # Direct path to properties.home view
     path('properties-home/', lambda request: __import__('properties.views').home(request), name='properties-home'),
     # Direct test of properties.home view
