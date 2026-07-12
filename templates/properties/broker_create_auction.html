@@ -1,0 +1,277 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}إنشاء مزاد جديد{% endblock %}
+{% block dashboard_title %}إنشاء مزاد <span>جديد</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'broker_auctions' %}" class="btn btn-outline">المزادات</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="padding: 28px;">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" class="auction-form">
+    {% csrf_token %}
+    
+    <div class="form-section">
+      <h3>🏠 معلومات العقار</h3>
+      
+      <div class="form-group">
+        <label for="property">العقار *</label>
+        <select name="property" id="property" class="form-control" required>
+          <option value="">اختر العقار</option>
+          {% for prop in properties %}
+          <option value="{{ prop.id }}">{{ prop.display_title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="auction_type">نوع المزاد *</label>
+        <select name="auction_type" id="auction_type" class="form-control" required>
+          <option value="">اختر نوع المزاد</option>
+          <option value="home">مزاد بيع منزل</option>
+          <option value="land">مزاد بيع أرض</option>
+          <option value="shop">مزاد بيع محل تجاري</option>
+          <option value="building">مزاد بيع عمارة</option>
+          <option value="investment">مزاد استثماري</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="form-section">
+      <h3>📝 معلومات المزاد</h3>
+      
+      <div class="form-group">
+        <label for="title">عنوان المزاد *</label>
+        <input type="text" name="title" id="title" class="form-control" required placeholder="أدخل عنوان المزاد">
+      </div>
+      
+      <div class="form-group">
+        <label for="description">وصف المزاد *</label>
+        <textarea name="description" id="description" class="form-control" rows="4" required placeholder="وصف تفصيلي للمزاد..."></textarea>
+      </div>
+    </div>
+    
+    <div class="form-section">
+      <h3>💰 الأسعار</h3>
+      
+      <div class="form-group">
+        <label for="starting_price">سعر البداية (د.ع) *</label>
+        <input type="number" name="starting_price" id="starting_price" class="form-control" required placeholder="مثال: 50000000">
+      </div>
+      
+      <div class="form-group">
+        <label for="minimum_increment">أقل زيادة (د.ع)</label>
+        <input type="number" name="minimum_increment" id="minimum_increment" class="form-control" placeholder="مثال: 100000" value="100000">
+      </div>
+      
+      <div class="form-group">
+        <label for="reserve_price">السعر الاحتياطي (د.ع)</label>
+        <input type="number" name="reserve_price" id="reserve_price" class="form-control" placeholder="الحد الأدنى للبيع">
+      </div>
+      
+      <div class="form-group">
+        <label for="deposit_amount">مبلغ التأمين للدخول (د.ع)</label>
+        <input type="number" name="deposit_amount" id="deposit_amount" class="form-control" placeholder="مثال: 1000000" value="0">
+      </div>
+    </div>
+    
+    <div class="form-section">
+      <h3>⏰ التوقيت</h3>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="start_date">تاريخ البداية *</label>
+          <input type="date" name="start_date" id="start_date" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="start_time">وقت البداية *</label>
+          <input type="time" name="start_time" id="start_time" class="form-control" required>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="end_date">تاريخ النهاية *</label>
+          <input type="date" name="end_date" id="end_date" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="end_time">وقت النهاية *</label>
+          <input type="time" name="end_time" id="end_time" class="form-control" required>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="auto_extend_minutes">التمديد التلقائي (دقائق)</label>
+        <input type="number" name="auto_extend_minutes" id="auto_extend_minutes" class="form-control" placeholder="مثال: 5" value="5">
+        <small>سيتم تمديد المزاد بهذا العدد من الدقائق إذا تم وضع مزايدة في الدقيقة الأخيرة</small>
+      </div>
+    </div>
+    
+    <div class="form-section">
+      <h3>🔐 الأمان والمشاركة</h3>
+      
+      <div class="form-group">
+        <label for="access_code">كود الدخول</label>
+        <input type="text" name="access_code" id="access_code" class="form-control" placeholder="اتركه فارغاً للتوليد التلقائي">
+        <small>سيتم توليد كود عشوائي إذا تركته فارغاً</small>
+      </div>
+      
+      <div class="form-group">
+        <label for="max_participants">الحد الأقصى للمشاركين</label>
+        <input type="number" name="max_participants" id="max_participants" class="form-control" placeholder="اتركه فارغاً لعدم التحديد">
+      </div>
+    </div>
+    
+    <div class="form-section">
+      <h3>📞 معلومات التواصل</h3>
+      
+      <div class="form-group">
+        <label for="contact_phone">رقم التواصل</label>
+        <input type="tel" name="contact_phone" id="contact_phone" class="form-control" placeholder="07XXXXXXXXX">
+      </div>
+      
+      <div class="form-group">
+        <label for="contact_email">بريد التواصل</label>
+        <input type="email" name="contact_email" id="contact_email" class="form-control" placeholder="example@email.com">
+      </div>
+    </div>
+    
+    <div class="form-section">
+      <h3>📋 الشروط</h3>
+      
+      <div class="form-group">
+        <label for="terms">شروط المزاد</label>
+        <textarea name="terms" id="terms" class="form-control" rows="4" placeholder="شروط وأحكام المزاد..."></textarea>
+      </div>
+    </div>
+    
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">🔨 إنشاء المزاد</button>
+      <a href="{% url 'broker_auctions' %}" class="btn btn-outline">إلغاء</a>
+    </div>
+  </form>
+</div>
+
+<style>
+.auction-form {
+  max-width: 800px;
+}
+
+.form-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.form-section h3 {
+  margin: 0 0 20px 0;
+  color: var(--text);
+  font-size: 1.2rem;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: white;
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text);
+  border: 2px solid var(--border);
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.btn-outline:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,298 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}مراقبة المستخدمين{% endblock %}
+{% block dashboard_title %}مراقبة <span>المستخدمين</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم الرئيسية</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="dashboard-grid">
+  <!-- إحصائيات المراقبة -->
+  <div class="card stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="stat-icon">👥</div>
+    <div class="stat-content">
+      <div class="stat-value">{{ total_users }}</div>
+      <div class="stat-label">إجمالي المستخدمين النشطين</div>
+    </div>
+  </div>
+
+  <div class="card stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+    <div class="stat-icon">🚫</div>
+    <div class="stat-content">
+      <div class="stat-value">{{ suspended_users }}</div>
+      <div class="stat-label">المستخدمين المعطلين</div>
+    </div>
+  </div>
+
+  <div class="card stat-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);">
+    <div class="stat-icon">⚠️</div>
+    <div class="stat-content">
+      <div class="stat-value">{{ active_warnings }}</div>
+      <div class="stat-label">الإنذارات النشطة</div>
+    </div>
+  </div>
+
+  <div class="card stat-card" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+    <div class="stat-icon">📊</div>
+    <div class="stat-content">
+      <div class="stat-value">{{ recent_actions|length }}</div>
+      <div class="stat-label">إجراءات المراقبة الأخيرة</div>
+    </div>
+  </div>
+</div>
+
+<!-- أدوات البحث والفلترة -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5>🔍 البحث والفلترة</h5>
+  </div>
+  <div class="card-body">
+    <form method="get" class="row g-3">
+      <div class="col-md-4">
+        <input type="text" name="search" class="form-control" placeholder="بحث بالاسم أو البريد الإلكتروني..." value="{{ search_query }}">
+      </div>
+      <div class="col-md-3">
+        <select name="status" class="form-select">
+          <option value="">جميع الحالات</option>
+          <option value="suspended" {% if status_filter == 'suspended' %}selected{% endif %}>المعطلين</option>
+          <option value="warned" {% if status_filter == 'warned' %}selected{% endif %}>المُنذرين</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">بحث</button>
+      </div>
+      <div class="col-md-3">
+        <a href="{% url 'user_moderation_panel' %}" class="btn btn-outline w-100">إعادة تعيين</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- قائمة المستخدمين -->
+<div class="card">
+  <div class="card-header">
+    <h5>👥 قائمة المستخدمين</h5>
+  </div>
+  <div class="card-body">
+    {% if users %}
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>المستخدم</th>
+              <th>الحالة</th>
+              <th>الإنذارات</th>
+              <th>آخر نشاط</th>
+              <th>الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user_data in users %}
+            <tr>
+              <td>
+                <div class="user-info">
+                  <strong>{{ user_data.user.username }}</strong>
+                  <small class="text-muted d-block">{{ user_data.user.email }}</small>
+                </div>
+              </td>
+              <td>
+                {% if user_data.is_suspended %}
+                  <span class="badge bg-danger">معطل</span>
+                {% else %}
+                  <span class="badge bg-success">نشط</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if user_data.warning_count > 0 %}
+                  <span class="badge bg-warning">{{ user_data.warning_count }} إنذار</span>
+                {% else %}
+                  <span class="badge bg-secondary">لا يوجد</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if user_data.recent_activity %}
+                  <small class="text-muted">{{ user_data.recent_activity.0.created_at|timesince }}</small>
+                {% else %}
+                  <small class="text-muted">لا يوجد نشاط</small>
+                {% endif %}
+              </td>
+              <td>
+                <div class="btn-group">
+                  <a href="{% url 'user_moderation_detail' user_data.user.id %}" class="btn btn-sm btn-outline-primary">عرض التفاصيل</a>
+                  <a href="{% url 'issue_user_warning' user_data.user.id %}" class="btn btn-sm btn-outline-warning">إنذار</a>
+                  {% if user_data.is_suspended %}
+                    <a href="{% url 'lift_suspension' user_data.user.id %}" class="btn btn-sm btn-outline-success">رفع التعطيل</a>
+                  {% else %}
+                    <a href="{% url 'suspend_user' user_data.user.id %}" class="btn btn-sm btn-outline-danger">تعطيل</a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-center py-5">
+        <div class="empty-icon">👥</div>
+        <h5>لا يوجد مستخدمين</h5>
+        <p class="text-muted">لم يتم العثور على مستخدمين يطابقون معايير البحث</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- إجراءات المراقبة الأخيرة -->
+<div class="card mt-4">
+  <div class="card-header">
+    <h5>📊 إجراءات المراقبة الأخيرة</h5>
+  </div>
+  <div class="card-body">
+    {% if recent_actions %}
+      <div class="timeline">
+        {% for action in recent_actions %}
+        <div class="timeline-item">
+          <div class="timeline-marker"></div>
+          <div class="timeline-content">
+            <div class="timeline-header">
+              <strong>{{ action.get_action_display }}</strong>
+              <small class="text-muted">{{ action.created_at|timesince }}</small>
+            </div>
+            <p class="mb-0">{{ action.reason }}</p>
+            <small class="text-muted">
+              المستخدم: {{ action.user.username }} | 
+              المشرف: {{ action.moderator.username|default:'النظام' }}
+            </small>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted text-center">لا توجد إجراءات مراقبة حديثة</p>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  padding: 25px;
+  border-radius: 12px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.stat-icon {
+  font-size: 2.5rem;
+}
+
+.stat-content .stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.stat-content .stat-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.user-info {
+  line-height: 1.4;
+}
+
+.table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.btn {
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.card {
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.timeline {
+  position: relative;
+  padding-right: 30px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e0e0e0;
+}
+
+.timeline-item {
+  position: relative;
+  padding-bottom: 20px;
+}
+
+.timeline-marker {
+  position: absolute;
+  right: -28px;
+  top: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #667eea;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px #667eea;
+}
+
+.timeline-content {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-right: 15px;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 15px;
+}
+</style>
+{% endblock %}

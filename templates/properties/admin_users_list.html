@@ -1,0 +1,122 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}إدارة المستخدمين{% endblock %}
+{% block dashboard_title %}إدارة <span>المستخدمين</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'admin_create_user' %}" class="btn btn-primary">➕ مستخدم جديد</a>
+<a href="{% url 'dashboard' %}?tab=users" class="btn btn-outline">لوحة التحكم</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="padding:0; overflow:hidden;">
+  <div class="card-header" style="padding:20px; border-bottom:1px solid var(--border);">
+    <div class="row align-items-center">
+      <div class="col-md-6">
+        <input type="text" id="searchUsers" class="form-control" placeholder="🔍 بحث عن مستخدم..." style="background:var(--bg-alt); border:1px solid var(--border);">
+      </div>
+      <div class="col-md-6 text-end">
+        <select id="filterType" class="form-control d-inline-block" style="width:auto; background:var(--bg-alt); border:1px solid var(--border);">
+          <option value="">جميع الأنواع</option>
+          <option value="admin">المديرين</option>
+          <option value="broker">الدلالين</option>
+          <option value="user">المستخدمين</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <table class="data-table" id="usersTable">
+    <thead>
+      <tr>
+        <th>المستخدم</th>
+        <th>البريد</th>
+        <th>النوع</th>
+        <th>الحالة</th>
+        <th>التاريخ</th>
+        <th>إجراءات</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr data-type="{{ user.user_type }}" data-name="{{ user.get_full_name|default:user.username }}" data-email="{{ user.email }}">
+        <td>
+          <div class="d-flex align-items-center">
+            <div class="user-avatar" style="width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; margin-left:10px;">
+              {{ user.get_full_name|default:user.username|slice:":1"|upper }}
+            </div>
+            <div>
+              <strong>{{ user.get_full_name|default:user.username }}</strong>
+              <small class="d-block text-muted">@{{ user.username }}</small>
+            </div>
+          </div>
+        </td>
+        <td>{{ user.email|default:'—' }}</td>
+        <td>
+          <span class="badge {% if user.user_type == 'admin' %}bg-danger{% elif user.user_type == 'broker' %}bg-primary{% else %}bg-secondary{% endif %}">
+            {% if user.user_type == 'admin' %}👑 مدير
+            {% elif user.user_type == 'broker' %}👔 دلال
+            {% elif user.user_type == 'user' %}👤 مستخدم
+            {% else %}❓ غير معروف{% endif %}
+          </span>
+        </td>
+        <td>
+          <span class="badge {% if user.is_active %}bg-success{% else %}bg-warning{% endif %}">
+            {% if user.is_active %}✓ نشط{% else %}✗ غير نشط{% endif %}
+          </span>
+        </td>
+        <td>{{ user.date_joined|date:"Y/m/d" }}</td>
+        <td style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a href="{% url 'admin_edit_user' user.id %}" class="btn btn-sm btn-outline" title="تعديل">✏️</a>
+          <a href="{% url 'admin_reset_password' user.id %}" class="btn btn-sm btn-outline" title="كلمة المرور">🔑</a>
+          <a href="{% url 'admin_change_user_type' user.id %}" class="btn btn-sm btn-outline" title="تغيير النوع">🔄</a>
+          <a href="{% url 'admin_toggle_user' user.id %}" class="btn btn-sm {% if user.is_active %}btn-warning{% else %}btn-success{% endif %}" title="{% if user.is_active %}تعطيل{% else %}تفعيل{% endif %}">
+            {% if user.is_active %}🔒{% else %}🔓{% endif %}
+          </a>
+          <a href="{% url 'admin_delete_user' user.id %}" class="btn btn-sm btn-danger" title="حذف">🗑️</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center; padding:40px;">لا يوجد مستخدمين</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<style>
+.user-avatar {
+  flex-shrink: 0;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('searchUsers');
+  const filterSelect = document.getElementById('filterType');
+  const table = document.getElementById('usersTable');
+  const rows = table.querySelectorAll('tbody tr');
+
+  function filterTable() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const filterType = filterSelect.value;
+
+    rows.forEach(row => {
+      const name = row.dataset.name.toLowerCase();
+      const email = row.dataset.email.toLowerCase();
+      const type = row.dataset.type;
+
+      const matchesSearch = name.includes(searchTerm) || email.includes(searchTerm);
+      const matchesType = filterType === '' || type === filterType;
+
+      if (matchesSearch && matchesType) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+
+  searchInput.addEventListener('input', filterTable);
+  filterSelect.addEventListener('change', filterTable);
+});
+</script>
+{% endblock %}

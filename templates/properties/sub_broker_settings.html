@@ -1,0 +1,89 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}الإعدادات - {{ broker.display_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>⚙️ الإعدادات</h1>
+                <div class="btn-group">
+                    <a href="{% url 'sub_broker_panel' %}" class="btn btn-outline-primary">الرئيسية</a>
+                    <a href="{% url 'sub_broker_commissions' %}" class="btn btn-outline-primary">العمولات</a>
+                    <a href="{% url 'sub_broker_properties' %}" class="btn btn-outline-primary">العقارات</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">إعدادات الملف الشخصي</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="bio" class="form-label">نبذة عنك</label>
+                            <textarea class="form-control" id="bio" name="bio" rows="4">{{ broker.bio }}</textarea>
+                            <small class="text-muted">اكتب نبذة مختصرة عنك وخبراتك في مجال العقارات</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="target_sales" class="form-label">هدف المبيعات الشهري</label>
+                            <input type="number" class="form-control" id="target_sales" name="target_sales" 
+                                   value="{{ broker.target_sales|default:'' }}" min="0">
+                            <small class="text-muted">حدد هدفك الشهري لعدد المبيعات</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">معلومات الحساب</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>الاسم:</strong> {{ broker.display_name }}</p>
+                    <p><strong>الهاتف:</strong> {{ broker.phone }}</p>
+                    <p><strong>المحافظة:</strong> {{ broker.governorate }}</p>
+                    {% if broker.office_name %}
+                    <p><strong>المكتب:</strong> {{ broker.office_name }}</p>
+                    {% endif %}
+                    <p><strong>الدلال الرئيسي:</strong> {{ broker.parent.display_name }}</p>
+                    <p><strong>تاريخ التسجيل:</strong> {{ broker.created_at|date:"Y-m-d" }}</p>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0">إعدادات العمولة</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>نوع العمولة:</strong> 
+                        {% if broker.commission_type == 'percentage' %}
+                            نسبة مئوية
+                        {% else %}
+                            مبلغ ثابت
+                        {% endif %}
+                    </p>
+                    {% if broker.commission_type == 'percentage' %}
+                    <p><strong>نسبة العمولة:</strong> {{ broker.commission_rate }}%</p>
+                    {% else %}
+                    <p><strong>العمولة الثابتة:</strong> {{ broker.fixed_commission }} د.ع</p>
+                    {% endif %}
+                    <p class="text-muted small">
+                        ملاحظة: هذه الإعدادات يديرها الدلال الرئيسي. 
+                        إذا كنت تريد تغييرها، تواصل مع الدلال الرئيسي.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

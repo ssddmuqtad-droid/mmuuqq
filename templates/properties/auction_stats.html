@@ -1,0 +1,9 @@
+{% extends 'properties/dashboard_base.html' %}
+{% block title %}إحصائيات المزاد{% endblock %}
+{% block dashboard_content %}
+<div class="stats-grid">
+  <div class="stat-card"><div class="stat-icon">📊</div><div><div class="stat-value">{{ stats.total_bids|default:0 }}</div><div class="stat-label">المزايدات</div></div></div>
+  <div class="stat-card"><div class="stat-icon">👥</div><div><div class="stat-value">{{ stats.participants|default:0 }}</div><div class="stat-label">المشاركون</div></div></div>
+</div>
+<a href="{% url 'auction_detail' auction.id %}" class="btn btn-outline">العودة للمزاد</a>
+{% endblock %}

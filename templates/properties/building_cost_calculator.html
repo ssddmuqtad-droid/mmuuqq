@@ -1,0 +1,363 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}حاسبة تكلفة البناء{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="calculator-page">
+    <div class="page-header">
+      <h1>🧮 حاسبة تكلفة البناء</h1>
+      <p>احسب تكلفة بناء منزلك حسب المنطقة في العراق</p>
+    </div>
+
+    <div class="calculator-layout">
+      <div class="calculator-form">
+        <div class="form-section">
+          <h3>معلومات البناء</h3>
+          <div class="form-group">
+            <label for="district">المنطقة</label>
+            <input type="text" id="district" class="form-control" placeholder="اكتب اسم المنطقة">
+          </div>
+
+          <div class="form-group">
+            <label for="area">مساحة البناء (متر مربع)</label>
+            <input type="number" id="area" class="form-control" placeholder="مثال: 300">
+          </div>
+
+          <div class="form-group">
+            <label for="floors">عدد الطوابق</label>
+            <input type="number" id="floors" class="form-control" placeholder="مثال: 2" value="1">
+          </div>
+
+          <div class="form-group">
+            <label for="finishing_level">مستوى التشطيب</label>
+            <select id="finishing_level" class="form-control">
+              <option value="economy">اقتصادي</option>
+              <option value="medium" selected>متوسط</option>
+              <option value="luxury">فاخر</option>
+              <option value="super_deluxe">سوبر ديلوكس</option>
+            </select>
+          </div>
+
+          <div class="checkbox-group">
+            <div class="checkbox-item">
+              <input type="checkbox" id="has_garage" class="form-check-input">
+              <label for="has_garage">كراج</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="has_garden" class="form-check-input">
+              <label for="has_garden">حديقة</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="has_elevator" class="form-check-input">
+              <label for="has_elevator">مصعد</label>
+            </div>
+          </div>
+
+          <button type="button" onclick="calculateCost()" class="btn btn-primary btn-lg btn-block">
+            <span class="btn-icon">🧮</span>
+            <span>احسب التكلفة</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="calculator-result">
+        <div class="result-card">
+          <h3>نتيجة الحساب</h3>
+          <div class="result-item">
+            <span class="label">تكلفة المتر المربع:</span>
+            <span class="value" id="cost_per_sqm">-</span>
+          </div>
+          <div class="result-item">
+            <span class="label">مساحة البناء الكلية:</span>
+            <span class="value" id="total_area">-</span>
+          </div>
+          <div class="result-item">
+            <span class="label">تكلفة الهيكل:</span>
+            <span class="value" id="structure_cost">-</span>
+          </div>
+          <div class="result-item">
+            <span class="label">تكلفة التشطيب:</span>
+            <span class="value" id="finishing_cost">-</span>
+          </div>
+          <div class="result-item highlight">
+            <span class="label">التكلفة الإجمالية:</span>
+            <span class="value" id="total_cost">-</span>
+          </div>
+          <div class="result-note">
+            <p>⚠️ هذه تقديرات تقريبية وقد تختلف حسب الأسعار الحالية</p>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <h3>معلومات إضافية</h3>
+          <ul>
+            <li>التكلفة تشمل: الهيكل، التشطيب، الكهرباء، السباكة</li>
+            <li>لا تشمل: تكلفة الأرض، الأثاث، الأجهزة</li>
+            <li>الأسعار قد تختلف حسب نوع المواد واليد العاملة</li>
+            <li>يُنصح بالحصول على عروض من عدة مقاولين</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// سعر المتر المربع في الناصرية (ذي قار)
+const NASIRIYAH_BASE_RATE = 600000;
+
+const FINISHING_MULTIPLIERS = {
+  economy: 0.7,
+  medium: 1.0,
+  luxury: 1.5,
+  super_deluxe: 2.0
+};
+
+const EXTRA_COSTS = {
+  garage: 50000000,
+  garden: 30000000,
+  elevator: 80000000
+};
+
+function formatPrice(price) {
+  return price.toLocaleString('ar-IQ') + ' د.ع';
+}
+
+function calculateCost() {
+  const district = document.getElementById('district').value;
+  const area = parseFloat(document.getElementById('area').value);
+  const floors = parseInt(document.getElementById('floors').value) || 1;
+  const finishingLevel = document.getElementById('finishing_level').value;
+  const hasGarage = document.getElementById('has_garage').checked;
+  const hasGarden = document.getElementById('has_garden').checked;
+  const hasElevator = document.getElementById('has_elevator').checked;
+
+  if (!area || area <= 0) {
+    alert('يرجى إدخال مساحة البناء');
+    return;
+  }
+
+  const totalArea = area * floors;
+  const finishingMultiplier = FINISHING_MULTIPLIERS[finishingLevel];
+  
+  const costPerSqm = NASIRIYAH_BASE_RATE * finishingMultiplier;
+  const structureCost = totalArea * costPerSqm * 0.6;
+  const finishingCost = totalArea * costPerSqm * 0.4;
+  
+  let totalCost = structureCost + finishingCost;
+  
+  if (hasGarage) totalCost += EXTRA_COSTS.garage;
+  if (hasGarden) totalCost += EXTRA_COSTS.garden;
+  if (hasElevator) totalCost += EXTRA_COSTS.elevator;
+
+  document.getElementById('cost_per_sqm').textContent = formatPrice(costPerSqm);
+  document.getElementById('total_area').textContent = totalArea.toLocaleString('ar-IQ') + ' متر مربع';
+  document.getElementById('structure_cost').textContent = formatPrice(structureCost);
+  document.getElementById('finishing_cost').textContent = formatPrice(finishingCost);
+  document.getElementById('total_cost').textContent = formatPrice(totalCost);
+}
+</script>
+
+<style>
+.calculator-page {
+  margin: 40px 0;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.page-header h1 {
+  font-size: 2.5rem;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.page-header p {
+  color: var(--text-light);
+  font-size: 1.1rem;
+}
+
+.calculator-layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 32px;
+}
+
+.calculator-form {
+  background: var(--bg);
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.3rem;
+  color: var(--text);
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--primary);
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-alt);
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.checkbox-item label {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.calculator-result {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.result-card,
+.info-card {
+  background: var(--bg);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.result-card h3,
+.info-card h3 {
+  margin: 0 0 20px 0;
+  font-size: 1.2rem;
+  color: var(--text);
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--primary);
+}
+
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.result-item.highlight {
+  background: var(--primary);
+  color: white;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  margin-top: 16px;
+}
+
+.result-item.highlight .label,
+.result-item.highlight .value {
+  color: white;
+}
+
+.result-item .label {
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.result-item .value {
+  color: var(--text);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.result-note {
+  margin-top: 16px;
+  padding: 12px;
+  background: #fef3c7;
+  border-radius: var(--radius-md);
+  border: 1px solid #f59e0b;
+}
+
+.result-note p {
+  margin: 0;
+  color: #92400e;
+  font-size: 0.9rem;
+}
+
+.info-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.info-card li {
+  padding: 8px 0;
+  padding-right: 24px;
+  position: relative;
+  color: var(--text-light);
+  line-height: 1.6;
+}
+
+.info-card li::before {
+  content: "•";
+  position: absolute;
+  right: 0;
+  color: var(--primary);
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+@media (max-width: 1024px) {
+  .calculator-layout {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,1126 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page.name }} - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="hotel-page-detail-container">
+    <!-- Cover Image -->
+    <div class="cover-section">
+        {% if page.cover_image %}
+            <img src="{{ page.cover_image.url }}" alt="{{ page.name }}" class="cover-image">
+        {% else %}
+            <div class="cover-placeholder">
+                <i class="fas fa-hotel"></i>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Page Header -->
+    <div class="page-header-section">
+        <div class="container">
+            <div class="page-header">
+                <div class="logo-section">
+                    {% if page.logo %}
+                        <img src="{{ page.logo.url }}" alt="{{ page.name }}" class="page-logo">
+                    {% else %}
+                        <div class="logo-placeholder">
+                            <i class="fas fa-building"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="page-info">
+                    <div class="page-name-row">
+                        <h1 class="page-name">{{ page.name }}</h1>
+                        {% if page.is_verified %}
+                            <span class="verified-badge"><i class="fas fa-check-circle"></i> موثق</span>
+                        {% endif %}
+                    </div>
+                    <p class="page-type">{{ page.get_page_type_display }}</p>
+                    <p class="page-location">
+                        <i class="fas fa-map-marker-alt"></i> {{ page.city }}, {{ page.get_governorate_display }}
+                    </p>
+                </div>
+                <div class="page-actions">
+                    {% if user.is_authenticated %}
+                        {% if is_following %}
+                            <a href="{% url 'hotel_page_unfollow' page.slug %}" class="btn btn-secondary">
+                                <i class="fas fa-user-minus"></i> إلغاء المتابعة
+                            </a>
+                        {% else %}
+                            <a href="{% url 'hotel_page_follow' page.slug %}" class="btn btn-primary">
+                                <i class="fas fa-user-plus"></i> متابعة
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'login' %}" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i> متابعة
+                        </a>
+                    {% endif %}
+                    <a href="#" class="btn btn-outline-secondary">
+                        <i class="fas fa-share-alt"></i> مشاركة
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <i class="fas fa-users"></i>
+                    <span class="stat-value">{{ page.followers_count }}</span>
+                    <span class="stat-label">متابع</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-file-alt"></i>
+                    <span class="stat-value">{{ page.posts_count }}</span>
+                    <span class="stat-label">منشور</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-bed"></i>
+                    <span class="stat-value">{{ page.rooms_count }}</span>
+                    <span class="stat-label">غرفة</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-percent"></i>
+                    <span class="stat-value">{{ page.offers_count }}</span>
+                    <span class="stat-label">عرض</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-eye"></i>
+                    <span class="stat-value">{{ page.views_count }}</span>
+                    <span class="stat-label">مشاهدة</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-star"></i>
+                    <span class="stat-value">{{ page.rating }}</span>
+                    <span class="stat-label">تقييم</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <div class="row">
+                <!-- Left Column -->
+                <div class="col-lg-8">
+                    <!-- Tabs -->
+                    <div class="tabs-section">
+                        <ul class="nav nav-tabs" id="pageTabs" role="tablist">
+                            <li class="nav-item">
+                                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#posts" type="button">
+                                    <i class="fas fa-file-alt"></i> المنشورات
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#rooms" type="button">
+                                    <i class="fas fa-bed"></i> الغرف
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#offers" type="button">
+                                    <i class="fas fa-percent"></i> العروض
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#gallery" type="button">
+                                    <i class="fas fa-images"></i> المعرض
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#reviews" type="button">
+                                    <i class="fas fa-star"></i> التقييمات
+                                </button>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="pageTabsContent">
+                            <!-- Posts Tab -->
+                            <div class="tab-pane fade show active" id="posts">
+                                {% for post in posts %}
+                                <div class="post-card">
+                                    <div class="post-header">
+                                        <div class="post-author">
+                                            {% if page.logo %}
+                                                <img src="{{ page.logo.url }}" alt="{{ page.name }}" class="author-avatar">
+                                            {% else %}
+                                                <div class="avatar-placeholder">
+                                                    <i class="fas fa-building"></i>
+                                                </div>
+                                            {% endif %}
+                                            <div class="author-info">
+                                                <h4 class="author-name">{{ page.name }}</h4>
+                                                <p class="post-time">{{ post.created_at|date:"F j, Y" }}</p>
+                                            </div>
+                                        </div>
+                                        <span class="post-type">{{ post.get_post_type_display }}</span>
+                                    </div>
+                                    <div class="post-content">
+                                        <h3 class="post-title">{{ post.title }}</h3>
+                                        <p class="post-text">{{ post.content }}</p>
+                                        {% if post.images %}
+                                        <div class="post-images">
+                                            {% for image in post.images %}
+                                            <img src="{{ image }}" alt="Post Image">
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        {% if post.price %}
+                                        <div class="post-price">
+                                            <span class="price-value">{{ post.price }} {{ post.currency }}</span>
+                                            {% if post.discount_percentage %}
+                                            <span class="discount-badge">-{{ post.discount_percentage }}%</span>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="post-footer">
+                                        <div class="post-stats">
+                                            <span><i class="fas fa-eye"></i> {{ post.views_count }}</span>
+                                            <span><i class="fas fa-heart"></i> {{ post.likes_count }}</span>
+                                            <span><i class="fas fa-comment"></i> {{ post.comments_count }}</span>
+                                            <span><i class="fas fa-share"></i> {{ post.shares_count }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="no-posts">
+                                    <i class="fas fa-file-alt"></i>
+                                    <p>لا توجد منشورات بعد</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- Rooms Tab -->
+                            <div class="tab-pane fade" id="rooms">
+                                <div class="rooms-grid">
+                                    {% for room in rooms %}
+                                    <div class="room-card">
+                                        <div class="room-image">
+                                            {% if room.images %}
+                                                <img src="{{ room.images.0 }}" alt="{{ room.title }}">
+                                            {% else %}
+                                                <div class="placeholder">
+                                                    <i class="fas fa-bed"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="room-body">
+                                            <h4 class="room-title">{{ room.title }}</h4>
+                                            <p class="room-type">{{ room.get_room_type_display }}</p>
+                                            <div class="room-price">
+                                                <span class="price">{{ room.price_per_night }} {{ room.currency }}</span>
+                                                <span class="per-night">/ ليلة</span>
+                                            </div>
+                                            <div class="room-capacity">
+                                                <span><i class="fas fa-user"></i> {{ room.max_adults }} بالغين</span>
+                                                <span><i class="fas fa-child"></i> {{ room.max_children }} أطفال</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="no-rooms">
+                                        <i class="fas fa-bed"></i>
+                                        <p>لا توجد غرف متاحة</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Offers Tab -->
+                            <div class="tab-pane fade" id="offers">
+                                <div class="offers-grid">
+                                    {% for offer in offers %}
+                                    <div class="offer-card">
+                                        <div class="offer-badge">{{ offer.get_offer_type_display }}</div>
+                                        <div class="offer-image">
+                                            {% if offer.images %}
+                                                <img src="{{ offer.images.0 }}" alt="{{ offer.title }}">
+                                            {% else %}
+                                                <div class="placeholder">
+                                                    <i class="fas fa-percent"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="offer-body">
+                                            <h4 class="offer-title">{{ offer.title }}</h4>
+                                            <p class="offer-description">{{ offer.description|truncatewords:15 }}</p>
+                                            <div class="offer-price">
+                                                <span class="original-price">{{ offer.original_price }} {{ offer.currency }}</span>
+                                                <span class="discounted-price">{{ offer.discounted_price }} {{ offer.currency }}</span>
+                                                <span class="discount">-{{ offer.discount_percentage }}%</span>
+                                            </div>
+                                            <div class="offer-validity">
+                                                <i class="fas fa-clock"></i>
+                                                <span>صالح من {{ offer.valid_from|date:"M j" }} إلى {{ offer.valid_until|date:"M j" }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="no-offers">
+                                        <i class="fas fa-percent"></i>
+                                        <p>لا توجد عروض متاحة</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Gallery Tab -->
+                            <div class="tab-pane fade" id="gallery">
+                                <div class="gallery-grid">
+                                    {% for image in page.gallery.all %}
+                                    <div class="gallery-item">
+                                        <img src="{{ image.image.url }}" alt="{{ image.caption }}">
+                                        {% if image.caption %}
+                                        <div class="gallery-caption">{{ image.caption }}</div>
+                                        {% endif %}
+                                    </div>
+                                    {% empty %}
+                                    <div class="no-gallery">
+                                        <i class="fas fa-images"></i>
+                                        <p>لا توجد صور في المعرض</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Reviews Tab -->
+                            <div class="tab-pane fade" id="reviews">
+                                <div class="reviews-section">
+                                    {% if user.is_authenticated %}
+                                    <div class="rating-form">
+                                        <h4>أضف تقييمك</h4>
+                                        <form method="post" action="{% url 'hotel_rating_create' page.slug %}">
+                                            {% csrf_token %}
+                                            <div class="rating-stars">
+                                                <label>
+                                                    <input type="radio" name="rating" value="5" required>
+                                                    <i class="fas fa-star"></i>
+                                                </label>
+                                                <label>
+                                                    <input type="radio" name="rating" value="4">
+                                                    <i class="fas fa-star"></i>
+                                                </label>
+                                                <label>
+                                                    <input type="radio" name="rating" value="3">
+                                                    <i class="fas fa-star"></i>
+                                                </label>
+                                                <label>
+                                                    <input type="radio" name="rating" value="2">
+                                                    <i class="fas fa-star"></i>
+                                                </label>
+                                                <label>
+                                                    <input type="radio" name="rating" value="1">
+                                                    <i class="fas fa-star"></i>
+                                                </label>
+                                            </div>
+                                            <textarea name="review" class="form-control" placeholder="اكتب مراجعتك..." rows="3"></textarea>
+                                            <button type="submit" class="btn btn-primary">إرسال التقييم</button>
+                                        </form>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="reviews-list">
+                                        {% for rating in page.ratings.all %}
+                                        <div class="review-card">
+                                            <div class="review-header">
+                                                <div class="reviewer-info">
+                                                    <div class="reviewer-avatar">
+                                                        <i class="fas fa-user"></i>
+                                                    </div>
+                                                    <div class="reviewer-details">
+                                                        <h5 class="reviewer-name">{{ rating.user.username }}</h5>
+                                                        <div class="review-rating">
+                                                    {% for i in rating.rating|times:5 %}
+                                                        <i class="fas fa-star"></i>
+                                                    {% endfor %}
+                                                    {% for i in rating.rating|times:5 %}
+                                                        <i class="far fa-star"></i>
+                                                    {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <span class="review-date">{{ rating.created_at|date:"M j, Y" }}</span>
+                                            </div>
+                                            {% if rating.review %}
+                                            <p class="review-text">{{ rating.review }}</p>
+                                            {% endif %}
+                                        </div>
+                                        {% empty %}
+                                        <div class="no-reviews">
+                                            <i class="fas fa-star"></i>
+                                            <p>لا توجد تقييمات بعد</p>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="col-lg-4">
+                    <!-- About Section -->
+                    <div class="sidebar-card about-card">
+                        <h3 class="card-title">عن {{ page.name }}</h3>
+                        <p class="card-description">{{ page.description }}</p>
+                        <div class="contact-info">
+                            {% if page.phone %}
+                            <div class="contact-item">
+                                <i class="fas fa-phone"></i>
+                                <span>{{ page.phone }}</span>
+                            </div>
+                            {% endif %}
+                            {% if page.whatsapp %}
+                            <div class="contact-item">
+                                <i class="fab fa-whatsapp"></i>
+                                <span>{{ page.whatsapp }}</span>
+                            </div>
+                            {% endif %}
+                            {% if page.email %}
+                            <div class="contact-item">
+                                <i class="fas fa-envelope"></i>
+                                <span>{{ page.email }}</span>
+                            </div>
+                            {% endif %}
+                            {% if page.website %}
+                            <div class="contact-item">
+                                <i class="fas fa-globe"></i>
+                                <a href="{{ page.website }}" target="_blank">{{ page.website }}</a>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if page.working_hours %}
+                        <div class="working-hours">
+                            <i class="fas fa-clock"></i>
+                            <span>{{ page.working_hours }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Location Section -->
+                    <div class="sidebar-card location-card">
+                        <h3 class="card-title">الموقع</h3>
+                        <p class="card-address">{{ page.address }}</p>
+                        {% if page.latitude and page.longitude %}
+                        <div class="map-container">
+                            <div id="hotel-map" style="height: 200px;"></div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="sidebar-card actions-card">
+                        <h3 class="card-title">إجراءات سريعة</h3>
+                        <div class="action-buttons">
+                            <a href="#" class="btn btn-outline-primary btn-block">
+                                <i class="fas fa-phone"></i> اتصل الآن
+                            </a>
+                            <a href="#" class="btn btn-outline-success btn-block">
+                                <i class="fab fa-whatsapp"></i> واتساب
+                            </a>
+                            <a href="#" class="btn btn-outline-info btn-block">
+                                <i class="fas fa-calendar"></i> احجز الآن
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if page.latitude and page.longitude %}
+<script>
+// Initialize map for hotel location
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof L !== 'undefined') {
+        var lat = parseFloat('{{ page.latitude }}');
+        var lng = parseFloat('{{ page.longitude }}');
+        var map = L.map('hotel-map').setView([lat, lng], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        L.marker([lat, lng]).addTo(map)
+            .bindPopup('{{ page.name|escapejs }}')
+            .openPopup();
+    }
+});
+</script>
+{% endif %}
+
+<style>
+.hotel-page-detail-container {
+    background: var(--bg-primary);
+    min-height: 100vh;
+}
+
+.cover-section {
+    height: 300px;
+    overflow: hidden;
+}
+
+.cover-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cover-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #ff8c42 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 5rem;
+    color: white;
+}
+
+.page-header-section {
+    background: var(--bg-secondary);
+    padding: 30px 0;
+    border-bottom: 1px solid var(--border-color);
+    margin-top: -50px;
+    position: relative;
+    z-index: 10;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.logo-section {
+    flex-shrink: 0;
+}
+
+.page-logo {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 4px solid var(--bg-primary);
+    object-fit: cover;
+}
+
+.logo-placeholder {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 4px solid var(--bg-primary);
+    background: var(--bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: var(--text-secondary);
+}
+
+.page-info {
+    flex: 1;
+}
+
+.page-name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.page-name {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.verified-badge {
+    background: #4CAF50;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+
+.page-type {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+}
+
+.page-location {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.page-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.stats-bar {
+    background: var(--bg-secondary);
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 20px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-item i {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.main-content {
+    padding: 40px 0;
+}
+
+.tabs-section {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.nav-tabs {
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
+}
+
+.nav-tabs .nav-link {
+    color: var(--text-secondary);
+    border: none;
+    padding: 15px 20px;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--primary-color);
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--primary-color);
+    background: var(--bg-secondary);
+    border-bottom: 3px solid var(--primary-color);
+}
+
+.tab-content {
+    padding: 30px;
+}
+
+.post-card {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.post-author {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.author-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.avatar-placeholder {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+}
+
+.author-name {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.post-time {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.post-type {
+    background: var(--primary-color);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.post-title {
+    font-size: 1.3rem;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.post-text {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.post-images {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.post-images img {
+    width: 100%;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.post-price {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.price-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.discount-badge {
+    background: #4CAF50;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+}
+
+.post-footer {
+    border-top: 1px solid var(--border-color);
+    padding-top: 15px;
+}
+
+.post-stats {
+    display: flex;
+    gap: 20px;
+    color: var(--text-secondary);
+}
+
+.post-stats span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.rooms-grid,
+.offers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.room-card,
+.offer-card {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.room-image,
+.offer-image {
+    height: 180px;
+    overflow: hidden;
+}
+
+.room-image img,
+.offer-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--text-secondary);
+}
+
+.room-body,
+.offer-body {
+    padding: 15px;
+}
+
+.room-title,
+.offer-title {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+.room-type {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.room-price {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.room-price .price {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.per-night {
+    color: var(--text-secondary);
+}
+
+.room-capacity {
+    display: flex;
+    gap: 15px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.offer-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--primary-color);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.offer-card {
+    position: relative;
+}
+
+.offer-description {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.offer-price {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.original-price {
+    text-decoration: line-through;
+    color: var(--text-secondary);
+}
+
+.discounted-price {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.discount {
+    background: #4CAF50;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.offer-validity {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.gallery-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.gallery-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 10px;
+    font-size: 0.9rem;
+}
+
+.rating-form {
+    background: var(--bg-primary);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color);
+}
+
+.rating-form h4 {
+    margin-bottom: 15px;
+    color: var(--text-primary);
+}
+
+.rating-stars {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 15px;
+}
+
+.rating-stars label {
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+}
+
+.rating-stars label input {
+    display: none;
+}
+
+.rating-stars label:hover,
+.rating-stars label:hover ~ label,
+.rating-stars input:checked ~ label {
+    color: #FFD700;
+}
+
+.rating-stars input:checked ~ label {
+    color: #FFD700;
+}
+
+.reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.review-card {
+    background: var(--bg-primary);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.reviewer-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.reviewer-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+}
+
+.reviewer-name {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.review-rating {
+    color: #FFD700;
+    font-size: 0.9rem;
+}
+
+.review-date {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.review-text {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.sidebar-card {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.card-title {
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.card-description {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary);
+}
+
+.contact-item a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.working-hours {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary);
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.card-address {
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+}
+
+.map-container {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.btn-block {
+    width: 100%;
+}
+
+.no-posts,
+.no-rooms,
+.no-offers,
+.no-gallery,
+.no-reviews {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--text-secondary);
+}
+
+.no-posts i,
+.no-rooms i,
+.no-offers i,
+.no-gallery i,
+.no-reviews i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .page-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .post-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}
+</style>
+{% endblock %}

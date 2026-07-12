@@ -1,0 +1,58 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}حذف المستخدم{% endblock %}
+{% block dashboard_title %}حذف <span>المستخدم</span>{% endblock %}
+{% block dashboard_subtitle %}
+<p style="margin:0;color:var(--text-muted);font-size:0.9rem;">{{ user.get_full_name|default:user.username }} — @{{ user.username }}</p>
+{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'admin_users_list' %}" class="btn btn-outline">← المستخدمين</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="delete-warning">
+  <div class="warning-icon">⚠️</div>
+  <h2>تحذير: هذا الإجراء لا يمكن التراجع عنه</h2>
+  <p>أنت على وشك حذف المستخدم <strong>{{ user.get_full_name|default:user.username }}</strong></p>
+</div>
+
+<div class="user-info-card">
+  <h3>معلومات المستخدم</h3>
+  <div class="info-row">
+    <span class="label">الاسم:</span>
+    <span class="value">{{ user.get_full_name|default:'غير محدد' }}</span>
+  </div>
+  <div class="info-row">
+    <span class="label">اسم المستخدم:</span>
+    <span class="value">@{{ user.username }}</span>
+  </div>
+  <div class="info-row">
+    <span class="label">البريد الإلكتروني:</span>
+    <span class="value">{{ user.email }}</span>
+  </div>
+  <div class="info-row">
+    <span class="label">تاريخ الإنشاء:</span>
+    <span class="value">{{ user.date_joined|date:"Y/m/d H:i" }}</span>
+  </div>
+  <div class="info-row">
+    <span class="label">نوع الحساب:</span>
+    <span class="value">
+      {% if user.is_superuser %}👑 مدير النظام
+      {% elif user.broker_profile %}👔 دلال
+      {% elif user.user_profile %}👤 مستخدم عادي
+      {% else %}❓ غير معروف{% endif %}
+    </span>
+  </div>
+</div>
+
+<div class="card" style="padding:24px;">
+  <form method="post" class="delete-form">
+    {% csrf_token %}
+    <div class="form-actions">
+      <button type="submit" class="btn btn-danger">🗑️ تأكيد الحذف</button>
+      <a href="{% url 'admin_users_list' %}" class="btn btn-outline">إلغاء</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

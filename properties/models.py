@@ -4448,6 +4448,8 @@ class Broker(models.Model):
     )
     is_verified = models.BooleanField(default=False, verbose_name='دلال موثق')
     is_active = models.BooleanField(default=True, verbose_name='نشط')
+    slug = models.SlugField(max_length=100, unique=True, blank=True, null=True, allow_unicode=True, verbose_name='رابط الصفحة')
+    has_standalone_page = models.BooleanField(default=False, verbose_name='صفحة مستقلة', help_text='تفعيل صفحة مستقلة للدلال لا تظهر عقاراته في الصفحة الرئيسية')
     
     # Subscription plan (for chat-based subscriptions only)
     subscription_plan = models.ForeignKey(

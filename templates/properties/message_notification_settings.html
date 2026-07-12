@@ -1,0 +1,253 @@
+{% extends "properties/base.html" %}
+{% load static %}
+
+{% block title %}إعدادات إشعارات الرسائل{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-info">
+      <h1>إعدادات إشعارات الرسائل</h1>
+      <p>تحكم في نوع الإشعارات التي تريد استلامها</p>
+    </div>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'broker_messaging' %}" class="btn btn-outline">← العودة للرسائل</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم</a>
+    </div>
+  </div>
+
+  <div class="settings-container">
+    <form method="post" class="settings-form">
+      {% csrf_token %}
+      
+      <!-- Notification Types -->
+      <div class="settings-section">
+        <h2>أنواع الإشعارات</h2>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="new_message_notifications" {% if settings.new_message_notifications %}checked{% endif %}>
+            <span>إشعارات الرسائل الجديدة</span>
+          </label>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="mention_notifications" {% if settings.mention_notifications %}checked{% endif %}>
+            <span>إشعارات الذكر (@mention)</span>
+          </label>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="reaction_notifications" {% if settings.reaction_notifications %}checked{% endif %}>
+            <span>إشعارات الردود الفعل على الرسائل</span>
+          </label>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="reply_notifications" {% if settings.reply_notifications %}checked{% endif %}>
+            <span>إشعارات الردود على رسائلك</span>
+          </label>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="group_mention_notifications" {% if settings.group_mention_notifications %}checked{% endif %}>
+            <span>إشعارات الذكر في المجموعات</span>
+          </label>
+        </div>
+      </div>
+      
+      <!-- Platform Preferences -->
+      <div class="settings-section">
+        <h2>تفضيلات المنصة</h2>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="in_app_notifications" {% if settings.in_app_notifications %}checked{% endif %}>
+            <span>إشعارات داخل التطبيق</span>
+          </label>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="browser_notifications" {% if settings.browser_notifications %}checked{% endif %}>
+            <span>إشعارات المتصفح</span>
+          </label>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="email_notifications" {% if settings.email_notifications %}checked{% endif %}>
+            <span>إشعارات البريد الإلكتروني</span>
+          </label>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="sound_enabled" {% if settings.sound_enabled %}checked{% endif %}>
+            <span>صوت الإشعارات</span>
+          </label>
+        </div>
+      </div>
+      
+      <!-- Quiet Hours -->
+      <div class="settings-section">
+        <h2>الساعات الهادئة</h2>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="quiet_hours_enabled" id="quietHoursToggle" {% if settings.quiet_hours_enabled %}checked{% endif %}>
+            <span>تفعيل الساعات الهادئة</span>
+          </label>
+        </div>
+        
+        <div class="form-row" id="quietHoursFields" {% if not settings.quiet_hours_enabled %}style="display:none;"{% endif %}>
+          <div class="form-group">
+            <label>بداية الساعات الهادئة</label>
+            <input type="time" name="quiet_hours_start" value="{% if settings.quiet_hours_start %}{{ settings.quiet_hours_start|time:'H:i' }}{% endif %}">
+          </div>
+          
+          <div class="form-group">
+            <label>نهاية الساعات الهادئة</label>
+            <input type="time" name="quiet_hours_end" value="{% if settings.quiet_hours_end %}{{ settings.quiet_hours_end|time:'H:i' }}{% endif %}">
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">حفظ الإعدادات</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.settings-container {
+  max-width: 800px;
+  margin: 2rem auto;
+}
+
+.settings-section {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.settings-section h2 {
+  margin: 0 0 1rem 0;
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  transition: background 0.3s ease;
+}
+
+.checkbox-label:hover {
+  background: var(--bg-alt);
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.checkbox-label span {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-row label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.form-row input[type="time"] {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-outline:hover {
+  background: var(--bg-alt);
+  border-color: var(--primary);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const quietHoursToggle = document.getElementById('quietHoursToggle');
+  if (quietHoursToggle) {
+    quietHoursToggle.addEventListener('change', function() {
+      const quietHoursFields = document.getElementById('quietHoursFields');
+      if (quietHoursFields) {
+        if (this.checked) {
+          quietHoursFields.style.display = 'grid';
+        } else {
+          quietHoursFields.style.display = 'none';
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

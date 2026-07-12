@@ -1,0 +1,2364 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}{{ property.display_title }}{% endblock %}
+{% block og_title %}{{ property.display_title }}{% endblock %}
+{% block meta_description %}{{ property.description|truncatewords:30 }}{% endblock %}
+{% block og_image %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ property.get_main_image }}">{% endblock %}
+
+{% block body_class %}has-call-bar{% endblock %}
+
+{% block content %}
+<div class="container detail-layout">
+  <div class="detail-main">
+    <div class="gallery">
+      <div class="gallery-main" id="gallery-main-container">
+        <img src="{{ images.0 }}" alt="{{ property.display_title }}" id="gallery-main-img">
+        {% if images|length > 1 or videos %}
+        <button type="button" class="gallery-nav prev" aria-label="السابق">‹</button>
+        <button type="button" class="gallery-nav next" aria-label="التالي">›</button>
+        {% endif %}
+      </div>
+      {% if images|length > 1 or videos %}
+      <div class="gallery-thumbs">
+        {% for img in images %}
+        <img src="{{ img }}" data-full="{{ img }}" data-type="image" alt="صورة {{ forloop.counter }}" loading="lazy">
+        {% endfor %}
+        {% for video in videos %}
+        <video src="{{ video.video.url }}" data-full="{{ video.video.url }}" data-type="video" muted preload="metadata" loading="lazy"></video>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    {% if virtual_tours %}
+    <div class="virtual-tours-section">
+      <h2>🌐 جولات افتراضية 360°</h2>
+      <div class="virtual-tours-grid">
+        {% for tour in virtual_tours %}
+        <div class="virtual-tour-card">
+          <div class="virtual-tour-viewer" id="panorama-{{ tour.id }}"></div>
+          <div class="virtual-tour-info">
+            <h3>{{ tour.title }}</h3>
+            {% if tour.description %}
+            <p>{{ tour.description }}</p>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="detail-info">
+      <div class="detail-badges">
+        <span class="badge badge-type">{{ property.get_type_display }}</span>
+        <span class="badge badge-status">{{ property.get_status_display }}</span>
+        {% if property.is_featured %}<span class="badge badge-featured">⭐ مميز</span>{% endif %}
+      </div>
+      
+      <h1>{{ property.display_title }}</h1>
+      <p class="detail-location">
+        <span class="location-icon">📍</span>
+        <span>{{ property.full_location }}</span>
+      </p>
+      
+      <div class="detail-price">
+        <span class="price-value">{{ property.price_formatted }}</span>
+        <span class="price-currency">{% if property.currency == 'USD' %}دولار أمريكي{% else %}دينار عراقي{% endif %}</span>
+        {% if property.negotiable %}<span class="price-negotiable">قابل للتفاوض</span>{% endif %}
+      </div>
+
+      <div class="share-row">
+        <button type="button" class="btn btn-outline share-btn" id="btn-share">
+          <span class="btn-icon">🔗</span>
+          <span>مشاركة</span>
+        </button>
+        <button type="button" class="btn btn-outline favorite-btn" data-fav-id="{{ property.id }}" data-fav-url="{{ property.get_absolute_url }}" data-fav-title="{{ property.display_title }}">
+          <span class="btn-icon">❤️</span>
+          <span>حفظ</span>
+        </button>
+        <button type="button" class="btn btn-outline compare-btn"
+          data-compare-id="{{ property.id }}"
+          data-compare-url="{{ property.get_absolute_url }}"
+          data-compare-title="{{ property.display_title }}"
+          data-compare-price="{{ property.price_formatted }}"
+          data-compare-area="{{ property.area }}"
+          data-compare-city="{{ property.city }}"
+          data-compare-type="{{ property.get_type_display }}">
+          <span class="btn-icon">⚖️</span>
+          <span>مقارنة</span>
+        </button>
+        <a href="tel:{{ property.phone }}" class="btn btn-primary call-btn">
+          <span class="btn-icon">📞</span>
+          <span>اتصال</span>
+        </a>
+      </div>
+
+      <div class="calc-widget">
+        <div class="calc-header">
+          <span class="calc-icon">💰</span>
+          <h3>حاسبة القسط الشهري</h3>
+        </div>
+        <div class="calc-body">
+          <div class="form-group">
+            <label>مدة السداد (سنة)</label>
+            <input type="range" id="calc-years" class="form-control" min="1" max="30" value="15">
+            <span id="calc-years-val" class="calc-years-val">15 سنة</span>
+          </div>
+          <p class="calc-result" id="calc-monthly">—</p>
+          <small class="calc-note">تقدير فقط · سعر العقار: {{ property.price_formatted }} د.ع</small>
+        </div>
+      </div>
+
+      <div class="detail-meta-grid">
+        <div class="meta-item">
+          <span class="meta-icon">📐</span>
+          <div class="meta-content">
+            <strong>{{ property.total_area|default:property.area }}</strong>
+            <span>م² مساحة</span>
+          </div>
+        </div>
+        {% if property.bedrooms %}
+        <div class="meta-item">
+          <span class="meta-icon">🛏</span>
+          <div class="meta-content">
+            <strong>{{ property.bedrooms }}</strong>
+            <span>غرف</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if property.living_rooms %}
+        <div class="meta-item">
+          <span class="meta-icon">🛋</span>
+          <div class="meta-content">
+            <strong>{{ property.living_rooms }}</strong>
+            <span>صالات</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if property.bathrooms %}
+        <div class="meta-item">
+          <span class="meta-icon">🚿</span>
+          <div class="meta-content">
+            <strong>{{ property.bathrooms }}</strong>
+            <span>حمامات</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if property.kitchens %}
+        <div class="meta-item">
+          <span class="meta-icon">🍳</span>
+          <div class="meta-content">
+            <strong>{{ property.kitchens }}</strong>
+            <span>مطابخ</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if property.balconies %}
+        <div class="meta-item">
+          <span class="meta-icon">🌅</span>
+          <div class="meta-content">
+            <strong>{{ property.balconies }}</strong>
+            <span>شرفات</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if property.total_floors %}
+        <div class="meta-item">
+          <span class="meta-icon">🏢</span>
+          <div class="meta-content">
+            <strong>{{ property.total_floors }}</strong>
+            <span>طوابق</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if property.floor_number %}
+        <div class="meta-item">
+          <span class="meta-icon">🏠</span>
+          <div class="meta-content">
+            <strong>{{ property.floor_number }}</strong>
+            <span>الطابق</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if property.parking_spaces %}
+        <div class="meta-item">
+          <span class="meta-icon">🅿</span>
+          <div class="meta-content">
+            <strong>{{ property.parking_spaces }}</strong>
+            <span>موقف</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if property.year_built %}
+        <div class="meta-item">
+          <span class="meta-icon">📅</span>
+          <div class="meta-content">
+            <strong>{{ property.year_built }}</strong>
+            <span>سنة البناء</span>
+          </div>
+        </div>
+        {% endif %}
+        <div class="meta-item">
+          <span class="meta-icon">👁</span>
+          <div class="meta-content">
+            <strong>{{ property.views_count }}</strong>
+            <span>مشاهدة</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Additional Details Section -->
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">📋</span>
+          <h2>تفاصيل إضافية</h2>
+        </div>
+        <div class="details-grid">
+          {% if property.property_number %}
+          <div class="detail-item">
+            <span class="detail-label">رقم الإعلان:</span>
+            <span class="detail-value">{{ property.property_number }}</span>
+          </div>
+          {% endif %}
+          {% if property.owner_name %}
+          <div class="detail-item">
+            <span class="detail-label">اسم المالك:</span>
+            <span class="detail-value">{{ property.owner_name }}</span>
+          </div>
+          {% endif %}
+          {% if property.year_built %}
+          <div class="detail-item">
+            <span class="detail-label">سنة البناء:</span>
+            <span class="detail-value">{{ property.year_built }}</span>
+          </div>
+          {% endif %}
+          {% if property.building_condition %}
+          <div class="detail-item">
+            <span class="detail-label">حالة البناء:</span>
+            <span class="detail-value">{{ property.building_condition }}</span>
+          </div>
+          {% endif %}
+          {% if property.facade %}
+          <div class="detail-item">
+            <span class="detail-label">الواجهة:</span>
+            <span class="detail-value">{{ property.facade }}</span>
+          </div>
+          {% endif %}
+          {% if property.direction %}
+          <div class="detail-item">
+            <span class="detail-label">الاتجاه:</span>
+            <span class="detail-value">{{ property.direction }}</span>
+          </div>
+          {% endif %}
+          {% if property.building_area %}
+          <div class="detail-item">
+            <span class="detail-label">مساحة البناء:</span>
+            <span class="detail-value">{{ property.building_area }} م²</span>
+          </div>
+          {% endif %}
+          {% if property.negotiable %}
+          <div class="detail-item">
+            <span class="detail-label">السعر:</span>
+            <span class="detail-value">قابل للتفاوض</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Location Details -->
+      <div class="location-details-section">
+        <div class="section-header">
+          <span class="section-icon">📍</span>
+          <h2>تفاصيل الموقع</h2>
+        </div>
+        <div class="location-details-grid">
+          {% if property.governorate %}
+          <div class="detail-item">
+            <span class="detail-label">المحافظة:</span>
+            <span class="detail-value">{{ property.governorate }}</span>
+          </div>
+          {% endif %}
+          {% if property.city %}
+          <div class="detail-item">
+            <span class="detail-label">المدينة:</span>
+            <span class="detail-value">{{ property.city }}</span>
+          </div>
+          {% endif %}
+          {% if property.subdistrict %}
+          <div class="detail-item">
+            <span class="detail-label">القضاء:</span>
+            <span class="detail-value">{{ property.subdistrict }}</span>
+          </div>
+          {% endif %}
+          {% if property.nahiyah %}
+          <div class="detail-item">
+            <span class="detail-label">الناحية:</span>
+            <span class="detail-value">{{ property.nahiyah }}</span>
+          </div>
+          {% endif %}
+          {% if property.landmark %}
+          <div class="detail-item">
+            <span class="detail-label">أقرب نقطة دالة:</span>
+            <span class="detail-value">{{ property.landmark }}</span>
+          </div>
+          {% endif %}
+          {% if property.nearest_landmark %}
+          <div class="detail-item">
+            <span class="detail-label">أقرب معلم:</span>
+            <span class="detail-value">{{ property.nearest_landmark }}</span>
+          </div>
+          {% endif %}
+          {% if property.distance_to_city_center %}
+          <div class="detail-item">
+            <span class="detail-label">المسافة لمركز المدينة:</span>
+            <span class="detail-value">{{ property.distance_to_city_center }} كم</span>
+          </div>
+          {% endif %}
+          {% if property.distance_to_airport %}
+          <div class="detail-item">
+            <span class="detail-label">المسافة للمطار:</span>
+            <span class="detail-value">{{ property.distance_to_airport }} كم</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Outside Iraq Location -->
+      {% if property.country %}
+      <div class="location-details-section">
+        <div class="section-header">
+          <span class="section-icon">🌍</span>
+          <h2>الموقع خارج العراق</h2>
+        </div>
+        <div class="location-details-grid">
+          <div class="detail-item">
+            <span class="detail-label">الدولة:</span>
+            <span class="detail-value">{{ property.country.name_ar }}</span>
+          </div>
+          {% if property.city_outside %}
+          <div class="detail-item">
+            <span class="detail-label">المدينة:</span>
+            <span class="detail-value">{{ property.city_outside.name_ar }}</span>
+          </div>
+          {% endif %}
+          {% if property.area_outside %}
+          <div class="detail-item">
+            <span class="detail-label">المنطقة:</span>
+            <span class="detail-value">{{ property.area_outside.name_ar }}</span>
+          </div>
+          {% endif %}
+          {% if property.postal_code %}
+          <div class="detail-item">
+            <span class="detail-label">الرمز البريدي:</span>
+            <span class="detail-value">{{ property.postal_code }}</span>
+          </div>
+          {% endif %}
+          {% if property.taxes %}
+          <div class="detail-item">
+            <span class="detail-label">الضرائب:</span>
+            <span class="detail-value">{{ property.taxes }}%</span>
+          </div>
+          {% endif %}
+          {% if property.registration_fees %}
+          <div class="detail-item">
+            <span class="detail-label">رسوم التسجيل:</span>
+            <span class="detail-value">{{ property.registration_fees }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Hotel/Resort Features -->
+      {% if property.hotel_stars or property.hotel_rooms or property.resort_capacity %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">🏨</span>
+          <h2>معلومات الفندق/المنتجع</h2>
+        </div>
+        <div class="details-grid">
+          {% if property.hotel_stars %}
+          <div class="detail-item">
+            <span class="detail-label">عدد النجوم:</span>
+            <span class="detail-value">{% for i in property.hotel_stars %}⭐{% endfor %}</span>
+          </div>
+          {% endif %}
+          {% if property.hotel_rating %}
+          <div class="detail-item">
+            <span class="detail-label">التقييم:</span>
+            <span class="detail-value">{{ property.hotel_rating }}/5</span>
+          </div>
+          {% endif %}
+          {% if property.hotel_rooms %}
+          <div class="detail-item">
+            <span class="detail-label">عدد الغرف:</span>
+            <span class="detail-value">{{ property.hotel_rooms }}</span>
+          </div>
+          {% endif %}
+          {% if property.hotel_suites %}
+          <div class="detail-item">
+            <span class="detail-label">عدد الأجنحة:</span>
+            <span class="detail-value">{{ property.hotel_suites }}</span>
+          </div>
+          {% endif %}
+          {% if property.hotel_family_rooms %}
+          <div class="detail-item">
+            <span class="detail-label">الغرف العائلية:</span>
+            <span class="detail-value">{{ property.hotel_family_rooms }}</span>
+          </div>
+          {% endif %}
+          {% if property.resort_capacity %}
+          <div class="detail-item">
+            <span class="detail-label">سعة الاستيعاب:</span>
+            <span class="detail-value">{{ property.resort_capacity }} شخص</span>
+          </div>
+          {% endif %}
+          {% if property.booking_available %}
+          <div class="detail-item">
+            <span class="detail-label">الحجز:</span>
+            <span class="detail-value">متاح</span>
+          </div>
+          {% endif %}
+          {% if property.booking_url %}
+          <div class="detail-item">
+            <span class="detail-label">رابط الحجز:</span>
+            <span class="detail-value"><a href="{{ property.booking_url }}" target="_blank">احجز الآن</a></span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Hotel Services -->
+      {% if property.has_restaurant or property.has_cafe or property.has_swimming_pool or property.has_gym %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">🛎</span>
+          <h2>الخدمات المتاحة</h2>
+        </div>
+        <div class="services-grid">
+          {% if property.has_restaurant %}<span class="service-badge">🍽️ مطعم</span>{% endif %}
+          {% if property.has_cafe %}<span class="service-badge">☕ مقهى</span>{% endif %}
+          {% if property.has_swimming_pool %}<span class="service-badge">🏊 مسبح</span>{% endif %}
+          {% if property.has_gym %}<span class="service-badge">💪 نادي رياضي</span>{% endif %}
+          {% if property.has_spa %}<span class="service-badge">💆 سبا</span>{% endif %}
+          {% if property.has_conference_hall %}<span class="service-badge">🎤 قاعة مؤتمرات</span>{% endif %}
+          {% if property.has_wifi %}<span class="service-badge">📶 واي فاي</span>{% endif %}
+          {% if property.has_parking %}<span class="service-badge">🅿️ موقف سيارات</span>{% endif %}
+          {% if property.has_room_service %}<span class="service-badge">🛎️ خدمة الغرف</span>{% endif %}
+          {% if property.has_laundry %}<span class="service-badge">🧺 خدمة الغسيل</span>{% endif %}
+          {% if property.has_airport_shuttle %}<span class="service-badge">✈️ نقل من المطار</span>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Virtual Tour & Media -->
+      {% if property.virtual_tour_url or property.vr_tour_url or property.ar_available %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">🌐</span>
+          <h2>الجولات الافتراضية والوسائط</h2>
+        </div>
+        <div class="media-links">
+          {% if property.virtual_tour_url %}
+          <a href="{{ property.virtual_tour_url }}" target="_blank" class="media-link">
+            <span class="media-icon">🎥</span>
+            <span>جولة افتراضية 360°</span>
+          </a>
+          {% endif %}
+          {% if property.vr_tour_url %}
+          <a href="{{ property.vr_tour_url }}" target="_blank" class="media-link">
+            <span class="media-icon">🥽</span>
+            <span>جولة VR</span>
+          </a>
+          {% endif %}
+          {% if property.ar_available %}
+          <span class="media-badge">دعم الواقع المعزز AR</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Live Stream -->
+      {% if property.live_stream_enabled %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">📺</span>
+          <h2>البث المباشر</h2>
+        </div>
+        <div class="live-stream-info">
+          {% if property.live_stream_url %}
+          <a href="{{ property.live_stream_url }}" target="_blank" class="btn btn-primary">
+            <span class="btn-icon">🔴</span>
+            <span>مشاهدة البث المباشر</span>
+          </a>
+          {% endif %}
+          {% if property.live_stream_scheduled %}
+          <p class="stream-scheduled">مجدول: {{ property.live_stream_scheduled|date:"Y-m-d H:i" }}</p>
+          {% endif %}
+          <span class="stream-status stream-status-{{ property.live_stream_status }}">
+            {{ property.get_live_stream_status_display }}
+          </span>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Amenities -->
+      <div class="amenities-section">
+        <div class="section-header">
+          <span class="section-icon">✨</span>
+          <h2>المرافق</h2>
+        </div>
+        <div class="amenities-grid">
+          {% if property.furnished %}<span class="amenity-badge">مفروش</span>{% endif %}
+          {% if property.has_pool %}<span class="amenity-badge">مسبح</span>{% endif %}
+          {% if property.has_garden %}<span class="amenity-badge">حديقة</span>{% endif %}
+          {% if property.has_elevator %}<span class="amenity-badge">مصعد</span>{% endif %}
+          {% if property.has_generator %}<span class="amenity-badge">مولد</span>{% endif %}
+          {% if property.has_national_electricity %}<span class="amenity-badge">كهرباء وطنية</span>{% endif %}
+          {% if property.has_water %}<span class="amenity-badge">ماء</span>{% endif %}
+          {% if property.has_internet %}<span class="amenity-badge">إنترنت</span>{% endif %}
+          {% if property.has_sewerage %}<span class="amenity-badge">مجاري</span>{% endif %}
+          {% if property.has_heating %}<span class="amenity-badge">تدفئة</span>{% endif %}
+          {% if property.has_cooling %}<span class="amenity-badge">تبريد</span>{% endif %}
+          {% if property.has_solar_power %}<span class="amenity-badge">طاقة شمسية</span>{% endif %}
+          {% if property.has_security_system %}<span class="amenity-badge">نظام أمان</span>{% endif %}
+          {% if property.has_cctv %}<span class="amenity-badge">كاميرات مراقبة</span>{% endif %}
+          {% if property.has_alarm %}<span class="amenity-badge">نظام إنذار</span>{% endif %}
+          {% if property.wheelchair_accessible %}<span class="amenity-badge">مخصص للكراسي المتحركة</span>{% endif %}
+          {% if property.has_ramp %}<span class="amenity-badge">منحدر</span>{% endif %}
+          {% if property.energy_efficient %}<span class="amenity-badge">موفر للطاقة</span>{% endif %}
+          {% if property.has_smart_home %}<span class="amenity-badge">منزل ذكي</span>{% endif %}
+          {% if property.has_double_glazing %}<span class="amenity-badge">زجاج مزدوج</span>{% endif %}
+          {% if property.has_insulation %}<span class="amenity-badge">عزل حراري</span>{% endif %}
+        </div>
+      </div>
+
+      <!-- View Type -->
+      {% if property.view_type %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">🌄</span>
+          <h2>الإطلالة</h2>
+        </div>
+        <div class="detail-item">
+          <span class="detail-value">{{ property.get_view_type_display }}</span>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Parking Type -->
+      {% if property.parking_type %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">🅿️</span>
+          <h2>نوع الموقف</h2>
+        </div>
+        <div class="detail-item">
+          <span class="detail-value">{{ property.get_parking_type_display }}</span>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Additional Fees -->
+      {% if property.maintenance_fee or property.hoa_fee %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">💰</span>
+          <h2>الرسوم الإضافية</h2>
+        </div>
+        <div class="details-grid">
+          {% if property.maintenance_fee %}
+          <div class="detail-item">
+            <span class="detail-label">رسوم الصيانة الشهرية:</span>
+            <span class="detail-value">{{ property.maintenance_fee }}</span>
+          </div>
+          {% endif %}
+          {% if property.hoa_fee %}
+          <div class="detail-item">
+            <span class="detail-label">رسوم الجمعية:</span>
+            <span class="detail-value">{{ property.hoa_fee }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Documents -->
+      {% if documents %}
+      <div class="details-section">
+        <div class="section-header">
+          <span class="section-icon">📄</span>
+          <h2>المستندات</h2>
+        </div>
+        <div class="documents-list">
+          {% for doc in documents %}
+          <div class="document-item">
+            <span class="doc-icon">📎</span>
+            <a href="{{ doc.file.url }}" target="_blank" class="doc-link">{{ doc.title }}</a>
+            <span class="doc-type">{{ doc.get_document_type_display }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Description -->
+      <div class="description-section">
+        <div class="section-header">
+          <span class="section-icon">📝</span>
+          <h2>الوصف</h2>
+        </div>
+        <div class="description-content">
+          {{ property.description|linebreaks }}
+        </div>
+      </div>
+
+      <!-- AI Generated Description (if available) -->
+      {% if property.ai_generated_description %}
+      <div class="details-section ai-section">
+        <div class="section-header">
+          <span class="section-icon">🤖</span>
+          <h2>وصف مولد بالذكاء الاصطناعي</h2>
+        </div>
+        <div class="description-content">
+          {{ property.ai_generated_description|linebreaks }}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Amenities Section -->
+      <div class="amenities-section">
+        <div class="section-header">
+          <span class="section-icon">✨</span>
+          <h2>المميزات والخدمات</h2>
+        </div>
+        <div class="amenities-grid">
+          {% if property.furnished %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🪑</span>
+            <span>مفروش</span>
+          </div>
+          {% endif %}
+          {% if property.has_pool %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🏊</span>
+            <span>مسبح</span>
+          </div>
+          {% endif %}
+          {% if property.has_garden %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🌳</span>
+            <span>حديقة</span>
+          </div>
+          {% endif %}
+          {% if property.has_elevator %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🛗</span>
+            <span>مصعد</span>
+          </div>
+          {% endif %}
+          {% if property.has_generator %}
+          <div class="amenity-item">
+            <span class="amenity-icon">⚡</span>
+            <span>مولد</span>
+          </div>
+          {% endif %}
+          {% if property.has_national_electricity %}
+          <div class="amenity-item">
+            <span class="amenity-icon">💡</span>
+            <span>الكهرباء الوطنية</span>
+          </div>
+          {% endif %}
+          {% if property.has_water %}
+          <div class="amenity-item">
+            <span class="amenity-icon">💧</span>
+            <span>الماء</span>
+          </div>
+          {% endif %}
+          {% if property.has_internet %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🌐</span>
+            <span>الإنترنت</span>
+          </div>
+          {% endif %}
+          {% if property.has_sewerage %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🚰</span>
+            <span>المجاري</span>
+          </div>
+          {% endif %}
+          {% if property.has_heating %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🔥</span>
+            <span>التدفئة</span>
+          </div>
+          {% endif %}
+          {% if property.has_cooling %}
+          <div class="amenity-item">
+            <span class="amenity-icon">❄️</span>
+            <span>التبريد</span>
+          </div>
+          {% endif %}
+          {% if property.has_solar_power %}
+          <div class="amenity-item">
+            <span class="amenity-icon">☀️</span>
+            <span>الطاقة الشمسية</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Security Section -->
+      {% if property.has_security_system or property.has_cctv or property.has_alarm %}
+      <div class="security-section">
+        <div class="section-header">
+          <span class="section-icon">🔒</span>
+          <h2>الأمان والحماية</h2>
+        </div>
+        <div class="amenities-grid">
+          {% if property.has_security_system %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🛡️</span>
+            <span>نظام الأمان</span>
+          </div>
+          {% endif %}
+          {% if property.has_cctv %}
+          <div class="amenity-item">
+            <span class="amenity-icon">📹</span>
+            <span>كاميرات المراقبة</span>
+          </div>
+          {% endif %}
+          {% if property.has_alarm %}
+          <div class="amenity-item">
+            <span class="amenity-icon">🚨</span>
+            <span>نظام الإنذار</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="description-section">
+        <div class="section-header">
+          <span class="section-icon">📝</span>
+          <h2>الوصف</h2>
+        </div>
+        <p class="description-text">{{ property.description }}</p>
+      </div>
+
+      {% if property.has_map %}
+      <div class="map-section">
+        <div class="section-header">
+          <span class="section-icon">🗺</span>
+          <h2>الموقع على الخريطة</h2>
+        </div>
+        <div id="property-map" data-lat="{{ property.latitude }}" data-lng="{{ property.longitude }}"></div>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if related_properties %}
+    <section class="related-section">
+      <div class="section-header">
+        <div class="section-badge">
+          <span class="badge-icon">🏠</span>
+          <span>مشابهة</span>
+        </div>
+        <h2>عقارات مشابهة</h2>
+      </div>
+      <div class="properties-grid">
+        {% for property in related_properties %}
+          {% include 'properties/_property_card.html' %}
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+  </div>
+
+  <aside class="detail-sidebar">
+    {% if property.latitude and property.longitude %}
+    <div class="sidebar-card">
+      <div class="card-header">
+        <span class="card-icon">📍</span>
+        <h3>الموقع على الخريطة</h3>
+      </div>
+      <div id="property-detail-map" style="height: 250px; border-radius: var(--radius-md); border: 2px solid var(--border);"></div>
+      <div style="margin-top: 12px;">
+        <button type="button" class="btn btn-sm btn-outline btn-block" id="open-detail-map-fullscreen">
+          <span class="btn-icon">⛶</span>
+          <span>فتح الخريطة بملء الشاشة</span>
+        </button>
+      </div>
+    </div>
+    {% endif %}
+    
+    <div class="sidebar-card contact-card">
+      <div class="card-header">
+        <span class="card-icon">📞</span>
+        <h3>تواصل مع الدلال</h3>
+      </div>
+      <p class="contact-phone">
+        <span class="phone-icon">📞</span>
+        <a href="tel:{{ property.phone }}">{{ property.phone }}</a>
+      </p>
+      <a href="tel:{{ property.phone }}" class="btn btn-primary btn-lg call-btn-full">
+        <span class="btn-icon">📞</span>
+        <span>اتصال مباشر</span>
+      </a>
+      {% if site_settings.whatsapp %}
+      <a href="https://wa.me/{{ site_settings.whatsapp }}" class="btn btn-accent btn-lg whatsapp-btn-full" target="_blank" rel="noopener">
+        <span class="btn-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.881 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </span>
+        <span>واتساب</span>
+      </a>
+      {% endif %}
+    </div>
+
+    <div class="sidebar-card message-card">
+      <div class="card-header">
+        <span class="card-icon">✉️</span>
+        <h3>أرسل استفساراً</h3>
+      </div>
+      <form method="post" action="{% url 'send_message' %}" class="message-form">
+        {% csrf_token %}
+        <input type="hidden" name="property_id" value="{{ property.id }}">
+        <div class="form-group">
+          <label>
+            <span class="label-icon">👤</span>
+            {{ message_form.name.label }}
+          </label>
+          {{ message_form.name }}
+        </div>
+        <div class="form-group">
+          <label>
+            <span class="label-icon">📱</span>
+            {{ message_form.phone.label }}
+          </label>
+          {{ message_form.phone }}
+        </div>
+        <div class="form-group">
+          <label>
+            <span class="label-icon">💬</span>
+            {{ message_form.message.label }}
+          </label>
+          {{ message_form.message }}
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg submit-btn">
+          <span class="btn-icon">🚀</span>
+          <span>إرسال الرسالة</span>
+        </button>
+      </form>
+    </div>
+  </aside>
+</div>
+
+<div class="mobile-call-bar">
+  <a href="tel:{{ property.phone }}" class="btn btn-primary">
+    <span class="btn-icon">📞</span>
+    <span>اتصال</span>
+  </a>
+  <a href="https://wa.me/964{{ property.phone|cut:'0' }}" class="btn btn-accent" target="_blank" rel="noopener">
+    <span class="btn-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.881 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    </span>
+    <span>واتساب</span>
+  </a>
+</div>
+
+<style>
+/* ===== Detail Layout ===== */
+.detail-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 40px;
+  padding: 40px 20px;
+  max-width: 1400px;
+}
+
+.detail-main {
+  min-width: 0;
+}
+
+/* ===== Gallery ===== */
+.gallery {
+  margin-bottom: 32px;
+}
+
+.gallery-main {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-alt);
+  aspect-ratio: 16/10;
+}
+
+.gallery-main img,
+.gallery-main video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery-nav:hover {
+  background: var(--primary);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.gallery-nav.prev {
+  left: 16px;
+}
+
+.gallery-nav.next {
+  right: 16px;
+}
+
+.gallery-thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.gallery-thumbs img,
+.gallery-thumbs video {
+  width: 100%;
+  aspect-ratio: 16/10;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 2px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.gallery-thumbs img:hover,
+.gallery-thumbs img.active,
+.gallery-thumbs video:hover,
+.gallery-thumbs video.active {
+  border-color: var(--primary);
+  transform: scale(1.05);
+}
+
+/* ===== Virtual Tours ===== */
+.virtual-tours-section {
+  margin-bottom: 32px;
+}
+
+.virtual-tours-section h2 {
+  font-size: 1.5rem;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.virtual-tours-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.virtual-tour-card {
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 2px solid var(--border);
+}
+
+.virtual-tour-viewer {
+  width: 100%;
+  height: 250px;
+  background: var(--bg-primary);
+}
+
+.virtual-tour-info {
+  padding: 16px;
+}
+
+.virtual-tour-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.virtual-tour-info p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ===== Detail Info ===== */
+.detail-info {
+  margin-bottom: 32px;
+}
+
+.detail-badges {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.badge-type {
+  background: var(--primary);
+  color: #fff;
+}
+
+.badge-status {
+  background: var(--accent);
+  color: #fff;
+}
+
+.badge-featured {
+  background: #ffd700;
+  color: #000;
+}
+
+.detail-info h1 {
+  font-size: 2rem;
+  margin: 0 0 8px 0;
+  color: var(--text);
+}
+
+.detail-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.location-icon {
+  font-size: 1.2rem;
+}
+
+.detail-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.price-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.price-currency {
+  color: var(--text-muted);
+}
+
+/* ===== Share Row ===== */
+.share-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+/* ===== Calc Widget ===== */
+.calc-widget {
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-bottom: 24px;
+  border: 2px solid var(--border);
+}
+
+.calc-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.calc-icon {
+  font-size: 1.5rem;
+}
+
+.calc-header h3 {
+  margin: 0;
+  color: var(--text);
+}
+
+.calc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.calc-result {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-align: center;
+  padding: 12px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+}
+
+.calc-note {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.calc-years-val {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ===== Detail Meta Grid ===== */
+.detail-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border);
+}
+
+.meta-icon {
+  font-size: 1.5rem;
+}
+
+.meta-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-content strong {
+  font-size: 1.25rem;
+  color: var(--text);
+}
+
+.meta-content span {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ===== Details Section ===== */
+.details-section,
+.location-details-section,
+.amenities-section,
+.security-section {
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-icon {
+  font-size: 1.5rem;
+}
+
+.section-header h2 {
+  margin: 0;
+  color: var(--text);
+}
+
+.details-grid,
+.location-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+}
+
+.detail-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.detail-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ===== Amenities Grid ===== */
+.amenities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.amenity-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.amenity-item:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.amenity-icon {
+  font-size: 1.25rem;
+}
+
+.amenity-item span {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+/* ===== Description Section ===== */
+.description-section {
+  margin-bottom: 32px;
+}
+
+.description-text {
+  line-height: 1.8;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+/* ===== Map Section ===== */
+.map-section {
+  margin-bottom: 32px;
+}
+
+#property-map,
+#property-detail-map {
+  width: 100%;
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+}
+
+/* ===== Related Section ===== */
+.related-section {
+  margin-top: 48px;
+}
+
+.section-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  width: fit-content;
+}
+
+.badge-icon {
+  font-size: 1.25rem;
+}
+
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* ===== Detail Info ===== */
+.detail-info {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.detail-info::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.detail-badges {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.badge {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.badge-type {
+  background: rgba(255, 107, 53, 0.15);
+  color: var(--primary);
+  border: 1px solid rgba(255, 107, 53, 0.3);
+}
+
+.badge-status {
+  background: var(--bg-alt);
+  color: var(--text-light);
+  border: 1px solid var(--border);
+}
+
+.badge-featured {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: #fff;
+  border: none;
+}
+
+.detail-info h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 12px;
+  line-height: 1.3;
+}
+
+.detail-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-light);
+  font-size: 1rem;
+  margin-bottom: 20px;
+}
+
+.location-icon {
+  font-size: 1.1rem;
+}
+
+.detail-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 140, 90, 0.05) 100%);
+  border-radius: var(--radius-lg);
+  border: 2px solid rgba(255, 107, 53, 0.2);
+}
+
+.price-value {
+  font-size: 2rem;
+  font-weight: 900;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.price-currency {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-light);
+}
+
+/* ===== Share Row ===== */
+.share-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+
+.share-row .btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-icon {
+  font-size: 1.1rem;
+}
+
+.share-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.favorite-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.compare-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.call-btn {
+  background: var(--gradient-primary);
+  border: none;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+}
+
+.call-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(255, 107, 53, 0.4);
+}
+
+/* ===== Calc Widget ===== */
+.calc-widget {
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.calc-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.calc-icon {
+  font-size: 1.5rem;
+}
+
+.calc-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.calc-body .form-group {
+  margin-bottom: 16px;
+}
+
+.calc-body .form-group label {
+  display: block;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.calc-body input[type="range"] {
+  width: 100%;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.calc-body input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.calc-years-val {
+  display: block;
+  font-weight: 800;
+  color: var(--primary);
+  font-size: 1.1rem;
+  margin-top: 8px;
+}
+
+/* Virtual Tours 360 */
+.virtual-tours-section {
+  margin: 32px 0;
+  padding: 24px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.virtual-tours-section h2 {
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+  color: var(--text);
+}
+
+.virtual-tours-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.virtual-tour-card {
+  background: var(--bg);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.virtual-tour-viewer {
+  width: 100%;
+  height: 300px;
+  background: #000;
+}
+
+.virtual-tour-info {
+  padding: 16px;
+}
+
+.virtual-tour-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.virtual-tour-info p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  line-height: 1.5;
+}
+
+.calc-result {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.calc-note {
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+/* ===== Meta Grid ===== */
+.detail-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-alt);
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.meta-item:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.meta-icon {
+  font-size: 1.5rem;
+}
+
+.meta-content strong {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+
+.meta-content span {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-top: 4px;
+}
+
+/* ===== Description Section ===== */
+.description-section {
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-icon {
+  font-size: 1.5rem;
+}
+
+.section-header h2 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.description-text {
+  color: var(--text-light);
+  line-height: 1.8;
+  white-space: pre-line;
+}
+
+/* ===== Map Section ===== */
+.map-section {
+  margin-bottom: 32px;
+}
+
+#property-map {
+  width: 100%;
+  height: 300px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 2px solid var(--border);
+}
+
+/* ===== Related Section ===== */
+.related-section {
+  margin-top: 40px;
+}
+
+.related-section .section-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.section-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 107, 53, 0.15);
+  border: 1px solid rgba(255, 107, 53, 0.3);
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.badge-icon {
+  font-size: 1rem;
+}
+
+.related-section .section-header h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+/* ===== Sidebar ===== */
+.detail-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sidebar-card {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.card-icon {
+  font-size: 1.8rem;
+}
+
+.card-header h3 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.contact-phone {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+}
+
+.phone-icon {
+  font-size: 1.3rem;
+}
+
+.contact-phone a {
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-decoration: none;
+}
+
+.call-btn-full,
+.whatsapp-btn-full,
+.submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  margin-bottom: 12px;
+}
+
+.call-btn-full {
+  background: var(--gradient-primary);
+  border: none;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+}
+
+.call-btn-full:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(255, 107, 53, 0.4);
+}
+
+.whatsapp-btn-full {
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+  border: none;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(37, 211, 102, 0.3);
+}
+
+.whatsapp-btn-full:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(37, 211, 102, 0.4);
+}
+
+.message-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.message-form .form-group {
+  margin-bottom: 0;
+}
+
+.message-form label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.label-icon {
+  font-size: 1rem;
+}
+
+.message-form input,
+.message-form textarea {
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  width: 100%;
+  font-family: inherit;
+}
+
+.message-form input:focus,
+.message-form textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.message-form textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.submit-btn {
+  background: var(--gradient-primary);
+  border: none;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+  margin-bottom: 0;
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(255, 107, 53, 0.4);
+}
+
+/* ===== Mobile Call Bar ===== */
+.mobile-call-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 0;
+  z-index: 1000;
+  background: var(--card-bg);
+  border-top: 2px solid var(--border);
+}
+
+.mobile-call-bar .btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.mobile-call-bar .btn-primary {
+  background: var(--gradient-primary);
+  color: #fff;
+}
+
+.mobile-call-bar .btn-accent {
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+  color: #fff;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1024px) {
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-sidebar {
+    order: 2;
+  }
+
+  .detail-main {
+    order: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .detail-layout {
+    padding: 16px 12px;
+    gap: 24px;
+  }
+
+  .gallery-main {
+    aspect-ratio: 16/12;
+    border-radius: var(--radius-md);
+  }
+
+  .gallery-nav {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+
+  .gallery-nav.prev {
+    left: 8px;
+  }
+
+  .gallery-nav.next {
+    right: 8px;
+  }
+
+  .gallery-thumbs {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 8px;
+  }
+
+  .detail-info {
+    padding: 20px 16px;
+    border-radius: var(--radius-md);
+  }
+
+  .detail-info h1 {
+    font-size: 1.4rem;
+    line-height: 1.4;
+  }
+
+  .detail-location {
+    font-size: 0.9rem;
+  }
+
+  .detail-price {
+    padding: 16px;
+    border-radius: var(--radius-md);
+  }
+
+  .price-value {
+    font-size: 1.6rem;
+  }
+
+  .price-currency {
+    font-size: 0.9rem;
+  }
+
+  .share-row {
+    flex-direction: column;
+  }
+
+  .share-row .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 16px;
+  }
+
+  .calc-widget {
+    padding: 20px 16px;
+    border-radius: var(--radius-md);
+  }
+
+  .calc-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .calc-result {
+    font-size: 1.3rem;
+  }
+
+  .detail-meta-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .meta-item {
+    padding: 12px;
+  }
+
+  .meta-content strong {
+    font-size: 1.1rem;
+  }
+
+  .meta-content span {
+    font-size: 0.8rem;
+  }
+
+  .section-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .sidebar-card {
+    padding: 20px 16px;
+    border-radius: var(--radius-md);
+  }
+
+  .card-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .contact-phone {
+    padding: 12px;
+  }
+
+  .contact-phone a {
+    font-size: 1rem;
+  }
+
+  .message-form input,
+  .message-form textarea {
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+
+  .call-btn-full,
+  .whatsapp-btn-full,
+  .submit-btn {
+    padding: 14px 16px;
+    font-size: 1rem;
+  }
+
+  .mobile-call-bar .btn {
+    padding: 14px;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .detail-layout {
+    padding: 12px 8px;
+  }
+
+  .gallery-main {
+    aspect-ratio: 4/3;
+  }
+
+  .gallery-thumbs {
+    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+    gap: 6px;
+  }
+
+  .detail-info {
+    padding: 16px 12px;
+  }
+
+  .detail-info h1 {
+    font-size: 1.2rem;
+  }
+
+  .detail-price {
+    padding: 12px;
+  }
+
+  .price-value {
+    font-size: 1.4rem;
+  }
+
+  .detail-meta-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .meta-item {
+    padding: 10px;
+  }
+
+  .meta-icon {
+    font-size: 1.2rem;
+  }
+
+  .meta-content strong {
+    font-size: 1rem;
+  }
+
+  .sidebar-card {
+    padding: 16px 12px;
+  }
+
+  .card-icon {
+    font-size: 1.5rem;
+  }
+}
+
+/* Fullscreen Map Modal */
+.fullscreen-map-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fullscreen-map-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.fullscreen-map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--card-bg);
+  border-bottom: 2px solid var(--border);
+}
+
+.fullscreen-map-header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.2rem;
+}
+
+#detail-fullscreen-map {
+  flex: 1;
+  width: 100%;
+}
+</style>
+{% endblock %}
+
+<!-- Fullscreen Map Modal -->
+<div id="detail-map-modal" class="fullscreen-map-modal" style="display: none;">
+  <div class="fullscreen-map-content">
+    <div class="fullscreen-map-header">
+      <h3>موقع العقار</h3>
+      <button type="button" class="btn btn-sm btn-outline" id="close-detail-map-fullscreen">إغلاق</button>
+    </div>
+    <div id="detail-fullscreen-map" style="height: calc(100vh - 80px);"></div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="{% static 'js/virtual-tour-360.js' %}"></script>
+<script>
+window.PROPERTY_PRICE = {{ property.price }};
+
+// Initialize Virtual Tour 360 viewer
+{% if virtual_tours %}
+document.addEventListener('DOMContentLoaded', function() {
+  {% for tour in virtual_tours %}
+  if (document.getElementById('panorama-{{ tour.id }}')) {
+    new VirtualTour360('#panorama-{{ tour.id }}', {
+      imageUrl: "{{ tour.image.url }}",
+      autoRotate: {{ tour.auto_rotate|lower }},
+      autoRotateSpeed: {{ tour.auto_rotate_speed }},
+      enableZoom: {{ tour.enable_zoom|lower }},
+      minZoom: {{ tour.min_zoom }},
+      maxZoom: {{ tour.max_zoom }},
+      enableFullscreen: {{ tour.enable_fullscreen|lower }},
+      enableVR: {{ tour.enable_vr|lower }},
+      initialPitch: {{ tour.initial_view_pitch }},
+      initialYaw: {{ tour.initial_view_yaw }},
+      startInAutoplay: {{ tour.start_in_autoplay|lower }},
+      autoplayDuration: {{ tour.autoplay_duration }}
+    });
+  }
+  {% endfor %}
+});
+{% endif %}
+
+// Gallery functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const mainContainer = document.getElementById('gallery-main-container');
+  const thumbs = document.querySelectorAll('.gallery-thumbs img, .gallery-thumbs video');
+  const prevBtn = document.querySelector('.gallery-nav.prev');
+  const nextBtn = document.querySelector('.gallery-nav.next');
+  
+  if (!mainContainer || thumbs.length === 0) return;
+  
+  let currentIndex = 0;
+  const mediaItems = Array.from(thumbs);
+  
+  function updateMainMedia(index) {
+    const item = mediaItems[index];
+    const type = item.dataset.type;
+    const src = item.dataset.full;
+    
+    // Remove active class from all thumbs
+    mediaItems.forEach(t => t.classList.remove('active'));
+    item.classList.add('active');
+    
+    // Clear container
+    mainContainer.innerHTML = '';
+    
+    if (type === 'video') {
+      // Create video element
+      const video = document.createElement('video');
+      video.src = src;
+      video.controls = true;
+      video.autoplay = true;
+      video.loop = true;
+      video.className = 'gallery-main-video';
+      video.style.width = '100%';
+      video.style.height = '100%';
+      video.style.objectFit = 'cover';
+      
+      // Add error handling
+      video.onerror = function() {
+        console.error('Video failed to load:', src);
+        // Fallback to image if video fails
+        const fallbackImg = document.createElement('img');
+        fallbackImg.src = '{{ images.0 }}';
+        fallbackImg.alt = '{{ property.display_title }}';
+        fallbackImg.id = 'gallery-main-img';
+        fallbackImg.style.width = '100%';
+        fallbackImg.style.height = '100%';
+        fallbackImg.style.objectFit = 'cover';
+        mainContainer.innerHTML = '';
+        mainContainer.appendChild(fallbackImg);
+      };
+      
+      mainContainer.appendChild(video);
+    } else {
+      // Create image element
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = '{{ property.display_title }}';
+      img.id = 'gallery-main-img';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      mainContainer.appendChild(img);
+    }
+    
+    // Re-add navigation buttons
+    if (prevBtn && nextBtn) {
+      mainContainer.appendChild(prevBtn);
+      mainContainer.appendChild(nextBtn);
+    }
+    
+    currentIndex = index;
+  }
+  
+  // Click on thumbnail
+  thumbs.forEach((thumb, index) => {
+    thumb.addEventListener('click', () => updateMainMedia(index));
+  });
+  
+  // Navigation buttons
+  if (prevBtn && nextBtn) {
+    prevBtn.addEventListener('click', () => {
+      let newIndex = currentIndex - 1;
+      if (newIndex < 0) newIndex = mediaItems.length - 1;
+      updateMainMedia(newIndex);
+    });
+    
+    nextBtn.addEventListener('click', () => {
+      let newIndex = currentIndex + 1;
+      if (newIndex >= mediaItems.length) newIndex = 0;
+      updateMainMedia(newIndex);
+    });
+  }
+  
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' && prevBtn) {
+      prevBtn.click();
+    } else if (e.key === 'ArrowRight' && nextBtn) {
+      nextBtn.click();
+    }
+  });
+  
+  // Set first thumbnail as active
+  if (mediaItems.length > 0) {
+    mediaItems[0].classList.add('active');
+  }
+
+  // Initialize property detail map
+  const detailMapContainer = document.getElementById('property-detail-map');
+  const detailMapModal = document.getElementById('detail-map-modal');
+  const openDetailFullscreenBtn = document.getElementById('open-detail-map-fullscreen');
+  const closeDetailFullscreenBtn = document.getElementById('close-detail-map-fullscreen');
+  
+  let detailMap = null;
+  let detailFullscreenMap = null;
+  let detailMarker = null;
+  let detailFullscreenMarker = null;
+  
+  if (detailMapContainer && typeof L !== 'undefined' && '{{ property.latitude }}' && '{{ property.longitude }}') {
+    const lat = parseFloat('{{ property.latitude }}');
+    const lng = parseFloat('{{ property.longitude }}');
+    
+    if (!isNaN(lat) && !isNaN(lng)) {
+      // Initialize normal map
+      detailMap = L.map('property-detail-map').setView([lat, lng], 15);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(detailMap);
+
+      detailMarker = L.marker([lat, lng]).addTo(detailMap);
+      
+      // Initialize fullscreen map
+      if (detailMapModal) {
+        detailFullscreenMap = L.map('detail-fullscreen-map').setView([lat, lng], 15);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(detailFullscreenMap);
+
+        detailFullscreenMarker = L.marker([lat, lng]).addTo(detailFullscreenMap);
+        
+        // Open fullscreen map
+        if (openDetailFullscreenBtn) {
+          openDetailFullscreenBtn.addEventListener('click', function() {
+            detailMapModal.style.display = 'block';
+            setTimeout(() => {
+              detailFullscreenMap.invalidateSize();
+            }, 100);
+          });
+        }
+        
+        // Close fullscreen map
+        if (closeDetailFullscreenBtn) {
+          closeDetailFullscreenBtn.addEventListener('click', function() {
+            detailMapModal.style.display = 'none';
+          });
+        }
+      }
+    }
+  }
+});
+</script>
+{% endblock %}

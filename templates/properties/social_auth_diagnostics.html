@@ -1,0 +1,191 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}تشخيص OAuth{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>🔍 تشخيص OAuth</h1>
+    <p>فحص إعدادات التوثيق الاجتماعي (Google و Facebook)</p>
+  </div>
+
+  <div class="form-card">
+    <h3>🌐 Google OAuth 2.0</h3>
+    <div class="diagnostic-item">
+      <span class="diagnostic-label">Client ID:</span>
+      <span class="diagnostic-value {% if diagnostics.google.client_id %}status-success{% else %}status-error{% endif %}">
+        {% if diagnostics.google.client_id %}✅ موجود{% else %}❌ غير موجود{% endif %}
+      </span>
+    </div>
+    <div class="diagnostic-item">
+      <span class="diagnostic-label">Client Secret:</span>
+      <span class="diagnostic-value {% if diagnostics.google.client_secret %}status-success{% else %}status-error{% endif %}">
+        {% if diagnostics.google.client_secret %}✅ موجود{% else %}❌ غير موجود{% endif %}
+      </span>
+    </div>
+    <div class="diagnostic-item">
+      <span class="diagnostic-label">Redirect URI:</span>
+      <span class="diagnostic-value">{{ diagnostics.google.redirect_uri }}</span>
+    </div>
+    <div class="diagnostic-item">
+      <span class="diagnostic-label">الحالة:</span>
+      <span class="diagnostic-value {% if diagnostics.google.status == 'configured' %}status-success{% else %}status-error{% endif %}">
+        {% if diagnostics.google.status == 'configured' %}✅ جاهز للاستخدام{% else %}❌ مفاتيح ناقصة{% endif %}
+      </span>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <h3>📘 Facebook OAuth 2.0</h3>
+    <div class="diagnostic-item">
+      <span class="diagnostic-label">App ID:</span>
+      <span class="diagnostic-value {% if diagnostics.facebook.client_id %}status-success{% else %}status-error{% endif %}">
+        {% if diagnostics.facebook.client_id %}✅ موجود{% else %}❌ غير موجود{% endif %}
+      </span>
+    </div>
+    <div class="diagnostic-item">
+      <span class="diagnostic-label">App Secret:</span>
+      <span class="diagnostic-value {% if diagnostics.facebook.client_secret %}status-success{% else %}status-error{% endif %}">
+        {% if diagnostics.facebook.client_secret %}✅ موجود{% else %}❌ غير موجود{% endif %}
+      </span>
+    </div>
+    <div class="diagnostic-item">
+      <span class="diagnostic-label">Redirect URI:</span>
+      <span class="diagnostic-value">{{ diagnostics.facebook.redirect_uri }}</span>
+    </div>
+    <div class="diagnostic-item">
+      <span class="diagnostic-label">الحالة:</span>
+      <span class="diagnostic-value {% if diagnostics.facebook.status == 'configured' %}status-success{% else %}status-error{% endif %}">
+        {% if diagnostics.facebook.status == 'configured' %}✅ جاهز للاستخدام{% else %}❌ مفاتيح ناقصة{% endif %}
+      </span>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <h3>⚙️ إعدادات البيئة</h3>
+    <div class="diagnostic-item">
+      <span class="diagnostic-label">DEBUG:</span>
+      <span class="diagnostic-value">{{ diagnostics.environment.debug }}</span>
+    </div>
+    <div class="diagnostic-item">
+      <span class="diagnostic-label">Railway Domain:</span>
+      <span class="diagnostic-value">{{ diagnostics.environment.railway_domain }}</span>
+    </div>
+    <div class="diagnostic-item">
+      <span class="diagnostic-label">Base URL:</span>
+      <span class="diagnostic-value">{{ diagnostics.environment.base_url }}</span>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <h3>🔐 Authentication Backends</h3>
+    <ul class="diagnostic-list">
+      {% for backend in diagnostics.backends %}
+      <li>{{ backend }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="form-card">
+    <h3>🔄 Pipeline</h3>
+    <ul class="diagnostic-list">
+      {% for step in diagnostics.pipeline %}
+      <li>{{ step }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  {% if diagnostics.google.status != 'configured' or diagnostics.facebook.status != 'configured' %}
+  <div class="form-card" style="border-color: #dc3545; background-color: rgba(220, 53, 69, 0.1);">
+    <h3 style="color: #dc3545;">⚠️ إجراءات مطلوبة</h3>
+    <p>لتفعيل التوثيق الاجتماعي، يجب عليك:</p>
+    <ol class="instructions-list">
+      <li>إنشاء مشروع في <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+      <li>تفعيل Google+ API</li>
+      <li>إنشاء OAuth 2.0 Client ID</li>
+      <li>إضافة Redirect URI: <code>{{ diagnostics.google.redirect_uri }}</code></li>
+      <li>نسخ Client ID و Client Secret إلى ملف <code>.env</code></li>
+      <li>إنشاء تطبيق في <a href="https://developers.facebook.com/" target="_blank">Facebook Developers</a></li>
+      <li>إضافة Facebook Login</li>
+      <li>إضافة Redirect URI: <code>{{ diagnostics.facebook.redirect_uri }}</code></li>
+      <li>نسخ App ID و App Secret إلى ملف <code>.env</code></li>
+      <li>إعادة تشغيل السيرفر</li>
+    </ol>
+  </div>
+  {% endif %}
+
+  <div class="form-card">
+    <a href="{% url 'dashboard' %}" class="btn btn-outline">
+      ← العودة للوحة التحكم
+    </a>
+  </div>
+</div>
+
+<style>
+.diagnostic-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.diagnostic-item:last-child {
+  border-bottom: none;
+}
+
+.diagnostic-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.diagnostic-value {
+  font-family: monospace;
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+}
+
+.status-success {
+  color: #4caf50;
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.status-error {
+  color: #dc3545;
+  background: rgba(220, 53, 69, 0.1);
+}
+
+.diagnostic-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.diagnostic-list li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.diagnostic-list li:last-child {
+  border-bottom: none;
+}
+
+.instructions-list {
+  padding-right: 1.5rem;
+}
+
+.instructions-list li {
+  margin: 0.5rem 0;
+}
+
+.instructions-list code {
+  background: var(--bg-alt);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+}
+</style>
+{% endblock %}

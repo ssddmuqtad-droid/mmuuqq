@@ -1,0 +1,200 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}إضافة عقار جديد{% endblock %}
+
+{% block content %}
+  <div class="container dashboard-container">
+    <h1>➕ إضافة عقار جديد</h1>
+    
+    <div class="card">
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-row">
+          <div class="form-group">
+            <label>نوع العقار</label>
+            <select name="type" required>
+              <option value="land">قطعة أرض</option>
+              <option value="house">بيت</option>
+              <option value="building">بناية</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>الحالة</label>
+            <select name="status" required>
+              <option value="ready">جاهز</option>
+              <option value="under-construction">قيد الإنشاء</option>
+              <option value="sold">مباع</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>الموقع</label>
+            <input type="text" name="location" required>
+          </div>
+          <div class="form-group">
+            <label>المساحة (متر مربع)</label>
+            <input type="number" name="area" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>السعر (د.ع)</label>
+            <input type="number" name="price" required>
+          </div>
+          <div class="form-group">
+            <label>رقم التواصل</label>
+            <input type="text" name="phone" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>وصف العقار</label>
+          <textarea name="description" rows="3" required></textarea>
+        </div>
+        
+        <div class="section-divider">
+          <h2>📷 صور العقار</h2>
+        </div>
+        
+        <div class="form-group">
+          <label>رفع صور العقار (يمكن رفع عدة صور)</label>
+          <input type="file" name="gallery_images" multiple accept="image/*" id="gallery_images">
+          <small class="form-text text-muted">يمكنك رفع عدة صور في نفس الوقت</small>
+        </div>
+        
+        <div id="image_360_checkboxes" style="display: none; margin-top: 15px;">
+          <label class="font-weight-bold">تحديد الصور 360°:</label>
+          <div id="checkboxes_container"></div>
+        </div>
+        
+        <div class="section-divider">
+          <h2>🎥 الجولة الافتراضية 360°</h2>
+        </div>
+        
+        <div class="form-group">
+          <label>نوع الجولة</label>
+          <select name="tour_type" id="tour_type">
+            <option value="">بدون جولة افتراضية</option>
+            <option value="image">صورة بانورامية 360°</option>
+            <option value="file">ملف جولة 360° جاهز</option>
+            <option value="external">رابط خارجي</option>
+            <option value="multi">جولة من عدة صور مترابطة</option>
+          </select>
+        </div>
+        
+        <div id="tour_fields" style="display: none;">
+          <div class="form-group">
+            <label>عنوان الجولة</label>
+            <input type="text" name="tour_title" placeholder="مثال: جولة داخلية كاملة">
+          </div>
+          
+          <div class="form-group" id="image_field" style="display: none;">
+            <label>صورة 360°</label>
+            <input type="file" name="tour_image" accept="image/*">
+          </div>
+          
+          <div class="form-group" id="file_field" style="display: none;">
+            <label>ملف الجولة</label>
+            <input type="file" name="tour_file">
+          </div>
+          
+          <div class="form-group" id="external_fields" style="display: none;">
+            <label>رابط خارجي</label>
+            <input type="url" name="external_url" placeholder="https://matterport.com/...">
+            
+            <label style="margin-top: 10px;">الخدمة الخارجية</label>
+            <select name="external_service">
+              <option value="">اختر الخدمة</option>
+              <option value="matterport">Matterport</option>
+              <option value="kuula">Kuula</option>
+              <option value="google">Google Street View</option>
+              <option value="other">خدمة أخرى</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>وصف الجولة</label>
+            <textarea name="tour_description" rows="3" placeholder="وصف الجولة الافتراضية..."></textarea>
+          </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">نشر العقار</button>
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">إلغاء</a>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const tourTypeSelect = document.getElementById('tour_type');
+  const tourFields = document.getElementById('tour_fields');
+  const imageField = document.getElementById('image_field');
+  const fileField = document.getElementById('file_field');
+  const externalFields = document.getElementById('external_fields');
+  
+  // Handle 360° image checkboxes
+  const galleryImagesInput = document.getElementById('gallery_images');
+  const image360Checkboxes = document.getElementById('image_360_checkboxes');
+  const checkboxesContainer = document.getElementById('checkboxes_container');
+  
+  galleryImagesInput.addEventListener('change', function() {
+    const files = this.files;
+    
+    if (files.length > 0) {
+      image360Checkboxes.style.display = 'block';
+      checkboxesContainer.innerHTML = '';
+      
+      for (let i = 0; i < files.length; i++) {
+        const div = document.createElement('div');
+        div.className = 'form-check';
+        div.style.marginBottom = '5px';
+        
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.className = 'form-check-input';
+        input.name = 'is_360';
+        input.id = `is_360_${i}`;
+        
+        const label = document.createElement('label');
+        label.className = 'form-check-label';
+        label.htmlFor = `is_360_${i}`;
+        label.textContent = `📷 ${files[i].name} - صورة 360°`;
+        
+        div.appendChild(input);
+        div.appendChild(label);
+        checkboxesContainer.appendChild(div);
+      }
+    } else {
+      image360Checkboxes.style.display = 'none';
+      checkboxesContainer.innerHTML = '';
+    }
+  });
+  
+  tourTypeSelect.addEventListener('change', function() {
+    const selectedType = this.value;
+    
+    if (selectedType === '') {
+      tourFields.style.display = 'none';
+    } else {
+      tourFields.style.display = 'block';
+      
+      // Hide all specific fields first
+      imageField.style.display = 'none';
+      fileField.style.display = 'none';
+      externalFields.style.display = 'none';
+      
+      // Show relevant field based on selection
+      if (selectedType === 'image' || selectedType === 'multi') {
+        imageField.style.display = 'block';
+      } else if (selectedType === 'file') {
+        fileField.style.display = 'block';
+      } else if (selectedType === 'external') {
+        externalFields.style.display = 'block';
+      }
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}الإشعارات{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-info">
+      <h1>الإشعارات</h1>
+      <p>جميع الإشعارات والتنبيهات</p>
+    </div>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">← لوحة التحكم</a>
+    </div>
+  </div>
+
+  <div class="notifications-container">
+    {% if unread_count > 0 %}
+    <div class="unread-banner">
+      <span>🔔 لديك {{ unread_count }} إشعار غير مقروء</span>
+    </div>
+    {% endif %}
+
+    <div class="notifications-list">
+      {% for notification in notifications %}
+      <div class="notification-card {% if not notification.is_read %}unread{% endif %} type-{{ notification.notification_type }}">
+        <div class="notification-header">
+          <span class="notification-icon">
+            {% if notification.notification_type == 'broker_created' %}👥
+            {% elif notification.notification_type == 'broker_updated' %}✏️
+            {% elif notification.notification_type == 'broker_deleted' %}🗑️
+            {% elif notification.notification_type == 'broker_suspended' %>⏸️
+            {% elif notification.notification_type == 'broker_activated' %>▶️
+            {% elif notification.notification_type == 'subscription_expiring' %>⏰
+            {% elif notification.notification_type == 'subscription_expired' %>❌
+            {% elif notification.notification_type == 'property_limit_reached' %>🏠
+            {% elif notification.notification_type == 'message_received' %>💬
+            {% elif notification.notification_type == 'success' %}✅
+            {% elif notification.notification_type == 'warning' %>⚠️
+            {% elif notification.notification_type == 'error' %>❌
+            {% else %}ℹ️
+            {% endif %}
+          </span>
+          <span class="notification-title">{{ notification.title }}</span>
+          <span class="notification-date">{{ notification.created_at|date:"Y-m-d H:i" }}</span>
+        </div>
+        <div class="notification-message">{{ notification.message }}</div>
+        {% if notification.link %}
+        <div class="notification-actions">
+          <a href="{{ notification.link }}" class="btn btn-sm btn-outline">عرض التفاصيل</a>
+        </div>
+        {% endif %}
+      </div>
+      {% empty %}
+      <div class="no-notifications">
+        <p>لا توجد إشعارات</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<style>
+.notifications-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.unread-banner {
+  background: var(--primary);
+  color: white;
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.notification-card {
+  background: var(--card-bg);
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.notification-card.unread {
+  border-left: 4px solid var(--primary);
+  background: var(--bg-alt);
+}
+
+.notification-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.notification-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.notification-icon {
+  font-size: 1.5rem;
+}
+
+.notification-title {
+  flex: 1;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.notification-date {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.notification-message {
+  color: var(--text-light);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.no-notifications {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-light);
+  font-style: italic;
+}
+</style>
+{% endblock %}

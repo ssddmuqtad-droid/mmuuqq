@@ -1,0 +1,43 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}تفاصيل الرسالة{% endblock %}
+
+{% block content %}
+<div class="dashboard-container" style="max-width:720px;margin:2rem auto">
+  <div class="dashboard-header">
+    <h1>رسالة من {{ msg.name }}</h1>
+    <a href="{% url 'broker_messages' %}" class="btn btn-outline">← رجوع</a>
+  </div>
+
+  <div class="form-card">
+    <p><strong>التاريخ:</strong> {{ msg.created_at|date:"Y-m-d H:i" }}</p>
+    {% if msg.phone %}<p><strong>الهاتف:</strong> <a href="tel:{{ msg.phone }}">{{ msg.phone }}</a></p>{% endif %}
+    {% if msg.email %}<p><strong>البريد:</strong> {{ msg.email }}</p>{% endif %}
+    {% if msg.property %}<p><strong>العقار:</strong> <a href="{{ msg.property.get_absolute_url }}">{{ msg.property.display_title }}</a></p>{% endif %}
+    <hr>
+    <p><strong>الرسالة:</strong></p>
+    <p>{{ msg.message }}</p>
+
+    {% if msg.reply %}
+    <hr>
+    <p><strong>ردك ({{ msg.replied_at|date:"Y-m-d H:i" }}):</strong></p>
+    <p>{{ msg.reply }}</p>
+    {% endif %}
+
+    <hr>
+    <h3>الرد على الزبون</h3>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.reply }}
+      <button type="submit" class="btn btn-primary" style="margin-top:1rem">إرسال الرد</button>
+    </form>
+
+    {% if not msg.is_archived %}
+    <form method="post" action="{% url 'broker_message_archive' msg.id %}" style="margin-top:1rem">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline">أرشفة المحادثة</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

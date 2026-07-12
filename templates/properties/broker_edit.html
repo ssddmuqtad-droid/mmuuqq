@@ -1,0 +1,46 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}تعديل دلال{% endblock %}
+
+{% block content %}
+<div class="dashboard-container" style="max-width:800px;margin:2rem auto">
+  <div class="dashboard-header">
+    <h1>تعديل: {{ broker.display_name }}</h1>
+    <a href="{% url 'broker_list' %}" class="btn btn-outline">← رجوع</a>
+  </div>
+  
+  <div class="form-card">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% for field in form %}
+      <div class="form-group" style="margin-bottom:1rem">
+        <label>{{ field.label }}</label>
+        {{ field }}
+        {% if field.name == 'profile_image' and broker.profile_image %}
+        <div style="margin-top: 10px;">
+          <img src="{{ broker.profile_image.url }}" alt="الصورة الشخصية" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%;">
+        </div>
+        {% endif %}
+        {% if field.name == 'cover_image' and broker.cover_image %}
+        <div style="margin-top: 10px;">
+          <img src="{{ broker.cover_image.url }}" alt="غلاف الصفحة" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
+        </div>
+        {% endif %}
+        {% if field.errors %}<div class="alert alert-error">{{ field.errors.0 }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary">حفظ التعديلات</button>
+    </form>
+  </div>
+
+  {% if can_delete_broker and broker.user != request.user %}
+  <div class="form-card" style="margin-top: 2rem;">
+    <h3>حذف الحساب</h3>
+    <form method="post" action="{% url 'broker_delete' broker.id %}" onsubmit="return confirm('حذف هذا الدلال نهائياً؟')">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">حذف الحساب</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

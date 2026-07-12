@@ -1,0 +1,185 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}التفضيلات | دلال{% endblock %}
+
+{% block extra_css %}
+<style>
+.preferences-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.preferences-card {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.preferences-card h3 {
+  margin-bottom: 25px;
+  color: #333;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #555;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #0d9488;
+}
+
+.form-check {
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.form-check-input {
+  width: 20px;
+  height: 20px;
+  margin-left: 15px;
+}
+
+.form-check-label {
+  flex: 1;
+  font-weight: 500;
+  color: #555;
+}
+
+.btn-primary {
+  background: #0d9488;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: #0b7e73;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+.alert {
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.alert-success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.alert-info {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="preferences-container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>التفضيلات</h1>
+    <a href="{% url 'user_settings' %}" class="btn-secondary">عودة للإعدادات</a>
+  </div>
+  
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+  
+  <form method="POST">
+    {% csrf_token %}
+    
+    <div class="preferences-card">
+      <h3>تفضيلات العرض</h3>
+      
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="{{ form.dark_mode.id_for_label }}" name="{{ form.dark_mode.html_name }}" {% if form.dark_mode.value %}checked{% endif %}>
+        <label class="form-check-label" for="{{ form.dark_mode.id_for_label }}">
+          الوضع الليلي
+          <small class="text-muted d-block">تفعيل الوضع الداكن للموقع</small>
+        </label>
+      </div>
+      
+      <div class="form-group">
+        <label for="{{ form.language.id_for_label }}">اللغة</label>
+        {{ form.language }}
+        <small class="text-muted d-block">اختر اللغة المفضلة للموقع</small>
+      </div>
+      
+      <div class="form-group">
+        <label for="{{ form.currency.id_for_label }}">العملة</label>
+        {{ form.currency }}
+        <small class="text-muted d-block">اختر العملة الافتراضية للأسعار</small>
+      </div>
+      
+      <div class="form-group">
+        <label for="{{ form.property_view_mode.id_for_label }}">طريقة عرض العقارات</label>
+        {{ form.property_view_mode }}
+        <small class="text-muted d-block">اختر طريقة عرض العقارات (شبكة أو قائمة)</small>
+      </div>
+      
+      <div class="form-group">
+        <label for="{{ form.properties_per_page.id_for_label }}">عدد العقارات في الصفحة</label>
+        {{ form.properties_per_page }}
+        <small class="text-muted d-block">اختر عدد العقارات المعروضة في كل صفحة</small>
+      </div>
+      
+      <button type="submit" class="btn-primary">حفظ التغييرات</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

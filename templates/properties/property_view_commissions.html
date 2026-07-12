@@ -1,0 +1,118 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}عمولات المشاهدات - {% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>👁️ عمولات المشاهدات</h1>
+                <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-right"></i> العودة للوحة التحكم
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center bg-primary text-white">
+                <div class="card-body">
+                    <h3>{{ total_view_commission.total|default:0 }} د.ع</h3>
+                    <p>إجمالي العمولات</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-success text-white">
+                <div class="card-body">
+                    <h3>{{ total_view_commission.paid|default:0 }} د.ع</h3>
+                    <p>العمولات المدفوعة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-warning text-white">
+                <div class="card-body">
+                    <h3>{{ total_view_commission.pending|default:0 }} د.ع</h3>
+                    <p>العمولات المعلقة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-info text-white">
+                <div class="card-body">
+                    <h3>{{ properties.count }}</h3>
+                    <p>عدد العقارات</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Properties List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">العقارات وعمولات المشاهدات</h5>
+                </div>
+                <div class="card-body">
+                    {% if properties %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>العقار</th>
+                                    <th>الدلال</th>
+                                    <th>المشاهدات</th>
+                                    <th>سعر العمولة</th>
+                                    <th>الإجمالي</th>
+                                    <th>المدفوع</th>
+                                    <th>المعلق</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for property in properties %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'property_detail' property.slug %}" target="_blank">
+                                            {{ property.display_title }}
+                                        </a>
+                                    </td>
+                                    <td>{{ property.broker.display_name|default:'-' }}</td>
+                                    <td>{{ property.views_count }}</td>
+                                    <td>{{ property.view_commission_rate }} د.ع</td>
+                                    <td>{{ property.total_view_commission }} د.ع</td>
+                                    <td>{{ property.paid_view_commission }} د.ع</td>
+                                    <td>{{ property.pending_view_commission }} د.ع</td>
+                                    <td>
+                                        {% if property.pending_view_commission > 0 %}
+                                        <a href="{% url 'pay_property_view_commission' property.id %}" class="btn btn-sm btn-success">
+                                            <i class="fas fa-money-bill"></i> دفع
+                                        </a>
+                                        {% else %}
+                                        <span class="badge bg-secondary">لا يوجد معلق</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-home fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">لا توجد عقارات</h4>
+                        <p class="text-muted">لم يتم إضافة أي عقار بعد</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

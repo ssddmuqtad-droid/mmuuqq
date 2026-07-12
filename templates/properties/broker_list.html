@@ -1,0 +1,639 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}إدارة الدلالين{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-info">
+      <h1>إدارة الدلالين</h1>
+      <p>إدارة وحسابات الدلالين والاشتراكات</p>
+    </div>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'broker_create' %}" class="btn btn-primary">➕ إنشاء دلال جديد</a>
+      <a href="{% url 'broker_list' %}?filter=my_brokers" class="btn btn-outline">👥 الدلالين المنشأة</a>
+      <a href="{% url 'broker_messaging' %}" class="btn btn-outline">💬 الرسائل</a>
+      <a href="{% url 'broker_statistics' %}" class="btn btn-outline">📊 الإحصائيات</a>
+      <a href="{% url 'activity_log' %}" class="btn btn-outline">📋 سجل النشاطات</a>
+      <a href="{% url 'join_requests_list' %}" class="btn btn-outline">طلبات الانضمام</a>
+      <a href="{% url 'office_panel' %}" class="btn btn-outline">المكتب العقاري</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">← لوحة التحكم</a>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="dashboard-stats" style="margin-bottom: 2rem;">
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ total_brokers }}</div>
+        <div class="stat-label">إجمالي الدلالين</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">✅</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ verified_brokers }}</div>
+        <div class="stat-label">الدلالين الموثقين</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🏠</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ total_properties }}</div>
+        <div class="stat-label">إجمالي العقارات</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🟢</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ active_brokers }}</div>
+        <div class="stat-label">الدلالين النشطين</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filter Section -->
+  <div class="search-filter-section" style="margin-bottom: 2rem;">
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="🔍 بحث بالاسم أو الهاتف..." class="search-input">
+      <select id="statusFilter" class="filter-select">
+        <option value="">جميع الحالات</option>
+        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>نشط</option>
+        <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>موقوف</option>
+        <option value="expired" {% if request.GET.status == 'expired' %}selected{% endif %}>منتهي الاشتراك</option>
+      </select>
+      <select id="verifiedFilter" class="filter-select">
+        <option value="">الكل</option>
+        <option value="verified" {% if request.GET.verified == 'verified' %}selected{% endif %}>موثق</option>
+        <option value="unverified" {% if request.GET.verified == 'unverified' %}selected{% endif %}>غير موثق</option>
+      </select>
+      <select id="roleFilter" class="filter-select">
+        <option value="">جميع الأدوار</option>
+        <option value="admin" {% if request.GET.role == 'admin' %}selected{% endif %}>مسؤول النظام</option>
+        <option value="main" {% if request.GET.role == 'main' %}selected{% endif %}>دلال رئيسي</option>
+        <option value="sub" {% if request.GET.role == 'sub' %}selected{% endif %}>دلال فرعي</option>
+      </select>
+      <select id="sortBy" class="filter-select">
+        <option value="newest" {% if request.GET.sort == 'newest' or not request.GET.sort %}selected{% endif %}>الأحدث</option>
+        <option value="oldest" {% if request.GET.sort == 'oldest' %}selected{% endif %}>الأقدم</option>
+        <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>الاسم</option>
+        <option value="properties" {% if request.GET.sort == 'properties' %}selected{% endif %}>عدد العقارات</option>
+        <option value="views" {% if request.GET.sort == 'views' %}selected{% endif %}>المشاهدات</option>
+        <option value="response_time" {% if request.GET.sort == 'response_time' %}selected{% endif %}>وقت الاستجابة</option>
+        <option value="performance" {% if request.GET.sort == 'performance' %}selected{% endif %}>الأداء</option>
+      </select>
+      <button onclick="exportData()" class="btn btn-outline">📥 تصدير</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>الدلال</th>
+          <th>معلومات الاتصال</th>
+          <th>القناة</th>
+          <th>الاشتراك</th>
+          <th>العقارات</th>
+          <th>الإحصائيات</th>
+          <th>الحالة</th>
+          <th>الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in broker_data %}
+        <tr class="broker-row">
+          <td>
+            <div class="broker-name">{{ item.broker.display_name }}</div>
+            <div class="broker-role">{{ item.broker.get_role_display }}</div>
+          </td>
+          <td>
+            <div class="contact-info">
+              <span>📱 {{ item.broker.phone }}</span>
+              <span>📍 {{ item.broker.governorate|default:"—"  }}</span>
+            </div>
+            {% if item.broker.office_name %}
+            <div class="office-name">🏢 {{ item.broker.office_name }}</div>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.channel %}
+            <div class="channel-info">
+              <div class="channel-name">📺 {{ item.channel.name }}</div>
+              <div class="channel-stats">
+                <span>👥 {{ item.channel.followers }}</span>
+                <span>👁️ {{ item.channel.views }}</span>
+                <span>⭐ {{ item.channel.rating|floatformat:1 }}</span>
+              </div>
+              <div class="channel-status">
+                {% if item.channel.is_verified %}
+                  <span class="badge badge-success">موثق</span>
+                {% endif %}
+                <span class="badge badge-{{ item.channel.status }}">{{ item.channel.get_status_display }}</span>
+              </div>
+            </div>
+            {% else %}
+            <div class="no-channel">لا توجد قناة</div>
+            <a href="{% url 'broker_channel_settings' %}" class="btn btn-sm btn-outline">إنشاء قناة</a>
+            {% endif %}
+          </td>
+          <td>
+            <div class="property-stats">
+              <div class="stat-row">
+                <span>المسموح:</span>
+                <strong>{{ item.property_limit|default:"∞" }}</strong>
+              </div>
+              <div class="stat-row">
+                <span>المستخدم:</span>
+                <strong>{{ item.property_count }}</strong>
+              </div>
+              <div class="stat-row {% if item.remaining_properties == 'inf' or item.remaining_properties > 5 %}text-success{% elif item.remaining_properties <= 2 %}text-danger{% endif %}">
+                <span>المتبقي:</span>
+                <strong>{% if item.remaining_properties == 'inf' %}غير محدود{% else %}{{ item.remaining_properties }}{% endif %}</strong>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="broker-stats">
+              <div class="stat-row">
+                <span>أضيف:</span>
+                <strong>{{ item.properties_added }}</strong>
+              </div>
+              <div class="stat-row">
+                <span>حذف:</span>
+                <strong>{{ item.properties_deleted }}</strong>
+              </div>
+              <div class="stat-row">
+                <span>مشاهدات:</span>
+                <strong>{{ item.total_views }}</strong>
+              </div>
+              <div class="stat-row">
+                <span>وقت الاستجابة:</span>
+                <strong>{% if item.average_response_time > 0 %}{{ item.average_response_time|floatformat:1 }} دقيقة{% else %}—{% endif %}</strong>
+              </div>
+              <div class="stat-row">
+                <span>درجة الأداء:</span>
+                <strong class="performance-score" data-score="{{ item.performance_score|default:0 }}">{{ item.performance_score|default:0 }}/100</strong>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="status-badges">
+              {% if item.broker.is_verified %}
+              <span class="badge badge-success">موثق</span>
+              {% endif %}
+              {% if item.broker.is_active %}
+              <span class="badge badge-primary">نشط</span>
+              {% else %}
+              <span class="badge badge-danger">موقوف</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <a href="{% url 'broker_edit' item.broker.id %}" class="btn btn-sm btn-outline" title="تعديل">✏️</a>
+              {% if item.channel %}
+              <a href="{% url 'broker_channel_detail' item.channel.id %}" class="btn btn-sm btn-primary" title="عرض القناة">📺</a>
+              <a href="{% url 'channel_management' %}" class="btn btn-sm btn-info" title="إدارة القناة">⚙️</a>
+              {% endif %}
+              {% if item.subscription_status == 'منتهي' %}
+              <button type="button" class="btn btn-sm btn-success" data-broker-id="{{ item.broker.id }}" data-broker-name="{{ item.broker.display_name }}" onclick="openRenewModal(this)" title="تجديد الاشتراك">🔄 تجديد</button>
+              {% else %}
+              <form method="post" action="{% url 'broker_renew_subscription' item.broker.id %}" style="display:inline">
+                {% csrf_token %}
+                <input type="hidden" name="duration" value="month">
+                <button type="submit" class="btn btn-sm btn-primary" title="تجديد الاشتراك">🔄</button>
+              </form>
+              {% endif %}
+              <form method="post" action="{% url 'broker_toggle_active' item.broker.id %}" style="display:inline">{% csrf_token %}
+                <button type="submit" class="btn btn-sm {% if item.broker.is_active %}btn-warning{% else %}btn-success{% endif %}" title="{% if item.broker.is_active %}إيقاف{% else %}تفعيل{% endif %}">
+                  {% if item.broker.is_active %}⏸️{% else %}▶️{% endif %}
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" style="text-align:center;padding: 2rem;">لا يوجد دلالين</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Renew Subscription Modal -->
+<div id="renewModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>تجديد اشتراك الدلال</h2>
+      <button type="button" class="modal-close" onclick="closeRenewModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="renewBrokerName"></p>
+      <form method="post" id="renewForm" action="">
+        {% csrf_token %}
+        <input type="hidden" name="broker_id" id="renewBrokerId">
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="display:block;margin-bottom:0.5rem;font-weight:600;">نوع التجديد:</label>
+          <select name="renew_type" class="form-control" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;" onchange="toggleRenewFields()">
+            <option value="time">تمديد الوقت</option>
+            <option value="properties">زيادة عدد العقارات</option>
+            <option value="both">كلاهما</option>
+          </select>
+        </div>
+        
+        <div id="timeFields">
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label style="display:block;margin-bottom:0.5rem;font-weight:600;">مدة التجديد:</label>
+            <select name="duration" class="form-control" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;">
+              <option value="month">شهر واحد</option>
+              <option value="3_months">3 أشهر</option>
+              <option value="6_months">6 أشهر</option>
+              <option value="year">سنة واحدة</option>
+              <option value="5_years">5 سنوات</option>
+            </select>
+          </div>
+        </div>
+        
+        <div id="propertyFields" style="display:none;">
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label style="display:block;margin-bottom:0.5rem;font-weight:600;">عدد العقارات الإضافية:</label>
+            <input type="number" name="additional_properties" min="1" value="10" class="form-control" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;">
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline" onclick="closeRenewModal()">إلغاء</button>
+      <button type="submit" form="renewForm" class="btn btn-primary">تجديد الاشتراك</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.header-info h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+}
+
+.header-info p {
+  margin: 0;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.dashboard-quick-links {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.broker-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.broker-role {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-top: 0.25rem;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.contact-info span {
+  color: var(--text-light);
+}
+
+.office-name {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-top: 0.25rem;
+}
+
+.channel-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.channel-name {
+  font-weight: 600;
+  color: var(--primary);
+  font-size: 0.9rem;
+}
+
+.channel-stats {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.channel-status {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.no-channel {
+  color: var(--text-light);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.badge-active {
+  background: rgba(72, 187, 120, 0.1);
+  color: #48bb78;
+  border: 1px solid rgba(72, 187, 120, 0.3);
+}
+
+.badge-inactive {
+  background: rgba(245, 101, 101, 0.1);
+  color: #f56565;
+  border: 1px solid rgba(245, 101, 101, 0.3);
+}
+
+.badge-suspended {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-pending {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.subscription-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.plan-name {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.subscription-dates {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.subscription-status {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: var(--bg-alt);
+  display: inline-block;
+  width: fit-content;
+}
+
+.subscription-status.status-active {
+  background: rgba(72, 187, 120, 0.1);
+  color: #48bb78;
+  border: 1px solid rgba(72, 187, 120, 0.3);
+}
+
+.subscription-status.status-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.subscription-status.status-expired {
+  background: rgba(245, 101, 101, 0.1);
+  color: #f56565;
+  border: 1px solid rgba(245, 101, 101, 0.3);
+  font-weight: 600;
+}
+
+.property-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  gap: 1rem;
+}
+
+.stat-row span {
+  color: var(--text-light);
+}
+
+.stat-row strong {
+  color: var(--text);
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.status-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.badge-success {
+  background: rgba(72, 187, 120, 0.1);
+  color: #48bb78;
+  border: 1px solid rgba(72, 187, 120, 0.3);
+}
+
+.badge-primary {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.badge-danger {
+  background: rgba(245, 101, 101, 0.1);
+  color: #f56565;
+  border: 1px solid rgba(245, 101, 101, 0.3);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.action-buttons .btn {
+  min-width: 32px;
+  padding: 0.25rem 0.5rem;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.modal-content {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 2px solid var(--border);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: var(--text-light);
+  transition: color 0.3s ease;
+}
+
+.modal-close:hover {
+  color: var(--text);
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 24px;
+  border-top: 2px solid var(--border);
+}
+
+.performance-score {
+  font-weight: 600;
+}
+
+.performance-score[data-score^="0"],
+.performance-score[data-score^="1"] {
+  color: var(--danger);
+}
+
+.performance-score[data-score^="2"],
+.performance-score[data-score^="3"] {
+  color: #f59e0b;
+}
+
+.performance-score[data-score^="4"],
+.performance-score[data-score^="5"] {
+  color: #3b82f6;
+}
+
+.performance-score[data-score^="6"],
+.performance-score[data-score^="7"],
+.performance-score[data-score^="8"],
+.performance-score[data-score^="9"],
+.performance-score[data-score="100"] {
+  color: var(--success);
+}
+</style>
+
+<script>
+function exportData() {
+  window.location.href = '{% url "export_brokers" %}';
+}
+
+function openRenewModal(button) {
+  const brokerId = button.getAttribute('data-broker-id');
+  const brokerName = button.getAttribute('data-broker-name');
+  
+  document.getElementById('renewBrokerId').value = brokerId;
+  document.getElementById('renewBrokerName').textContent = 'تجديد اشتراك: ' + brokerName;
+  document.getElementById('renewForm').action = '/dashboard/brokers/' + brokerId + '/renew/';
+  
+  document.getElementById('renewModal').style.display = 'flex';
+}
+
+function closeRenewModal() {
+  document.getElementById('renewModal').style.display = 'none';
+}
+
+function toggleRenewFields() {
+  const renewType = document.querySelector('select[name="renew_type"]').value;
+  const timeFields = document.getElementById('timeFields');
+  const propertyFields = document.getElementById('propertyFields');
+  
+  if (renewType === 'time') {
+    timeFields.style.display = 'block';
+    propertyFields.style.display = 'none';
+  } else if (renewType === 'properties') {
+    timeFields.style.display = 'none';
+    propertyFields.style.display = 'block';
+  } else if (renewType === 'both') {
+    timeFields.style.display = 'block';
+    propertyFields.style.display = 'block';
+  }
+}
+
+// Close modal when clicking outside
+document.getElementById('renewModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeRenewModal();
+  }
+});
+</script>
+
+{% endblock %}

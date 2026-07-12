@@ -1,0 +1,116 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}دفع عمولة المشاهدات - {% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>💰 دفع عمولة المشاهدات</h1>
+                <a href="{% url 'property_view_commissions' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-right"></i> العودة للعمولات
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">معلومات العقار</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>العنوان:</strong> {{ property.display_title }}</p>
+                    <p><strong>الدلال:</strong> {{ property.broker.display_name|default:'-' }}</p>
+                    <p><strong>المحافظة:</strong> {{ property.governorate }}</p>
+                    <p><strong>السعر:</strong> {{ property.price_formatted }} د.ع</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">ملخص العمولات</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>عدد المشاهدات:</strong> {{ commission_summary.views }}</p>
+                    <p><strong>سعر العمولة:</strong> {{ commission_summary.rate }} د.ع</p>
+                    <p><strong>إجمالي العمولات:</strong> {{ commission_summary.total }} د.ع</p>
+                    <p><strong>العمولات المدفوعة:</strong> {{ commission_summary.paid }} د.ع</p>
+                    <p><strong>العمولات المعلقة:</strong> {{ commission_summary.pending }} د.ع</p>
+                    <p><strong>الرصيد المتبقي:</strong> {{ commission_summary.balance }} د.ع</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">دفع عمولة</h5>
+                </div>
+                <div class="card-body">
+                    {% if commission_summary.pending > 0 %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">المبلغ المراد دفعه (دينار)</label>
+                            <input type="number" class="form-control" id="amount" name="amount" 
+                                   min="0.01" max="{{ commission_summary.pending }}" step="0.01" required>
+                            <small class="form-text text-muted">
+                                الحد الأقصى: {{ commission_summary.pending }} د.ع
+                            </small>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-money-bill"></i> دفع العمولة
+                            </button>
+                            <a href="{% url 'property_view_commissions' %}" class="btn btn-outline-secondary">
+                                إلغاء
+                            </a>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        لا توجد عمولات معلقة لهذا العقار
+                    </div>
+                    <a href="{% url 'property_view_commissions' %}" class="btn btn-outline-secondary">
+                        العودة للعمولات
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0">ملاحظات</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-info-circle"></i>
+                            سيتم خصم المبلغ من العمولات المعلقة
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-info-circle"></i>
+                            سيتم تحديث رصيد الدلال تلقائياً
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-info-circle"></i>
+                            سيتم تسجيل العملية في سجل النشاطات
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

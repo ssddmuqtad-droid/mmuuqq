@@ -1,0 +1,518 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}لوحة تحكم الدلال الرئيسي{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="main-broker-panel">
+    <div class="panel-header">
+      <div class="header-content">
+        <div class="header-icon">👑</div>
+        <div>
+          <h1>لوحة تحكم الدلال الرئيسي</h1>
+          <p>إدارة الدلالين الفرعيين وعقاراتهم</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="{% url 'broker_create' %}" class="btn btn-primary">
+          <span class="btn-icon">➕</span>
+          إضافة دلال فرعي
+        </a>
+      </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+      <div class="stat-card primary">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+          <h3>الدلالين الفرعيين</h3>
+          <p class="stat-value">{{ total_sub_brokers }}</p>
+          <p class="stat-subtitle">دلال نشط</p>
+        </div>
+      </div>
+
+      <div class="stat-card success">
+        <div class="stat-icon">🏠</div>
+        <div class="stat-content">
+          <h3>إجمالي العقارات</h3>
+          <p class="stat-value">{{ total_properties }}</p>
+          <p class="stat-subtitle">عقار منشور</p>
+        </div>
+      </div>
+
+      <div class="stat-card info">
+        <div class="stat-icon">✅</div>
+        <div class="stat-content">
+          <h3>العقارات النشطة</h3>
+          <p class="stat-value">{{ active_properties }}</p>
+          <p class="stat-subtitle">عقار متاح</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub Brokers Section -->
+    <div class="section">
+      <div class="section-header">
+        <h2>الدلالين الفرعيين</h2>
+        <a href="{% url 'broker_list' %}" class="view-all">عرض الكل</a>
+      </div>
+      <div class="brokers-grid">
+        {% if sub_brokers %}
+          {% for sub_broker in sub_brokers %}
+          <div class="broker-card">
+            <div class="broker-avatar">
+              <div class="avatar-placeholder">👤</div>
+              {% if sub_broker.is_verified %}
+              <span class="verified-badge">✓</span>
+              {% endif %}
+            </div>
+            <div class="broker-info">
+              <h3>{{ sub_broker.display_name }}</h3>
+              <p class="broker-phone">📞 {{ sub_broker.phone }}</p>
+              {% if sub_broker.office_name %}
+              <p class="broker-office">🏢 {{ sub_broker.office_name }}</p>
+              {% endif %}
+              {% if sub_broker.governorate %}
+              <p class="broker-location">📍 {{ sub_broker.governorate }}</p>
+              {% endif %}
+            </div>
+            <div class="broker-stats">
+              <div class="broker-stat">
+                <span class="stat-label">العقارات:</span>
+                <span class="stat-value">{{ sub_broker.properties.count }}</span>
+              </div>
+            </div>
+            <div class="broker-actions">
+              <a href="{% url 'broker_edit' sub_broker.id %}" class="btn btn-sm btn-outline">تعديل</a>
+              <a href="{% url 'broker_profile' sub_broker.user.username %}" class="btn btn-sm btn-primary">عرض</a>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <h3>لا يوجد دلالين فرعيين</h3>
+            <p>ابدأ بإضافة دلالين فرعيين لفريقك</p>
+            <a href="{% url 'broker_create' %}" class="btn btn-primary">إضافة دلال فرعي</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recent Properties Section -->
+    <div class="section">
+      <div class="section-header">
+        <h2>أحدث العقارات</h2>
+        <a href="{% url 'explore' %}" class="view-all">عرض الكل</a>
+      </div>
+      <div class="properties-grid">
+        {% if recent_properties %}
+          {% for property in recent_properties %}
+          <div class="property-card">
+            <div class="property-image">
+              {% if property.image %}
+              <img src="{{ property.image.url }}" alt="{{ property.title }}">
+              {% else %}
+              <div class="image-placeholder">🏠</div>
+              {% endif %}
+              <div class="property-status status-{{ property.status }}">
+                {{ property.get_status_display }}
+              </div>
+            </div>
+            <div class="property-content">
+              <h3>{{ property.title }}</h3>
+              <p class="property-price">{{ property.price|format_price }}</p>
+              <p class="property-location">📍 {{ property.district }}</p>
+              <div class="property-broker">
+                <span class="broker-name">👤 {{ property.broker.display_name }}</span>
+              </div>
+            </div>
+            <div class="property-actions">
+              <a href="{% url 'property_detail' property.slug %}" class="btn btn-sm btn-primary">عرض</a>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">
+            <div class="empty-icon">🏠</div>
+            <h3>لا توجد عقارات</h3>
+            <p>لم يتم نشر أي عقارات من قبل الدلالين الفرعيين</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.main-broker-panel {
+  padding: 40px 0;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-icon {
+  font-size: 3rem;
+}
+
+.header-content h1 {
+  font-size: 2rem;
+  margin: 0 0 8px 0;
+  color: var(--text);
+}
+
+.header-content p {
+  margin: 0;
+  color: var(--text-light);
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.stat-card {
+  background: var(--bg);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card.primary { border-color: #3b82f6; }
+.stat-card.success { border-color: #10b981; }
+.stat-card.info { border-color: #8b5cf6; }
+
+.stat-icon {
+  font-size: 2.5rem;
+  min-width: 60px;
+}
+
+.stat-content h3 {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin: 0 0 8px 0;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 4px 0;
+}
+
+.stat-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin: 0;
+}
+
+.section {
+  background: var(--bg);
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text);
+}
+
+.view-all {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.brokers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.broker-card {
+  background: var(--bg-alt);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.broker-avatar {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.verified-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: #10b981;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.broker-info {
+  text-align: center;
+}
+
+.broker-info h3 {
+  font-size: 1.2rem;
+  margin: 0 0 8px 0;
+  color: var(--text);
+}
+
+.broker-phone,
+.broker-office,
+.broker-location {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin: 4px 0;
+}
+
+.broker-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.broker-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.broker-stat .stat-label {
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.broker-stat .stat-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.broker-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.property-card {
+  background: var(--bg-alt);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.property-image {
+  position: relative;
+  height: 180px;
+  background: var(--border);
+}
+
+.property-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+}
+
+.property-status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: white;
+}
+
+.status-ready { background: #10b981; }
+.status-rent { background: #3b82f6; }
+.status-under-construction { background: #f59e0b; }
+.status-sold { background: #ef4444; }
+
+.property-content {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.property-content h3 {
+  font-size: 1rem;
+  margin: 0;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-price {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 0;
+}
+
+.property-location {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin: 0;
+}
+
+.property-broker {
+  margin-top: auto;
+}
+
+.broker-name {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.property-actions {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-light);
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  margin: 0 0 8px 0;
+  color: var(--text);
+}
+
+.empty-state p {
+  margin: 0 0 24px 0;
+}
+
+@media (max-width: 768px) {
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-content {
+    width: 100%;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions .btn {
+    flex: 1;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .brokers-grid,
+  .properties-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,437 @@
+{% extends 'properties/base.html' %}
+{% load price_filters %}
+
+{% block title %}{{ building_request.owner_name }} - طلب البناء{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="building-request-detail">
+    <div class="request-header">
+      <h1>🏗️ طلب بناء منزل</h1>
+      <p class="request-owner">{{ building_request.owner_name }}</p>
+      <div class="request-meta">
+        <span class="request-type">{{ building_request.get_request_type_display }}</span>
+        <span class="request-status status-{{ building_request.status }}">{{ building_request.get_status_display }}</span>
+      </div>
+    </div>
+
+    <div class="request-sections">
+      <div class="request-section">
+        <h2>معلومات صاحب الطلب</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">الاسم:</span>
+            <span class="value">{{ building_request.owner_name }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">رقم الهاتف:</span>
+            <span class="value">{{ building_request.owner_phone }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">المنطقة:</span>
+            <span class="value">{{ building_request.owner_district }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">الموقع:</span>
+            <span class="value">{{ building_request.owner_location }}</span>
+          </div>
+        </div>
+      </div>
+
+      {% if building_request.land_info %}
+      <div class="request-section">
+        <h2>معلومات الأرض</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">موقع القطعة:</span>
+            <span class="value">{{ building_request.land_info.plot_location }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">مساحة الأرض:</span>
+            <span class="value">{{ building_request.land_info.area }} متر مربع</span>
+          </div>
+          <div class="info-item">
+            <span class="label">الأبعاد:</span>
+            <span class="value">{{ building_request.land_info.width }} × {{ building_request.land_info.length }} متر</span>
+          </div>
+          <div class="info-item">
+            <span class="label">نوع الأرض:</span>
+            <span class="value">{{ building_request.land_info.get_land_type_display }}</span>
+          </div>
+        </div>
+        {% if building_request.land_info.deed_image %}
+        <div class="deed-image">
+          <span class="label">صورة السند:</span>
+          <img src="{{ building_request.land_info.deed_image.url }}" alt="صورة السند">
+        </div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="request-section">
+        <h2>معلومات الأرض</h2>
+        <p class="not-added">لم يتم إضافة معلومات الأرض بعد</p>
+        <a href="{% url 'building_request_add_land_info' building_request.id %}" class="btn btn-primary">إضافة معلومات الأرض</a>
+      </div>
+      {% endif %}
+
+      {% if building_request.building_details %}
+      <div class="request-section">
+        <h2>تفاصيل البناء</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">عدد الطوابق:</span>
+            <span class="value">{{ building_request.building_details.floors }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">عدد الغرف:</span>
+            <span class="value">{{ building_request.building_details.rooms }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">عدد الحمامات:</span>
+            <span class="value">{{ building_request.building_details.bathrooms }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">النمط المعماري:</span>
+            <span class="value">{{ building_request.building_details.get_architectural_style_display }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">كراج:</span>
+            <span class="value">{% if building_request.building_details.has_garage %}نعم{% else %}لا{% endif %}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">حديقة:</span>
+            <span class="value">{% if building_request.building_details.has_garden %}نعم{% else %}لا{% endif %}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">مصعد:</span>
+            <span class="value">{% if building_request.building_details.has_elevator %}نعم{% else %}لا{% endif %}</span>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="request-section">
+        <h2>تفاصيل البناء</h2>
+        <p class="not-added">لم يتم إضافة تفاصيل البناء بعد</p>
+        <a href="{% url 'building_request_add_building_details' building_request.id %}" class="btn btn-primary">إضافة تفاصيل البناء</a>
+      </div>
+      {% endif %}
+
+      {% if building_request.budget %}
+      <div class="request-section">
+        <h2>الميزانية</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">الميزانية التقريبية:</span>
+            <span class="value">{{ building_request.budget.estimated_budget|format_price }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">مستوى التشطيب:</span>
+            <span class="value">{{ building_request.budget.get_finishing_level_display }}</span>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="request-section">
+        <h2>الميزانية</h2>
+        <p class="not-added">لم يتم إضافة الميزانية بعد</p>
+        <a href="{% url 'building_request_add_budget' building_request.id %}" class="btn btn-primary">إضافة الميزانية</a>
+      </div>
+      {% endif %}
+
+      <div class="request-section">
+        <h2>عروض الأسعار</h2>
+        {% if building_request.quotes.all %}
+        <div class="quotes-list">
+          {% for quote in building_request.quotes.all %}
+          <div class="quote-item">
+            <div class="quote-header">
+              <span class="quote-provider">{{ quote.provider_name }}</span>
+              <span class="quote-type">{{ quote.get_quote_type_display }}</span>
+            </div>
+            <div class="quote-details">
+              <span class="quote-price">{{ quote.price|format_price }}</span>
+              <span class="quote-duration">{{ quote.duration_days }} يوم</span>
+            </div>
+            {% if quote.description %}
+            <p class="quote-description">{{ quote.description }}</p>
+            {% endif %}
+            {% if quote.is_accepted %}
+            <span class="quote-accepted">✅ مقبول</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="not-added">لا توجد عروض بعد</p>
+        {% endif %}
+        <a href="{% url 'building_request_add_quote' building_request.id %}" class="btn btn-primary">إضافة عرض سعر</a>
+      </div>
+
+      <div class="request-section">
+        <h2>مزايدات المقاولين</h2>
+        {% if building_request.contractor_bids.all %}
+        <div class="bids-list">
+          {% for bid in building_request.contractor_bids.all %}
+          <div class="bid-item">
+            <div class="bid-header">
+              <span class="bid-contractor">{{ bid.contractor_name }}</span>
+              {% if bid.is_winning %}
+              <span class="bid-winning">🏆 الفائز</span>
+              {% endif %}
+            </div>
+            <div class="bid-amount">{{ bid.bid_amount|format_price }}</div>
+            {% if bid.bid_description %}
+            <p class="bid-description">{{ bid.bid_description }}</p>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="not-added">لا توجد مزايدات بعد</p>
+        {% endif %}
+        <a href="{% url 'building_request_add_contractor_bid' building_request.id %}" class="btn btn-primary">إضافة مزايدة مقاول</a>
+      </div>
+
+      <div class="request-section">
+        <h2>تقييمات المقاولين</h2>
+        {% if building_request.contractor_ratings.all %}
+        <div class="ratings-list">
+          {% for rating in building_request.contractor_ratings.all %}
+          <div class="rating-item">
+            <div class="rating-header">
+              <span class="rating-contractor">{{ rating.contractor_name }}</span>
+              <span class="rating-score">⭐ {{ rating.rating }}/5</span>
+            </div>
+            <p class="rating-review">{{ rating.review }}</p>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="not-added">لا توجد تقييمات بعد</p>
+        {% endif %}
+        <a href="{% url 'building_request_add_contractor_rating' building_request.id %}" class="btn btn-primary">إضافة تقييم مقاول</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.building-request-detail {
+  margin: 40px 0;
+}
+
+.request-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.request-header h1 {
+  font-size: 2.5rem;
+  color: var(--text);
+  margin: 16px 0 8px 0;
+}
+
+.request-owner {
+  color: var(--text-light);
+  font-size: 1.1rem;
+  margin-bottom: 16px;
+}
+
+.request-meta {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.request-type,
+.request-status {
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: white;
+}
+
+.request-type {
+  background: #3b82f6;
+}
+
+.status-pending {
+  background: #f59e0b;
+}
+
+.status-active {
+  background: #10b981;
+}
+
+.status-in_progress {
+  background: #3b82f6;
+}
+
+.status-completed {
+  background: #6b7280;
+}
+
+.status-cancelled {
+  background: #ef4444;
+}
+
+.request-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.request-section {
+  background: var(--bg);
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.request-section h2 {
+  margin: 0 0 24px 0;
+  font-size: 1.4rem;
+  color: var(--text);
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--primary);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-item .label {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.info-item .value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.deed-image {
+  margin-top: 16px;
+}
+
+.deed-image img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.not-added {
+  color: var(--text-light);
+  margin-bottom: 16px;
+}
+
+.quotes-list,
+.bids-list,
+.ratings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.quote-item,
+.bid-item,
+.rating-item {
+  background: var(--bg-alt);
+  padding: 16px;
+  border-radius: var(--radius-md);
+}
+
+.quote-header,
+.bid-header,
+.rating-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.quote-provider,
+.bid-contractor,
+.rating-contractor {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.quote-type {
+  padding: 4px 8px;
+  background: var(--primary);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+}
+
+.quote-details {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.quote-price,
+.bid-amount {
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.quote-duration {
+  color: var(--text-light);
+}
+
+.quote-description,
+.bid-description,
+.rating-review {
+  color: var(--text-light);
+  line-height: 1.6;
+  margin: 8px 0;
+}
+
+.quote-accepted {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #10b981;
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+}
+
+.bid-winning {
+  padding: 4px 8px;
+  background: #f59e0b;
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+}
+
+.rating-score {
+  font-weight: 700;
+  color: #f59e0b;
+}
+
+@media (max-width: 768px) {
+  .request-header h1 {
+    font-size: 2rem;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+{% endblock %}

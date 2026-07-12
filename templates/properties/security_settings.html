@@ -1,0 +1,170 @@
+{% extends "properties/base.html" %}
+{% load static %}
+
+{% block title %}إعدادات الأمان{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-info">
+      <h1>إعدادات الأمان</h1>
+      <p>إدارة كلمة المرور وإعدادات الأمان</p>
+    </div>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم</a>
+    </div>
+  </div>
+
+  <div class="settings-container">
+    <form method="post" class="settings-form">
+      {% csrf_token %}
+      
+      <!-- Password Change -->
+      <div class="settings-section">
+        <h2>تغيير كلمة المرور</h2>
+        
+        <div class="form-group">
+          <label>كلمة المرور الحالية</label>
+          <input type="password" name="current_password" required>
+        </div>
+        
+        <div class="form-group">
+          <label>كلمة المرور الجديدة</label>
+          <input type="password" name="new_password" required minlength="8">
+          <small>يجب أن تكون 8 أحرف على الأقل</small>
+        </div>
+        
+        <div class="form-group">
+          <label>تأكيد كلمة المرور الجديدة</label>
+          <input type="password" name="confirm_password" required minlength="8">
+        </div>
+      </div>
+      
+      <!-- Security Info -->
+      <div class="settings-section">
+        <h2>معلومات الأمان</h2>
+        
+        <div class="info-item">
+          <span class="info-label">آخر تسجيل دخول:</span>
+          <span class="info-value">{{ request.user.last_login|date:"Y-m-d H:i" }}</span>
+        </div>
+        
+        <div class="info-item">
+          <span class="info-label">تاريخ إنشاء الحساب:</span>
+          <span class="info-value">{{ request.user.date_joined|date:"Y-m-d" }}</span>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.settings-container {
+  max-width: 800px;
+  margin: 2rem auto;
+}
+
+.settings-section {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.settings-section h2 {
+  margin: 0 0 1rem 0;
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.form-group input[type="password"] {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.info-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-outline:hover {
+  background: var(--bg-alt);
+  border-color: var(--primary);
+}
+</style>
+{% endblock %}

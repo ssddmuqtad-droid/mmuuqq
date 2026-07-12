@@ -1,0 +1,527 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}إعدادات القناة - {{ broker.display_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.channel-settings-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.settings-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 30px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+
+.settings-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.settings-header h1 {
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.settings-header p {
+  color: var(--text-light);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+
+.form-group textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.image-upload-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.image-upload-card {
+  background: var(--bg);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.image-upload-card:hover {
+  border-color: var(--primary);
+  background: rgba(13, 148, 136, 0.05);
+}
+
+.image-preview {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  background: var(--border);
+}
+
+.image-preview-placeholder {
+  width: 100%;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  background: var(--border);
+  color: var(--text-light);
+  font-size: 3rem;
+}
+
+.btn-save {
+  width: 100%;
+  padding: 15px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-save:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.status-pending {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.status-active {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.status-inactive {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+.status-suspended {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="channel-settings-container">
+  <div class="settings-header">
+    <h1>⚙️ إعدادات القناة</h1>
+    <p>قم بتخصيص قناة الدلال الخاصة بك</p>
+    
+    <span class="status-badge status-{{ channel.status }}">
+      {% if channel.status == 'pending' %}بانتظار الموافقة{% endif %}
+      {% if channel.status == 'active' %}نشط{% endif %}
+      {% if channel.status == 'inactive' %}غير نشط{% endif %}
+      {% if channel.status == 'suspended' %}موقوف{% endif %}
+    </span>
+  </div>
+
+  <div class="settings-card">
+    <form method="post" enctype="multipart/form-data" id="main-form">
+      {% csrf_token %}
+      
+      <div class="form-group">
+        <label for="name">اسم القناة</label>
+        <input 
+          type="text" 
+          id="name" 
+          name="name" 
+          value="{{ channel.name }}" 
+          placeholder="أدخل اسم القناة"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="description">وصف القناة</label>
+        <textarea 
+          id="description" 
+          name="description" 
+          placeholder="اكتب وصفاً لقناتك..."
+        >{{ channel.description }}</textarea>
+      </div>
+
+      <div class="image-upload-section">
+        <div class="image-upload-card">
+          <label for="logo" style="cursor: pointer;">
+            {% if channel.logo %}
+            <img src="{{ channel.logo.url }}" alt="شعار القناة" class="image-preview">
+            {% else %}
+            <div class="image-preview-placeholder">📺</div>
+            {% endif %}
+            <div style="margin-top: 10px;">
+              <strong>شعار القناة</strong>
+              <p style="font-size: 0.85rem; color: var(--text-light);">انقر لرفع الشعار</p>
+            </div>
+          </label>
+          <input type="file" id="logo" name="logo" accept="image/*" style="display: none;">
+        </div>
+
+        <div class="image-upload-card">
+          <label for="cover_image" style="cursor: pointer;">
+            {% if channel.cover_image %}
+            <img src="{{ channel.cover_image.url }}" alt="صورة الغلاف" class="image-preview">
+            {% else %}
+            <div class="image-preview-placeholder">🖼️</div>
+            {% endif %}
+            <div style="margin-top: 10px;">
+              <strong>صورة الغلاف</strong>
+              <p style="font-size: 0.85rem; color: var(--text-light);">انقر لرفع الغلاف</p>
+            </div>
+          </label>
+          <input type="file" id="cover_image" name="cover_image" accept="image/*" style="display: none;">
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="settings-card">
+    <h3 style="color: var(--text); margin-bottom: 20px;">📱 معلومات التواصل</h3>
+    
+    <div class="form-group">
+      <label for="phone">رقم الهاتف</label>
+      <input 
+        type="tel" 
+        id="phone" 
+        name="phone" 
+        value="{{ channel.phone }}" 
+        placeholder="07xxxxxxxxx"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="email">البريد الإلكتروني</label>
+      <input 
+        type="email" 
+        id="email" 
+        name="email" 
+        value="{{ channel.email }}" 
+        placeholder="example@email.com"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="address">العنوان</label>
+      <textarea 
+        id="address" 
+        name="address" 
+        placeholder="أدخل عنوانك الكامل..."
+      >{{ channel.address }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="work_area">منطقة العمل</label>
+      <input 
+        type="text" 
+        id="work_area" 
+        name="work_area" 
+        value="{{ channel.work_area }}" 
+        placeholder="مثال: بغداد، أربيل، البصرة..."
+      >
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <h3 style="color: var(--text); margin-bottom: 20px;">👤 معلومات شخصية</h3>
+    
+    <div class="form-group">
+      <label for="experience_years">سنوات الخبرة</label>
+      <input 
+        type="number" 
+        id="experience_years" 
+        name="experience_years" 
+        value="{{ channel.experience_years }}" 
+        placeholder="مثال: 5"
+        min="0"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="specialization">التخصص</label>
+      <input 
+        type="text" 
+        id="specialization" 
+        name="specialization" 
+        value="{{ channel.specialization }}" 
+        placeholder="مثال: عقارات سكنية، تجارية، أراضي..."
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="working_hours">ساعات العمل</label>
+      <input 
+        type="text" 
+        id="working_hours" 
+        name="working_hours" 
+        value="{{ channel.working_hours }}" 
+        placeholder="مثال: 9 صباحاً - 5 مساءً"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="languages">اللغات</label>
+      <input 
+        type="text" 
+        id="languages" 
+        name="languages" 
+        value="{{ channel.languages }}" 
+        placeholder="مثال: العربية، الكردية، الإنجليزية"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="about_me">عني</label>
+      <textarea 
+        id="about_me" 
+        name="about_me" 
+        placeholder="اكتب نبذة عنك وخبراتك..."
+        style="min-height: 150px;"
+      >{{ channel.about_me }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="achievements">الإنجازات</label>
+      <textarea 
+        id="achievements" 
+        name="achievements" 
+        placeholder="اكتب إنجازاتك ومشاريعك المميزة..."
+        style="min-height: 120px;"
+      >{{ channel.achievements }}</textarea>
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <h3 style="color: var(--text); margin-bottom: 20px;">🔗 الروابط الاجتماعية</h3>
+    
+    <div class="form-group">
+      <label for="whatsapp">واتساب</label>
+      <input 
+        type="text" 
+        id="whatsapp" 
+        name="whatsapp" 
+        value="{{ channel.whatsapp }}" 
+        placeholder="07xxxxxxxxx"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="facebook">فيسبوك</label>
+      <input 
+        type="url" 
+        id="facebook" 
+        name="facebook" 
+        value="{{ channel.facebook }}" 
+        placeholder="https://facebook.com/..."
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="instagram">انستغرام</label>
+      <input 
+        type="url" 
+        id="instagram" 
+        name="instagram" 
+        value="{{ channel.instagram }}" 
+        placeholder="https://instagram.com/..."
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="telegram">تيليجرام</label>
+      <input 
+        type="text" 
+        id="telegram" 
+        name="telegram" 
+        value="{{ channel.telegram }}" 
+        placeholder="@username"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="youtube">يوتيوب</label>
+      <input 
+        type="url" 
+        id="youtube" 
+        name="youtube" 
+        value="{{ channel.youtube }}" 
+        placeholder="https://youtube.com/..."
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="tiktok">تيك توك</label>
+      <input 
+        type="url" 
+        id="tiktok" 
+        name="tiktok" 
+        value="{{ channel.tiktok }}" 
+        placeholder="https://tiktok.com/..."
+      >
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <h3 style="color: var(--text); margin-bottom: 20px;">🔍 تحسين محركات البحث (SEO)</h3>
+    
+    <div class="form-group">
+      <label for="meta_title">عنوان SEO</label>
+      <input 
+        type="text" 
+        id="meta_title" 
+        name="meta_title" 
+        value="{{ channel.meta_title }}" 
+        placeholder="عنوان مختصر للقناة (أقصى 70 حرف)"
+        maxlength="70"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="meta_description">وصف SEO</label>
+      <textarea 
+        id="meta_description" 
+        name="meta_description" 
+        placeholder="وصف مختصر للقناة (أقصى 160 حرف)"
+        maxlength="160"
+        style="min-height: 80px;"
+      >{{ channel.meta_description }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="keywords">كلمات مفتاحية</label>
+      <input 
+        type="text" 
+        id="keywords" 
+        name="keywords" 
+        value="{{ channel.keywords }}" 
+        placeholder="كلمات مفتاحية مفصولة بفواصل"
+      >
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <button type="submit" form="main-form" class="btn-save">💾 حفظ جميع التغييرات</button>
+  </div>
+
+  <div class="settings-card">
+    <h3 style="color: var(--text); margin-bottom: 15px;">📊 إحصائيات القناة</h3>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
+      <div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">{{ channel.properties_count }}</div>
+        <div style="color: var(--text-light);">عقار</div>
+      </div>
+      <div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">{{ channel.followers_count }}</div>
+        <div style="color: var(--text-light);">متابع</div>
+      </div>
+      <div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">{{ channel.views_count }}</div>
+        <div style="color: var(--text-light);">مشاهدة</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align: center;">
+    <a href="{% url 'dashboard' %}" class="btn" style="background: var(--card-bg); border: 2px solid var(--border);">
+      ← العودة للوحة التحكم
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Handle file input changes
+document.getElementById('logo').addEventListener('change', function(e) {
+  if (e.target.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const preview = document.querySelector('label[for="logo"] .image-preview');
+      if (preview) {
+        preview.src = e.target.result;
+      } else {
+        const placeholder = document.querySelector('label[for="logo"] .image-preview-placeholder');
+        if (placeholder) {
+          placeholder.outerHTML = `<img src="${e.target.result}" alt="شعار القناة" class="image-preview">`;
+        }
+      }
+    };
+    reader.readAsDataURL(e.target.files[0]);
+  }
+});
+
+document.getElementById('cover_image').addEventListener('change', function(e) {
+  if (e.target.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const preview = document.querySelector('label[for="cover_image"] .image-preview');
+      if (preview) {
+        preview.src = e.target.result;
+      } else {
+        const placeholder = document.querySelector('label[for="cover_image"] .image-preview-placeholder');
+        if (placeholder) {
+          placeholder.outerHTML = `<img src="${e.target.result}" alt="صورة الغلاف" class="image-preview">`;
+        }
+      }
+    };
+    reader.readAsDataURL(e.target.files[0]);
+  }
+});
+</script>
+{% endblock %}

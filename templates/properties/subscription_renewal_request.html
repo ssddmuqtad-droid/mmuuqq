@@ -1,0 +1,186 @@
+{% extends "properties/dashboard_base.html" %}
+{% load static %}
+
+{% block title %}طلب تجديد اشتراك{% endblock %}
+{% block dashboard_title %}طلب تجديد <span>الاشتراك</span>{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">🔄 طلب تجديد اشتراك</h3>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Current Subscription Info -->
+                    {% if current_subscription %}
+                    <div class="alert alert-info mb-4">
+                        <h5>الاشتراك الحالي</h5>
+                        <p><strong>الخطة:</strong> {{ current_subscription.plan.name }}</p>
+                        <p><strong>تاريخ الانتهاء:</strong> {{ current_subscription.end_date|date:"Y-m-d H:i" }}</p>
+                        <p><strong>الأيام المتبقية:</strong> {{ current_subscription.get_days_remaining }} يوم</p>
+                        <p><strong>العقارات المستخدمة:</strong> {{ current_subscription.properties_used }} / {{ current_subscription.plan.max_properties }}</p>
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">نوع الاشتراك</label>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="property_types" value="properties_iraq" id="prop_iraq">
+                                        <label class="form-check-label" for="prop_iraq">
+                                            🏠 عقارات داخل العراق
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="property_types" value="properties_outside" id="prop_outside">
+                                        <label class="form-check-label" for="prop_outside">
+                                            🌍 عقارات خارج العراق
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="property_types" value="hotels" id="prop_hotels">
+                                        <label class="form-check-label" for="prop_hotels">
+                                            🏨 فنادق
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="property_types" value="resorts" id="prop_resorts">
+                                        <label class="form-check-label" for="prop_resorts">
+                                            🏖️ منتجعات
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">خدمات إضافية</label>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <a href="{% url 'broker_building_requests' %}" class="btn btn-outline-primary w-100">
+                                        🏗️ طلبات بناء
+                                    </a>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <a href="{% url 'auction_approval' %}" class="btn btn-outline-primary w-100">
+                                        🔨 مزادات
+                                    </a>
+                                </div>
+                            </div>
+                            <small class="text-muted">هذه الخدمات مستقلة عن اشتراك العقارات</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">عدد العقارات حسب المستوى</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="regular_count" class="form-label">عادي (50 دينار/عقار/يوم)</label>
+                                    <input type="number" class="form-control" id="regular_count" name="regular_count" min="0" value="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="premium_count" class="form-label">مميز (1000 دينار/عقار/يوم)</label>
+                                    <input type="number" class="form-control" id="premium_count" name="premium_count" min="0" value="0">
+                                </div>
+                            </div>
+                            <small class="text-muted">يمكنك تحديد عدد العقارات لكل مستوى</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="days_requested" class="form-label fw-bold">عدد الأيام</label>
+                            <input type="number" class="form-control" id="days_requested" name="days_requested" min="1" required>
+                            <small class="text-muted">أدخل عدد الأيام المطلوبة</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">التكلفة التقديرية</label>
+                            <div class="alert alert-secondary" id="estimated_cost">
+                                0 دينار
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="notes" class="form-label fw-bold">ملاحظات</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="alert alert-info">
+                                <h5 class="alert-heading">💬 هل تحتاج مساعدة؟</h5>
+                                <p class="mb-2">إذا كان لديك أي استفسار بخصوص الاشتراك، يمكنك التواصل مع الإدارة مباشرة.</p>
+                                <a href="{% url 'admin_contact' %}" class="btn btn-info btn-sm">
+                                    📩 مراسلة الإدارة
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <span class="btn-icon">📝</span>
+                                <span>إرسال طلب التجديد</span>
+                            </button>
+                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                                إلغاء
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Calculate estimated cost
+document.addEventListener('DOMContentLoaded', function() {
+    const regularCountInput = document.getElementById('regular_count');
+    const premiumCountInput = document.getElementById('premium_count');
+    const daysInput = document.getElementById('days_requested');
+    const costDisplay = document.getElementById('estimated_cost');
+    
+    function calculateCost() {
+        const regularCount = parseInt(regularCountInput.value) || 0;
+        const premiumCount = parseInt(premiumCountInput.value) || 0;
+        const days = parseInt(daysInput.value) || 0;
+        
+        const regularPrice = 50;
+        const premiumPrice = 1000;
+        
+        const regularCost = regularPrice * regularCount * days;
+        const premiumCost = premiumPrice * premiumCount * days;
+        const totalCost = regularCost + premiumCost;
+        
+        let costText = totalCost.toLocaleString() + ' دينار';
+        if (regularCount > 0 && premiumCount > 0) {
+            costText += ` (${regularCost.toLocaleString()} عادي + ${premiumCost.toLocaleString()} مميز)`;
+        }
+        
+        costDisplay.textContent = costText;
+    }
+    
+    regularCountInput.addEventListener('input', calculateCost);
+    premiumCountInput.addEventListener('input', calculateCost);
+    daysInput.addEventListener('input', calculateCost);
+});
+</script>
+{% endblock %}

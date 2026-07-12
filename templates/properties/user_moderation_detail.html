@@ -1,0 +1,278 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}تفاصيل مراقبة المستخدم - {{ target_user.username }}{% endblock %}
+{% block dashboard_title %}تفاصيل <span>{{ target_user.username }}</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'user_moderation_panel' %}" class="btn btn-outline">العودة للقائمة</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<!-- معلومات المستخدم -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5>👤 معلومات المستخدم</h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <p><strong>اسم المستخدم:</strong> {{ target_user.username }}</p>
+        <p><strong>البريد الإلكتروني:</strong> {{ target_user.email }}</p>
+        <p><strong>الاسم الكامل:</strong> {{ target_user.get_full_name|default:'غير محدد' }}</p>
+      </div>
+      <div class="col-md-6">
+        <p><strong>تاريخ التسجيل:</strong> {{ target_user.date_joined|date:"Y-m-d" }}</p>
+        <p><strong>آخر تسجيل دخول:</strong> {{ target_user.last_login|date:"Y-m-d H:i"|default:'لم يسجل دخول' }}</p>
+        <p><strong>الحالة:</strong>
+          {% if target_user.is_active %}
+            <span class="badge bg-success">نشط</span>
+          {% else %}
+            <span class="badge bg-danger">غير نشط</span>
+          {% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- حالة المراقبة الحالية -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5>🚨 حالة المراقبة الحالية</h5>
+  </div>
+  <div class="card-body">
+    {% if active_suspension %}
+      <div class="alert alert-danger">
+        <h6>⚠️ المستخدم معطل حالياً</h6>
+        <p><strong>السبب:</strong> {{ active_suspension.get_reason_display }}</p>
+        <p><strong>الوصف:</strong> {{ active_suspension.description }}</p>
+        <p><strong>تاريخ البدء:</strong> {{ active_suspension.start_date|date:"Y-m-d H:i" }}</p>
+        {% if active_suspension.end_date %}
+          <p><strong>تاريخ الانتهاء:</strong> {{ active_suspension.end_date|date:"Y-m-d H:i" }}</p>
+        {% endif %}
+        <a href="{% url 'lift_suspension' target_user.id %}" class="btn btn-success btn-sm mt-2">رفع التعطيل</a>
+      </div>
+    {% else %}
+      <div class="alert alert-success">
+        <h6>✅ المستخدم نشط ولا يوجد تعطيل</h6>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- إجراءات سريعة -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5>⚡ إجراءات سريعة</h5>
+  </div>
+  <div class="card-body">
+    <div class="btn-group">
+      <a href="{% url 'issue_user_warning' target_user.id %}" class="btn btn-warning">⚠️ إصدار إنذار</a>
+      {% if not active_suspension %}
+        <a href="{% url 'suspend_user' target_user.id %}" class="btn btn-danger">🚫 تعطيل المستخدم</a>
+      {% endif %}
+      <a href="{% url 'delete_user' target_user.id %}" class="btn btn-outline-danger">🗑️ حذف المستخدم</a>
+    </div>
+  </div>
+</div>
+
+<!-- الإنذارات -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5>⚠️ الإنذارات</h5>
+  </div>
+  <div class="card-body">
+    {% if warnings %}
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>النوع</th>
+              <th>الشدة</th>
+              <th>السبب</th>
+              <th>الحالة</th>
+              <th>التاريخ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for warning in warnings %}
+            <tr>
+              <td>{{ warning.get_warning_type_display }}</td>
+              <td>
+                <span class="badge bg-{{ warning.severity }}">
+                  {{ warning.get_severity_display }}
+                </span>
+              </td>
+              <td>{{ warning.reason }}</td>
+              <td>
+                {% if warning.is_acknowledged %}
+                  <span class="badge bg-success">تم الاعتراف</span>
+                {% elif warning.expires_at and warning.expires_at < now %}
+                  <span class="badge bg-secondary">منتهي</span>
+                {% else %}
+                  <span class="badge bg-warning">نشط</span>
+                {% endif %}
+              </td>
+              <td>{{ warning.created_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted text-center">لا توجد إنذارات لهذا المستخدم</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- التعطيلات السابقة -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5>🚫 التعطيلات السابقة</h5>
+  </div>
+  <div class="card-body">
+    {% if suspensions %}
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>السبب</th>
+              <th>الحالة</th>
+              <th>تاريخ البدء</th>
+              <th>تاريخ الانتهاء</th>
+              <th>تاريخ الرفع</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for suspension in suspensions %}
+            <tr>
+              <td>{{ suspension.get_reason_display }}</td>
+              <td>
+                <span class="badge bg-{{ suspension.status }}">
+                  {{ suspension.get_status_display }}
+                </span>
+              </td>
+              <td>{{ suspension.start_date|date:"Y-m-d H:i" }}</td>
+              <td>{{ suspension.end_date|date:"Y-m-d H:i"|default:'غير محدد' }}</td>
+              <td>{{ suspension.lifted_at|date:"Y-m-d H:i"|default:'-' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted text-center">لا توجد تعطيلات سابقة</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- إجراءات المراقبة -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5>📊 إجراءات المراقبة</h5>
+  </div>
+  <div class="card-body">
+    {% if moderation_actions %}
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>الإجراء</th>
+              <th>السبب</th>
+              <th>المشرف</th>
+              <th>التاريخ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for action in moderation_actions %}
+            <tr>
+              <td>{{ action.get_action_display }}</td>
+              <td>{{ action.reason }}</td>
+              <td>{{ action.moderator.username|default:'النظام' }}</td>
+              <td>{{ action.created_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted text-center">لا توجد إجراءات مراقبة</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- النشاط الأخير -->
+<div class="card">
+  <div class="card-header">
+    <h5>📝 النشاط الأخير</h5>
+  </div>
+  <div class="card-body">
+    {% if recent_activity %}
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>الإجراء</th>
+              <th>النوع</th>
+              <th>الوصف</th>
+              <th>التاريخ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for activity in recent_activity %}
+            <tr>
+              <td>{{ activity.get_action_display }}</td>
+              <td>{{ activity.model_type }}</td>
+              <td>{{ activity.description|truncatewords:10 }}</td>
+              <td>{{ activity.created_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted text-center">لا يوجد نشاط مسجل</p>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.badge.bg-low {
+  background-color: #6c757d;
+}
+.badge.bg-medium {
+  background-color: #ffc107;
+}
+.badge.bg-high {
+  background-color: #fd7e14;
+}
+.badge.bg-critical {
+  background-color: #dc3545;
+}
+
+.card {
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.btn {
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends 'properties/dashboard_base.html' %}
+{% block title %}{{ title|default:'النموذج' }}{% endblock %}
+{% block dashboard_title %}{{ title|default:'النموذج' }}{% endblock %}
+{% block dashboard_content %}
+<div class="card" style="padding:28px; max-width:720px;">
+  {% if form %}
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div style="display:flex; gap:12px; margin-top:20px;">
+      <button type="submit" class="btn btn-primary">حفظ</button>
+      <a href="javascript:history.back()" class="btn btn-outline">إلغاء</a>
+    </div>
+  </form>
+  {% else %}
+  <p>{{ message|default:'هذه الصفحة قيد التطوير.' }}</p>
+  <a href="{% url 'dashboard' %}" class="btn btn-primary" style="margin-top:16px;">العودة للوحة التحكم</a>
+  {% endif %}
+</div>
+{% endblock %}

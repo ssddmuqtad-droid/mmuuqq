@@ -1,0 +1,153 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}إنذار مستخدم{% endblock %}
+{% block dashboard_title %}إنذار <span>مستخدم</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'user_monitoring' %}" class="btn btn-outline">عودة للمراقبة</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="padding: 28px;">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="user-info-card">
+    <div class="user-avatar">
+      {% if user.broker_profile and user.broker_profile.profile_image %}
+      <img src="{{ user.broker_profile.profile_image.url }}" alt="{{ user.username }}">
+      {% else %}
+      <span>👤</span>
+      {% endif %}
+    </div>
+    <div class="user-details">
+      <h3>{{ user.get_full_name|default:user.username }}</h3>
+      <p>{{ user.email }}</p>
+      <p>@{{ user.username }}</p>
+    </div>
+  </div>
+
+  <form method="post" class="warning-form">
+    {% csrf_token %}
+    
+    <div class="form-group">
+      <label for="warning_message">رسالة الإنذار *</label>
+      <textarea 
+        id="warning_message" 
+        name="warning_message" 
+        class="form-control" 
+        rows="6" 
+        required
+        placeholder="اكتب رسالة الإنذار للمستخدم..."
+      ></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-warning">⚠️ إرسال الإنذار</button>
+      <a href="{% url 'user_monitoring' %}" class="btn btn-outline">إلغاء</a>
+    </div>
+  </form>
+</div>
+
+<style>
+.user-info-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--bg-alt);
+  padding: 25px;
+  border-radius: var(--radius);
+  margin-bottom: 30px;
+}
+
+.user-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-details h3 {
+  margin: 0 0 10px 0;
+  color: var(--text);
+  font-size: 1.4rem;
+}
+
+.user-details p {
+  margin: 5px 0;
+  color: var(--text-light);
+  font-size: 1rem;
+}
+
+.warning-form {
+  max-width: 600px;
+}
+
+.form-group {
+  margin-bottom: 25px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: white;
+  color: var(--text);
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.form-actions {
+  display: flex;
+  gap: 15px;
+}
+
+.btn-warning {
+  background: #ffc107;
+  color: #000;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-warning:hover {
+  background: #e0a800;
+}
+</style>
+{% endblock %}

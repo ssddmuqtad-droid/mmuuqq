@@ -1,0 +1,18 @@
+{% extends 'properties/dashboard_base.html' %}
+{% block title %}إعادة توجيه رسالة{% endblock %}
+{% block dashboard_content %}
+<div class="card" style="padding:28px;">
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>المحادثة المستهدفة</label>
+      <select name="target_conversation" class="form-control" required>
+        {% for conv in conversations %}
+        <option value="{{ conv.id }}">{{ conv }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">إعادة التوجيه</button>
+  </form>
+</div>
+{% endblock %}

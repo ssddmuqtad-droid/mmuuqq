@@ -1,0 +1,170 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}الإشعارات | دلال{% endblock %}
+
+{% block extra_css %}
+<style>
+.notifications-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.notifications-card {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.notifications-card h3 {
+  margin-bottom: 25px;
+  color: #333;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.form-check {
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.form-check-input {
+  width: 20px;
+  height: 20px;
+  margin-left: 15px;
+}
+
+.form-check-label {
+  flex: 1;
+  font-weight: 500;
+  color: #555;
+}
+
+.btn-primary {
+  background: #0d9488;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: #0b7e73;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+.alert {
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.alert-success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="notifications-container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>الإشعارات</h1>
+    <a href="{% url 'user_settings' %}" class="btn-secondary">عودة للإعدادات</a>
+  </div>
+  
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+  
+  <form method="POST">
+    {% csrf_token %}
+    
+    <div class="notifications-card">
+      <h3>إعدادات الإشعارات</h3>
+      
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="{{ form.notification_new_properties.id_for_label }}" name="{{ form.notification_new_properties.html_name }}" {% if form.notification_new_properties.value %}checked{% endif %}>
+        <label class="form-check-label" for="{{ form.notification_new_properties.id_for_label }}">
+          إشعارات العقارات الجديدة
+          <small class="text-muted d-block">احصل على إشعار عند إضافة عقارات جديدة</small>
+        </label>
+      </div>
+      
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="{{ form.notification_messages.id_for_label }}" name="{{ form.notification_messages.html_name }}" {% if form.notification_messages.value %}checked{% endif %}>
+        <label class="form-check-label" for="{{ form.notification_messages.id_for_label }}">
+          إشعارات الرسائل
+          <small class="text-muted d-block">احصل على إشعار عند استلام رسائل جديدة</small>
+        </label>
+      </div>
+      
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="{{ form.notification_offers.id_for_label }}" name="{{ form.notification_offers.html_name }}" {% if form.notification_offers.value %}checked{% endif %}>
+        <label class="form-check-label" for="{{ form.notification_offers.id_for_label }}">
+          إشعارات العروض والخصومات
+          <small class="text-muted d-block">احصل على إشعار عند وجود عروض وخصومات</small>
+        </label>
+      </div>
+      
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="{{ form.notification_matching.id_for_label }}" name="{{ form.notification_matching.html_name }}" {% if form.notification_matching.value %}checked{% endif %}>
+        <label class="form-check-label" for="{{ form.notification_matching.id_for_label }}">
+          إشعارات العقارات المطابقة
+          <small class="text-muted d-block">احصل على إشعار عند وجود عقارات مطابقة لاهتماماتك</small>
+        </label>
+      </div>
+      
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="{{ form.email_notifications.id_for_label }}" name="{{ form.email_notifications.html_name }}" {% if form.email_notifications.value %}checked{% endif %}>
+        <label class="form-check-label" for="{{ form.email_notifications.id_for_label }}">
+          إشعارات البريد الإلكتروني
+          <small class="text-muted d-block">استلم الإشعارات عبر البريد الإلكتروني</small>
+        </label>
+      </div>
+      
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="{{ form.app_notifications.id_for_label }}" name="{{ form.app_notifications.html_name }}" {% if form.app_notifications.value %}checked{% endif %}>
+        <label class="form-check-label" for="{{ form.app_notifications.id_for_label }}">
+          إشعارات التطبيق
+          <small class="text-muted d-block">استلم الإشعارات داخل التطبيق</small>
+        </label>
+      </div>
+      
+      <button type="submit" class="btn-primary">حفظ التغييرات</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

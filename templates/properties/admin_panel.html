@@ -1,0 +1,755 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}لوحة تحكم الإدارة{% endblock %}
+{% block dashboard_title %}لوحة تحكم <span>الإدارة</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم الرئيسية</a>
+<a href="{% url 'user_moderation_panel' %}" class="btn btn-primary">👥 مراقبة المستخدمين</a>
+<a href="{% url 'user_monitoring_panel' %}" class="btn btn-primary">🔍 مراقبة متقدمة</a>
+<a href="{% url 'subscription_renewal_requests_list' %}" class="btn btn-warning">🔄 طلبات التجديد</a>
+<a href="{% url 'admin_notification_panel' %}" class="btn btn-info">🔔 إدارة الإشعارات</a>
+<a href="{% url 'admin_bulk_messaging' %}" class="btn btn-success">💬 رسائل الإدارة</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-dashboard {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.stat-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.stat-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.stat-sub {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.chart-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+}
+
+.chart-card h3 {
+  color: #fff;
+  margin-bottom: 1rem;
+}
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.quick-actions .btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.quick-actions .btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.pending-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.pending-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.pending-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pending-title {
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 0.25rem;
+}
+
+.pending-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.filter-bar {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-bar input,
+.filter-bar select {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.filter-bar select option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+.filter-bar input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.75rem;
+  text-align: right;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.data-table th {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+}
+
+.data-table td {
+  color: #fff;
+}
+
+.data-table tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
+.badge.bg-success {
+  background: #10b981;
+}
+
+.badge.bg-warning {
+  background: #f59e0b;
+}
+
+.badge.bg-danger {
+  background: #ef4444;
+}
+
+.badge.bg-info {
+  background: #3b82f6;
+}
+
+.badge.bg-primary {
+  background: #6366f1;
+}
+
+.badge.bg-secondary {
+  background: #6b7280;
+}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="admin-dashboard">
+  <!-- شريط التصفية -->
+  <div class="filter-bar">
+    <input type="text" id="searchInput" placeholder="🔍 بحث...">
+    <select id="dateFilter">
+      <option value="all">كل الفترات</option>
+      <option value="today">اليوم</option>
+      <option value="week">آخر أسبوع</option>
+      <option value="month">آخر شهر</option>
+      <option value="year">آخر سنة</option>
+    </select>
+    <select id="statusFilter">
+      <option value="all">كل الحالات</option>
+      <option value="active">نشط</option>
+      <option value="pending">قيد المراجعة</option>
+      <option value="inactive">غير نشط</option>
+    </select>
+    <button class="btn btn-primary" onclick="applyFilters()">تطبيق التصفية</button>
+    <button class="btn btn-outline" onclick="exportData()">📥 تصدير البيانات</button>
+  </div>
+
+  <!-- شبكة الإحصائيات -->
+  <div class="stats-grid">
+    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+      <div class="stat-icon">👥</div>
+      <div class="stat-value">{{ total_users }}</div>
+      <div class="stat-label">إجمالي المستخدمين</div>
+      <div class="stat-sub">
+        <span>نشط: {{ active_users }}</span>
+        <span>جديد: {{ new_users }}</span>
+      </div>
+    </div>
+
+    <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+      <div class="stat-icon">🏠</div>
+      <div class="stat-value">{{ total_properties }}</div>
+      <div class="stat-label">إجمالي العقارات</div>
+      <div class="stat-sub">
+        <span>نشط: {{ active_properties }}</span>
+        <span>مسودة: {{ draft_properties }}</span>
+      </div>
+    </div>
+
+    <div class="stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+      <div class="stat-icon">💳</div>
+      <div class="stat-value">{{ total_revenue }}</div>
+      <div class="stat-label">إجمالي الإيرادات (د.ع)</div>
+      <div class="stat-sub">
+        <span>معلقة: {{ pending_payments }}</span>
+        <span>مكتملة: {{ completed_payments }}</span>
+      </div>
+    </div>
+
+    <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+      <div class="stat-icon">👔</div>
+      <div class="stat-value">{{ total_brokers }}</div>
+      <div class="stat-label">الدلالين</div>
+      <div class="stat-sub">
+        <span>نشط: {{ active_brokers }}</span>
+        <span>موثق: {{ verified_brokers }}</span>
+      </div>
+    </div>
+
+    <div class="stat-card" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+      <div class="stat-icon">🔨</div>
+      <div class="stat-value">{{ total_auctions }}</div>
+      <div class="stat-label">المزادات</div>
+      <div class="stat-sub">
+        <span>نشط: {{ active_auctions }}</span>
+        <span>قيد المراجعة: {{ pending_auctions }}</span>
+      </div>
+    </div>
+
+    <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+      <div class="stat-icon">🔔</div>
+      <div class="stat-value">{{ unread_notifications }}</div>
+      <div class="stat-label">إشعارات غير مقروءة</div>
+      <div class="stat-sub">
+        <span>تحتاج مراجعة</span>
+      </div>
+      <a href="{% url 'admin_notification_panel' %}" class="btn btn-sm btn-light mt-2" style="color: #333;">
+        إدارة الإشعارات
+      </a>
+    </div>
+
+    <div class="stat-card" style="background: linear-gradient(135deg, #00c6fb 0%, #005bea 100%);">
+      <div class="stat-icon">🏖️</div>
+      <div class="stat-value">{{ total_resorts }}</div>
+      <div class="stat-label">المنتجعات السياحية</div>
+      <div class="stat-sub">
+        <span>نشط: {{ active_resorts }}</span>
+        <span>مميز: {{ featured_resorts }}</span>
+      </div>
+    </div>
+
+    <div class="stat-card" style="background: linear-gradient(135deg, #f857a6 0%, #ff5858 100%);">
+      <div class="stat-icon">🏨</div>
+      <div class="stat-value">{{ total_hotels }}</div>
+      <div class="stat-label">الفنادق</div>
+      <div class="stat-sub">
+        <span>نشط: {{ active_hotels }}</span>
+        <span>حجوزات: {{ hotel_bookings }}</span>
+      </div>
+    </div>
+
+    <div class="stat-card" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+      <div class="stat-icon">📅</div>
+      <div class="stat-value">{{ total_bookings }}</div>
+      <div class="stat-label">الحجوزات</div>
+      <div class="stat-sub">
+        <span>مؤكدة: {{ confirmed_bookings }}</span>
+        <span>ملغاة: {{ cancelled_bookings }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- الرسوم البيانية -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>📈 نمو المستخدمين</h3>
+      <canvas id="userGrowthChart"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>🏠 العقارات حسب الحالة</h3>
+      <canvas id="propertyStatusChart"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>💰 الإيرادات الشهرية</h3>
+      <canvas id="revenueChart"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>👔 نشاط الدلالين</h3>
+      <canvas id="brokerActivityChart"></canvas>
+    </div>
+  </div>
+
+<div class="dashboard-grid" style="grid-template-columns: repeat(2, 1fr);">
+  <!-- تفاصيل المستخدمين -->
+  <div class="card">
+    <h3>📊 تفاصيل المستخدمين</h3>
+    <div class="stats-detail">
+      <div class="stat-row">
+        <span>المديرين</span>
+        <span class="badge bg-danger">{{ admin_users }}</span>
+      </div>
+      <div class="stat-row">
+        <span>الدلالين</span>
+        <span class="badge bg-primary">{{ broker_users }}</span>
+      </div>
+      <div class="stat-row">
+        <span>المستخدمين العاديين</span>
+        <span class="badge bg-secondary">{{ regular_users }}</span>
+      </div>
+      <div class="stat-row">
+        <span>غير نشطين</span>
+        <span class="badge bg-warning">{{ total_users|add:"-"|add:active_users }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- تفاصيل العقارات -->
+  <div class="card">
+    <h3>📊 تفاصيل العقارات</h3>
+    <div class="stats-detail">
+      <div class="stat-row">
+        <span>عقارات نشطة</span>
+        <span class="badge bg-success">{{ active_properties }}</span>
+      </div>
+      <div class="stat-row">
+        <span>قيد المراجعة</span>
+        <span class="badge bg-warning">{{ pending_properties }}</span>
+      </div>
+      <div class="stat-row">
+        <span>تم بيعها</span>
+        <span class="badge bg-info">{{ sold_properties }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- تفاصيل المزادات -->
+  <div class="card">
+    <h3>📊 تفاصيل المزادات</h3>
+    <div class="stats-detail">
+      <div class="stat-row">
+        <span>مزادات نشطة</span>
+        <span class="badge bg-success">{{ active_auctions }}</span>
+      </div>
+      <div class="stat-row">
+        <span>قيد المراجعة</span>
+        <span class="badge bg-warning">{{ pending_auctions }}</span>
+      </div>
+      <div class="stat-row">
+        <span>منتهية</span>
+        <span class="badge bg-secondary">{{ ended_auctions }}</span>
+      </div>
+      <div class="stat-row">
+        <span>إجمالي المزايدات</span>
+        <span class="badge bg-primary">{{ total_bids }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- إجراءات سريعة -->
+  <div class="card">
+    <h3>⚡ إجراءات سريعة</h3>
+    <div class="quick-actions">
+      <a href="{% url 'admin_create_user' %}" class="btn btn-outline">➕ إنشاء مستخدم</a>
+      <a href="{% url 'admin_users_list' %}" class="btn btn-outline">👥 إدارة المستخدمين</a>
+      <a href="{% url 'broker_create' %}" class="btn btn-outline">👔 إضافة دلال</a>
+      <a href="{% url 'broker_list' %}" class="btn btn-outline">📋 إدارة الدلالين</a>
+      <a href="{% url 'auction_approval' %}" class="btn btn-outline">🔨 موافقة المزادات</a>
+      <a href="{% url 'subscription_plans_list' %}" class="btn btn-outline">⭐ خطط الاشتراك</a>
+      <a href="/admin/" target="_blank" class="btn btn-outline">🔧 Django Admin</a>
+      <a href="{% url 'activity_log' %}" class="btn btn-outline">📋 سجل النشاطات</a>
+    </div>
+  </div>
+
+  <!-- إضافة عقارات -->
+  <div class="card">
+    <h3>🏠 إضافة عقارات</h3>
+    <div class="quick-actions">
+      <a href="{% url 'dynamic_add_property' %}?category=inside_iraq" class="btn btn-primary">🏠 عقارات داخل العراق</a>
+      <a href="{% url 'dynamic_add_property' %}?category=outside_iraq" class="btn btn-primary">🌍 عقارات خارج العراق</a>
+      <a href="{% url 'dynamic_add_property' %}?category=hotel" class="btn btn-primary">🏨 فنادق</a>
+      <a href="{% url 'dynamic_add_property' %}?category=resort" class="btn btn-primary">🏖️ منتجعات وأماكن سياحية</a>
+    </div>
+  </div>
+</div>
+
+<div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); margin-top: 1.5rem;">
+  <!-- العقارات المعلقة -->
+  {% if pending_properties_list %}
+  <div class="card">
+    <div class="card-header">
+      <h3>🏠 العقارات المعلقة</h3>
+      <a href="{% url 'dashboard' %}" class="view-all">عرض الكل</a>
+    </div>
+    <div class="pending-list">
+      {% for property in pending_properties_list %}
+      <div class="pending-item">
+        <div class="pending-info">
+          <div class="pending-title">{{ property.display_title|truncatechars:40 }}</div>
+          <div class="pending-meta">
+            <span>👤 {{ property.owner.username }}</span>
+            <span>📅 {{ property.created_at|timesince }}</span>
+          </div>
+        </div>
+        <a href="{% url 'edit_property' property.id %}" class="btn btn-sm btn-outline">مراجعة</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- المدفوعات المعلقة -->
+  {% if pending_payments_list %}
+  <div class="card">
+    <div class="card-header">
+      <h3>💳 المدفوعات المعلقة</h3>
+      <a href="#" class="view-all">عرض الكل</a>
+    </div>
+    <div class="pending-list">
+      {% for payment in pending_payments_list %}
+      <div class="pending-item">
+        <div class="pending-info">
+          <div class="pending-title">{{ payment.property.display_title|truncatechars:40 }}</div>
+          <div class="pending-meta">
+            <span>👤 {{ payment.broker.display_name }}</span>
+            <span>💰 {{ payment.total_amount }} د.ع</span>
+            <span>📅 {{ payment.created_at|timesince }}</span>
+          </div>
+        </div>
+        <div class="pending-actions">
+          <a href="{% url 'approve_property_payment' payment.id %}" class="btn btn-sm btn-success">قبول</a>
+          <a href="{% url 'reject_property_payment' payment.id %}" class="btn btn-sm btn-danger">رفض</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- طلبات الاشتراك المعلقة -->
+  {% if pending_subscription_requests_list %}
+  <div class="card">
+    <div class="card-header">
+      <h3>⭐ طلبات الاشتراك المعلقة</h3>
+      <a href="{% url 'subscription_plans_list' %}" class="view-all">عرض الكل</a>
+    </div>
+    <div class="pending-list">
+      {% for request in pending_subscription_requests_list %}
+      <div class="pending-item">
+        <div class="pending-info">
+          <div class="pending-title">{{ request.broker.display_name }}</div>
+          <div class="pending-meta">
+            <span>📦 {{ request.requested_plan.name }}</span>
+            <span>📅 {{ request.created_at|timesince }}</span>
+          </div>
+        </div>
+        <a href="#" class="btn btn-sm btn-outline">مراجعة</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- المستخدمين الجدد -->
+  {% if new_users_list %}
+  <div class="card">
+    <div class="card-header">
+      <h3>🆕 المستخدمين الجدد</h3>
+      <a href="{% url 'admin_users_list' %}" class="view-all">عرض الكل</a>
+    </div>
+    <div class="pending-list">
+      {% for user in new_users_list %}
+      <div class="pending-item">
+        <div class="pending-info">
+          <div class="pending-title">{{ user.username }}</div>
+          <div class="pending-meta">
+            <span>📧 {{ user.email }}</span>
+            <span>📅 {{ user.date_joined|timesince }}</span>
+          </div>
+        </div>
+        <a href="{% url 'admin_edit_user' user.id %}" class="btn btn-sm btn-outline">إدارة</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- المزادات المعلقة -->
+  {% if pending_auctions_list %}
+  <div class="card">
+    <div class="card-header">
+      <h3>🔨 المزادات المعلقة</h3>
+      <a href="{% url 'auction_approval' %}" class="view-all">عرض الكل</a>
+    </div>
+    <div class="pending-list">
+      {% for auction in pending_auctions_list %}
+      <div class="pending-item">
+        <div class="pending-info">
+          <div class="pending-title">{{ auction.property.display_title|truncatechars:40 }}</div>
+          <div class="pending-meta">
+            <span>👔 {{ auction.broker.display_name }}</span>
+            <span>📅 {{ auction.created_at|timesince }}</span>
+          </div>
+        </div>
+        <a href="{% url 'auction_detail' auction.id %}" class="btn btn-sm btn-outline">مراجعة</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- النشاط الحديث -->
+  <div class="card">
+    <div class="card-header">
+      <h3>📋 النشاط الحديث</h3>
+      <a href="{% url 'activity_log' %}" class="view-all">عرض الكل</a>
+    </div>
+    <div class="activity-list">
+      {% for activity in recent_activity %}
+      <div class="activity-item">
+        <div class="activity-icon">
+          {% if activity.action == 'create' %}➕
+          {% elif activity.action == 'update' %}✏️
+          {% elif activity.action == 'delete' %}🗑️
+          {% elif activity.action == 'login' %}🔐
+          {% else %}📌{% endif %}
+        </div>
+        <div class="activity-content">
+          <div class="activity-text">{{ activity.description }}</div>
+          <div class="activity-time">{{ activity.created_at|timesince }} مضى</div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="empty-state">لا يوجد نشاط حديث</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // نمو المستخدمين
+  const userGrowthCtx = document.getElementById('userGrowthChart');
+  if (userGrowthCtx) {
+    new Chart(userGrowthCtx, {
+      type: 'line',
+      data: {
+        labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
+        datasets: [{
+          label: 'المستخدمين الجدد',
+          data: [{{ new_users }}, {{ new_users }}, {{ new_users }}, {{ new_users }}, {{ new_users }}, {{ new_users }}],
+          borderColor: '#667eea',
+          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { labels: { color: '#fff' } }
+        },
+        scales: {
+          y: {
+            ticks: { color: '#fff' },
+            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+          },
+          x: {
+            ticks: { color: '#fff' },
+            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+          }
+        }
+      }
+    });
+  }
+
+  // حالة العقارات
+  const propertyStatusCtx = document.getElementById('propertyStatusChart');
+  if (propertyStatusCtx) {
+    new Chart(propertyStatusCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['نشط', 'قيد المراجعة', 'تم بيعها', 'مسودة'],
+        datasets: [{
+          data: [{{ active_properties }}, {{ pending_properties }}, {{ sold_properties }}, {{ draft_properties }}],
+          backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#6b7280']
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { labels: { color: '#fff' } }
+        }
+      }
+    });
+  }
+
+  // الإيرادات الشهرية
+  const revenueCtx = document.getElementById('revenueChart');
+  if (revenueCtx) {
+    new Chart(revenueCtx, {
+      type: 'bar',
+      data: {
+        labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
+        datasets: [{
+          label: 'الإيرادات (د.ع)',
+          data: [{{ total_revenue }}, {{ total_revenue }}, {{ total_revenue }}, {{ total_revenue }}, {{ total_revenue }}, {{ total_revenue }}],
+          backgroundColor: '#11998e'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { labels: { color: '#fff' } }
+        },
+        scales: {
+          y: {
+            ticks: { color: '#fff' },
+            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+          },
+          x: {
+            ticks: { color: '#fff' },
+            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+          }
+        }
+      }
+    });
+  }
+
+  // نشاط الدلالين
+  const brokerActivityCtx = document.getElementById('brokerActivityChart');
+  if (brokerActivityCtx) {
+    new Chart(brokerActivityCtx, {
+      type: 'pie',
+      data: {
+        labels: ['نشط', 'غير نشط', 'موثق'],
+        datasets: [{
+          data: [{{ active_brokers }}, {{ total_brokers|add:"-"|add:active_brokers }}, {{ verified_brokers }}],
+          backgroundColor: ['#10b981', '#ef4444', '#3b82f6']
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { labels: { color: '#fff' } }
+        }
+      }
+    });
+  }
+});
+
+function applyFilters() {
+  const search = document.getElementById('searchInput').value;
+  const dateFilter = document.getElementById('dateFilter').value;
+  const statusFilter = document.getElementById('statusFilter').value;
+  console.log('تطبيق التصفية:', { search, dateFilter, statusFilter });
+  alert('تم تطبيق التصفية بنجاح');
+}
+
+function exportData() {
+  const data = {
+    total_users: {{ total_users }},
+    total_properties: {{ total_properties }},
+    total_revenue: {{ total_revenue }},
+    total_brokers: {{ total_brokers }},
+    total_auctions: {{ total_auctions }}
+  };
+  const dataStr = JSON.stringify(data, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(dataBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'admin_data.json';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}

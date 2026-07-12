@@ -1,0 +1,281 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}{{ category_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.category-header {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  padding: 60px 20px;
+  text-align: center;
+  color: white;
+  border-radius: 0 0 30px 30px;
+  margin-bottom: 30px;
+}
+
+.category-icon {
+  font-size: 4rem;
+  margin-bottom: 15px;
+}
+
+.category-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.category-subtitle {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.filter-section {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 25px;
+  margin-bottom: 30px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+}
+
+.form-control option {
+  background: #1a1a1a;
+  color: white;
+}
+
+.btn-filter {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-filter:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(79, 172, 254, 0.4);
+}
+
+.resorts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 25px;
+  padding: 0 20px;
+}
+
+.resort-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.resort-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.resort-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.resort-image-placeholder {
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.resort-details {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+}
+
+.resort-content {
+  padding: 20px;
+}
+
+.resort-name {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: white;
+}
+
+.resort-type {
+  display: inline-block;
+  background: rgba(79, 172, 254, 0.2);
+  color: #4facfe;
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+
+.resort-price {
+  font-size: 1.1rem;
+  color: #4facfe;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.resort-location {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+}
+
+.resort-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.feature-tag {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.btn-book {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+.btn-book:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+}
+
+.no-results {
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="category-header">
+  <div class="category-icon">{{ category_icon }}</div>
+  <h1 class="category-title">{{ category_title }}</h1>
+  <p class="category-subtitle">تصفح المنتجعات والأماكن السياحية مع خيارات فلترة متقدمة</p>
+</div>
+
+<div class="container">
+  <!-- Filter Section -->
+  <div class="filter-section">
+    <form method="get" class="filter-grid">
+      <div class="form-group">
+        <label>نوع المنتجع</label>
+        <select name="resort_type" class="form-control">
+          <option value="" {% if not resort_type %}selected{% endif %}>الكل</option>
+          <option value="beach" {% if resort_type == 'beach' %}selected{% endif %}>شاطئي</option>
+          <option value="mountain" {% if resort_type == 'mountain' %}selected{% endif %}>جبلي</option>
+          <option value="desert" {% if resort_type == 'desert' %}selected{% endif %}>صحراوي</option>
+          <option value="lake" {% if resort_type == 'lake' %}selected{% endif %}>بحيري</option>
+          <option value="family" {% if resort_type == 'family' %}selected{% endif %}>عائلي</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>السعر لليلة من</label>
+        <input type="number" name="price_min" class="form-control" placeholder="السعر الأدنى" value="{{ price_min }}">
+      </div>
+
+      <div class="form-group">
+        <label>السعر لليلة إلى</label>
+        <input type="number" name="price_max" class="form-control" placeholder="السعر الأعلى" value="{{ price_max }}">
+      </div>
+
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <button type="submit" class="btn-filter">تصفية النتائج</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Resorts Grid -->
+  {% if resorts %}
+  <div class="resorts-grid">
+    {% for resort in resorts %}
+    <div class="resort-card">
+      <div class="resort-image-placeholder">🏖️</div>
+      <div class="resort-content">
+        <h3 class="resort-name">{{ resort.resort_name }}</h3>
+        <span class="resort-type">{{ resort.get_resort_type_display }}</span>
+        <p class="resort-price">{{ resort.price_per_night }} {{ resort.currency }}/ليلة</p>
+        <p class="resort-details">السعة: {{ resort.min_guests }}-{{ resort.max_guests }} شخص</p>
+        <div class="resort-features">
+          {% if resort.has_wifi %}
+          <span class="feature-tag">📶 واي فاي</span>
+          {% endif %}
+          {% if resort.has_kitchen %}
+          <span class="feature-tag">� مطبخ</span>
+          {% endif %}
+          {% if resort.has_bbq %}
+          <span class="feature-tag">🍖 شواء</span>
+          {% endif %}
+          {% if resort.has_playground %}
+          <span class="feature-tag">� ملعب أطفال</span>
+          {% endif %}
+          {% if resort.has_parking %}
+          <span class="feature-tag">� موقف سيارات</span>
+          {% endif %}
+        </div>
+        <button class="btn-book">احجز الآن</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="no-results">
+    <p>لا توجد منتجعات مطابقة لمعايير البحث</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

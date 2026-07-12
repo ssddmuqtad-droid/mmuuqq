@@ -1,0 +1,201 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}النشاط | دلال{% endblock %}
+
+{% block extra_css %}
+<style>
+.activity-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.activity-section {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.activity-section h3 {
+  margin-bottom: 25px;
+  color: #333;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.activity-item {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-icon {
+  width: 50px;
+  height: 50px;
+  background: #f0f0f0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #0d9488;
+}
+
+.activity-info {
+  flex: 1;
+}
+
+.activity-title {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.activity-date {
+  color: #999;
+  font-size: 12px;
+}
+
+.search-item {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.search-item:last-child {
+  border-bottom: none;
+}
+
+.search-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.search-filters {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #666;
+}
+
+.search-date {
+  color: #999;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+  text-decoration: none;
+  color: white;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+}
+
+.empty-state i {
+  font-size: 48px;
+  margin-bottom: 15px;
+}
+
+@media (max-width: 768px) {
+  .activity-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="activity-container">
+  <div class="activity-header">
+    <h1>النشاط</h1>
+    <a href="{% url 'user_settings' %}" class="btn-secondary">عودة للإعدادات</a>
+  </div>
+  
+  <div class="activity-section">
+    <h3>العقارات المشاهدة مؤخراً</h3>
+    {% if viewed_properties %}
+      {% for prop in viewed_properties %}
+        <div class="activity-item">
+          <div class="activity-icon">
+            <i class="fas fa-eye"></i>
+          </div>
+          <div class="activity-info">
+            <div class="activity-title">{{ prop.title }}</div>
+            <div class="activity-date">{{ prop.viewed_at|date:"Y-m-d H:i" }}</div>
+          </div>
+          <a href="{% url 'property_detail' prop.slug %}" class="btn-secondary">عرض</a>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="fas fa-eye"></i>
+        <p>لم تشاهد أي عقارات مؤخراً</p>
+      </div>
+    {% endif %}
+  </div>
+  
+  <div class="activity-section">
+    <h3>عمليات البحث المحفوظة</h3>
+    {% if saved_searches %}
+      {% for search in saved_searches %}
+        <div class="search-item">
+          <div class="search-name">{{ search.name }}</div>
+          <div class="search-filters">
+            <strong>الفلاتر:</strong>
+            {% if search.filters %}
+              {% for key, value in search.filters.items %}
+                {{ key }}: {{ value }}{% if not forloop.last %}, {% endif %}
+              {% endfor %}
+            {% else %}
+              لا توجد فلاتر
+            {% endif %}
+          </div>
+          <div class="search-date">تم الحفظ: {{ search.created_at|date:"Y-m-d H:i" }}</div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="fas fa-search"></i>
+        <p>لا توجد عمليات بحث محفوظة</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

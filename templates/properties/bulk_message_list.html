@@ -1,0 +1,153 @@
+{% extends "properties/base.html" %}
+{% load static %}
+
+{% block title %}الرسائل الجماعية{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-info">
+      <h1>الرسائل الجماعية</h1>
+      <p>سجل الرسائل الجماعية المرسلة</p>
+    </div>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'bulk_message_create' %}" class="btn btn-primary">إرسال رسالة جديدة</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم</a>
+    </div>
+  </div>
+
+  <div class="bulk-messages-container">
+    <div class="messages-table">
+      <table>
+        <thead>
+          <tr>
+            <th>العنوان</th>
+            <th>المستهدفون</th>
+            <th>الحالة</th>
+            <th>المستلمين</th>
+            <th>تم الإرسال</th>
+            <th>فشل</th>
+            <th>تاريخ الإرسال</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for msg in bulk_messages %}
+          <tr>
+            <td>{{ msg.title }}</td>
+            <td>{{ msg.get_target_type_display }}</td>
+            <td>
+              <span class="status-badge status-{{ msg.status }}">
+                {{ msg.get_status_display }}
+              </span>
+            </td>
+            <td>{{ msg.total_recipients }}</td>
+            <td>{{ msg.sent_count }}</td>
+            <td>{{ msg.failed_count }}</td>
+            <td>{{ msg.sent_at|date:"Y-m-d H:i"|default:"-" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" style="text-align: center;">لا توجد رسائل جماعية</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+.bulk-messages-container {
+  max-width: 1200px;
+  margin: 2rem auto;
+}
+
+.messages-table {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  overflow-x: auto;
+}
+
+.messages-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.messages-table th,
+.messages-table td {
+  padding: 1rem;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+
+.messages-table th {
+  background: var(--bg-alt);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.messages-table tr:hover {
+  background: var(--bg-alt);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-draft {
+  background: var(--bg-alt);
+  color: var(--text-light);
+}
+
+.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-sent {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-outline:hover {
+  background: var(--bg-alt);
+  border-color: var(--primary);
+}
+</style>
+{% endblock %}

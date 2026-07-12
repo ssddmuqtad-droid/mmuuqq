@@ -1,0 +1,1914 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}إضافة عقار جديد{% endblock %}
+
+{% block extra_css %}
+<style>
+.dynamic-form-container {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+}
+
+.form-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.form-header h1 {
+  font-size: 2.5rem;
+  color: white;
+  margin-bottom: 10px;
+}
+
+.form-header p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.1rem;
+}
+
+.category-selection {
+  margin-bottom: 40px;
+}
+
+.category-label {
+  display: block;
+  color: white;
+  font-weight: 600;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+}
+
+.category-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.category-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 25px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 15px;
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.category-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 107, 53, 0.5);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+}
+
+.category-btn.active {
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  border-color: #ff6b35;
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+}
+
+.category-btn .btn-icon {
+  font-size: 2.5rem;
+}
+
+.category-btn .btn-text {
+  font-weight: 600;
+  text-align: center;
+}
+
+.form-section {
+  display: none !important;
+  animation: fadeIn 0.5s ease;
+}
+
+.form-section.active {
+  display: block !important;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section-title {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 30px 0 20px 0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.5);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.form-control {
+  padding: 12px 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #667eea;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.form-control option {
+  background: #1a1a1a;
+  color: white;
+}
+
+.form-control[type="checkbox"],
+.form-control[type="radio"] {
+  width: auto;
+  height: auto;
+  margin: 0 5px 0 0;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.checkbox-item label {
+  cursor: pointer;
+  margin: 0;
+}
+
+.btn-submit {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 15px 40px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  margin-top: 30px;
+}
+
+.btn-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+}
+
+.btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.no-selection {
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+}
+
+.no-selection-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.error-message {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.help-text {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  margin-top: 5px;
+}
+
+.required {
+  color: #f87171;
+}
+
+@media (max-width: 768px) {
+  .dynamic-form-container {
+    margin: 20px;
+    padding: 20px;
+  }
+  
+  .form-header h1 {
+    font-size: 2rem;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dynamic-form-container">
+  <div class="form-header">
+    <h1>إضافة عقار جديد</h1>
+    <p>اختر فئة العقار واملأ النموذج المناسب</p>
+  </div>
+
+  <!-- Category Selection -->
+  <div class="category-selection">
+    <label class="category-label">🏠 اختر فئة العقار <span class="required">*</span></label>
+    <div class="category-buttons">
+      <button type="button" class="category-btn {% if category == 'inside_iraq' or not category %}active{% endif %}" onclick="console.log('Inside Iraq clicked'); selectCategory('inside_iraq')" id="btn-inside_iraq">
+        <span class="btn-icon">🏠</span>
+        <span class="btn-text">عقارات داخل العراق</span>
+      </button>
+      <button type="button" class="category-btn {% if category == 'outside_iraq' %}active{% endif %}" onclick="console.log('Outside Iraq clicked'); selectCategory('outside_iraq')" id="btn-outside_iraq">
+        <span class="btn-icon">🌍</span>
+        <span class="btn-text">عقارات خارج العراق</span>
+      </button>
+      <button type="button" class="category-btn {% if category == 'hotel' %}active{% endif %}" onclick="console.log('Hotel clicked'); selectCategory('hotel')" id="btn-hotel">
+        <span class="btn-icon">🏨</span>
+        <span class="btn-text">فنادق</span>
+      </button>
+      <button type="button" class="category-btn {% if category == 'resort' %}active{% endif %}" onclick="console.log('Resort clicked'); selectCategory('resort')" id="btn-resort">
+        <span class="btn-icon">🏖️</span>
+        <span class="btn-text">منتجعات وأماكن سياحية</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- No Selection Message -->
+  <div id="no-selection" class="no-selection" {% if category %}style="display: none;"{% endif %}>
+    <div class="no-selection-icon">📋</div>
+    <p>يرجى اختيار فئة العقار لعرض النموذج المناسب</p>
+  </div>
+
+  <!-- Property Form -->
+  <form method="post" enctype="multipart/form-data" id="propertyForm">
+    {% csrf_token %}
+    
+    <!-- Hidden category field -->
+    <input type="hidden" name="category" id="hidden-category" value="{{ category }}">
+    
+    {% if property_form.non_field_errors %}
+    <div class="error-message">
+      {% for error in property_form.non_field_errors %}
+      {{ error }}
+      {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Inside Iraq Form -->
+    <div id="inside_iraq-form" class="form-section {% if category == 'inside_iraq' or not category %}active{% endif %}">
+      <h2 class="section-title">🏠 عقارات داخل العراق</h2>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">المعلومات الأساسية</h3>
+      <div class="form-grid">
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صورة الغلاف <span class="required">*</span></label>
+          <input type="file" name="cover_image" accept="image/*" class="form-control" required>
+          <small style="color: rgba(255,255,255,0.6);">صورة الغلاف الرئيسية للعقار</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صورة شخصية</label>
+          <input type="file" name="personal_image" accept="image/*" class="form-control">
+          <small style="color: rgba(255,255,255,0.6);">صورة شخصية لصاحب العقار (اختياري)</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>عنوان الإعلان <span class="required">*</span></label>
+          <input type="text" name="title" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label>نوع العقار <span class="required">*</span></label>
+          <select name="type" class="form-control" required>
+            <option value="">اختر نوع العقار</option>
+            <option value="apartment">شقة</option>
+            <option value="house">منزل</option>
+            <option value="villa">فيلا</option>
+            <option value="duplex">دوبلكس</option>
+            <option value="residential_complex">مجمع سكني</option>
+            <option value="shop">محل تجاري</option>
+            <option value="office">مكتب</option>
+            <option value="residential_building">بناية سكنية</option>
+            <option value="commercial_building">عمارة تجارية</option>
+            <option value="residential_land">أرض سكنية</option>
+            <option value="agricultural_land">أرض زراعية</option>
+            <option value="commercial_land">أرض تجارية</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>الغرض</label>
+          <select name="purpose" class="form-control">
+            <option value="">اختر الغرض</option>
+            <option value="sale">بيع</option>
+            <option value="rent">إيجار</option>
+            <option value="investment">استثمار</option>
+            <option value="auction">مزاد</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>حالة العقار</label>
+          <select name="property_condition" class="form-control">
+            <option value="">اختر الحالة</option>
+            <option value="new">جديد</option>
+            <option value="used">مستعمل</option>
+            <option value="under_construction">قيد الإنشاء</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>حالة الملكية</label>
+          <select name="ownership_status" class="form-control">
+            <option value="">اختر حالة الملكية</option>
+            <option value="title_deed">طابو</option>
+            <option value="agricultural">زراعي</option>
+            <option value="investment">استثماري</option>
+            <option value="commercial">تجاري</option>
+            <option value="other">أخرى</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>رقم الإعلان</label>
+          <input type="text" name="property_number" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>اسم المالك (اختياري)</label>
+          <input type="text" name="owner_name" class="form-control">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">معلومات السعر</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>السعر (د.ع) <span class="required">*</span></label>
+          <input type="number" name="price" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label>العملة</label>
+          <select name="currency" class="form-control">
+            <option value="IQD">دينار عراقي</option>
+            <option value="USD">دولار أمريكي</option>
+            <option value="EUR">يورو</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>قابل للتفاوض</label>
+          <select name="negotiable" class="form-control">
+            <option value="yes">نعم</option>
+            <option value="no">لا</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>سعر المتر</label>
+          <input type="number" name="price_per_meter" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>الدفعة الأولى</label>
+          <input type="number" name="down_payment" class="form-control">
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>الأقساط (إن وجدت)</label>
+          <textarea name="installments" class="form-control" rows="2"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>رسوم الصيانة السنوية</label>
+          <input type="number" name="annual_maintenance_fee" class="form-control">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الموقع</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>المحافظة <span class="required">*</span></label>
+          <select name="governorate" class="form-control" required>
+            <option value="">اختر المحافظة</option>
+            <option value="بغداد">بغداد</option>
+            <option value="البصرة">البصرة</option>
+            <option value="نينوى">نينوى</option>
+            <option value="أربيل">أربيل</option>
+            <option value="النجف">النجف</option>
+            <option value="كربلاء">كربلاء</option>
+            <option value="بابل">بابل</option>
+            <option value="القادسية">القادسية</option>
+            <option value="الديوانية">الديوانية</option>
+            <option value="واسط">واسط</option>
+            <option value="ذي قار">ذي قار</option>
+            <option value="ميسان">ميسان</option>
+            <option value="البصرة">البصرة</option>
+            <option value="صلاح الدين">صلاح الدين</option>
+            <option value="ديالى">ديالى</option>
+            <option value="كركوك">كركوك</option>
+            <option value="الأنبار">الأنبار</option>
+            <option value="القادسية">القادسية</option>
+            <option value="المثنى">المثنى</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>المدينة</label>
+          <input type="text" name="city" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>القضاء</label>
+          <input type="text" name="district" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>الشارع</label>
+          <input type="text" name="street" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>أقرب نقطة دالة</label>
+          <input type="text" name="landmark" class="form-control">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">المساحة والبناء</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>المساحة الكلية (م²)</label>
+          <input type="number" name="total_area" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>مساحة البناء (م²)</label>
+          <input type="number" name="building_area" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>الواجهة</label>
+          <input type="text" name="facade" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>الاتجاه</label>
+          <input type="text" name="direction" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>سنة البناء</label>
+          <input type="number" name="year_built" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>حالة البناء</label>
+          <input type="text" name="building_condition" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>عدد الطوابق</label>
+          <input type="number" name="total_floors" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>رقم الطابق</label>
+          <input type="number" name="floor_number" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>نوع الأرضية</label>
+          <input type="text" name="floor_type" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>نوع السقف</label>
+          <input type="text" name="roof_type" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>نوع الجدران</label>
+          <input type="text" name="wall_type" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>حالة التشطيب</label>
+          <input type="text" name="finish_condition" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>آخر صيانة</label>
+          <input type="date" name="last_maintenance" class="form-control">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">تفاصيل الغرف</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>عدد الغرف</label>
+          <input type="number" name="bedrooms" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>عدد الصالات</label>
+          <input type="number" name="living_rooms" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>عدد غرف الطعام</label>
+          <input type="number" name="dining_rooms" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>عدد الحمامات</label>
+          <input type="number" name="bathrooms" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>عدد المطابخ</label>
+          <input type="number" name="kitchens" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>عدد الشرفات</label>
+          <input type="number" name="balconies" class="form-control">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الخدمات</h3>
+      <div class="checkbox-group">
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_national_electricity" value="true">
+          <label>كهرباء</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_water" value="true">
+          <label>ماء</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_internet" value="true">
+          <label>إنترنت</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_generator" value="true">
+          <label>مولدة</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_solar_power" value="true">
+          <label>طاقة شمسية</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_elevator" value="true">
+          <label>مصعد</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_garden" value="true">
+          <label>حديقة</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_pool" value="true">
+          <label>مسبح</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_cctv" value="true">
+          <label>كاميرات</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_alarm" value="true">
+          <label>نظام إنذار</label>
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الوصف</h3>
+      <div class="form-group">
+        <textarea name="description" class="form-control" rows="5"></textarea>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الوسائط</h3>
+      <div class="form-grid">
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صورة الغلاف الأمامية <span class="required">*</span></label>
+          <input type="file" name="cover_image" accept="image/*" class="form-control" required>
+          <small style="color: rgba(255,255,255,0.6);">الصورة الرئيسية التي ستظهر في نتائج البحث</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صور إضافية (حتى 10 صور)</label>
+          <input type="file" name="additional_images" accept="image/*" multiple class="form-control">
+          <small style="color: rgba(255,255,255,0.6);">يمكنك رفع حتى 10 صور إضافية</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>فيديو العقار</label>
+          <input type="file" name="property_video" accept="video/*" class="form-control">
+          <small style="color: rgba(255,255,255,0.6);">رفع فيديو يعرض تفاصيل العقار</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صور 360°</label>
+          <input type="file" name="360_images" accept="image/*" multiple class="form-control" id="360-images-input" onchange="preview360Images(this)">
+          <small style="color: rgba(255,255,255,0.6);">رفع صور بانورامية بتقنية 360°</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>تصوير فيديو 360° مباشر 🎥</label>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary" onclick="start360Camera()" id="start-camera-btn">
+              <span class="btn-icon">📹</span>
+              <span class="btn-text">بدء التصوير 360°</span>
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="stop360Camera()" id="stop-camera-btn" style="display: none;">
+              <span class="btn-icon">⏹️</span>
+              <span class="btn-text">إيقاف التصوير</span>
+            </button>
+            <button type="button" class="btn btn-primary" onclick="capture360Photo()" id="capture-btn" style="display: none;">
+              <span class="btn-icon">📸</span>
+              <span class="btn-text">التقاط صورة</span>
+            </button>
+          </div>
+          <video id="360-camera-preview" style="display: none; width: 100%; max-width: 400px; margin-top: 10px; border-radius: 8px;" autoplay playsinline></video>
+          <canvas id="360-canvas" style="display: none;"></canvas>
+          <small style="color: rgba(255,255,255,0.6);">يمكنك التقاط صور 360° مباشرة من الكاميرا وحفظها</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>معاينة الصور 360°</label>
+          <div id="360-preview-container" style="display: none; width: 100%; height: 300px; border-radius: 8px; overflow: hidden; margin-top: 10px;"></div>
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">نوع النشر</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>نوع الإعلان</label>
+          <select name="publication_type" class="form-control">
+            <option value="normal">عادي</option>
+            <option value="featured">مميز ⭐</option>
+            <option value="pinned">مثبت في الأعلى 📌</option>
+          </select>
+          <small style="color: rgba(255,255,255,0.6);">اختر نوع النشر (يتطلب اشتراك مميز)</small>
+        </div>
+        
+        <div class="form-group">
+          <label>مدة النشر (أيام)</label>
+          <input type="number" name="publication_days" class="form-control" placeholder="30" min="1" max="365">
+          <small style="color: rgba(255,255,255,0.6);">مدة ظهور الإعلان</small>
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">بيانات التواصل</h3>
+      <div class="form-group">
+        <label>رقم الهاتف <span class="required">*</span></label>
+        <input type="tel" name="phone" class="form-control" required>
+      </div>
+    </div>
+    
+    <!-- Outside Iraq Form -->
+    <div id="outside_iraq-form" class="form-section {% if category == 'outside_iraq' %}active{% endif %}">
+      <h2 class="section-title">🌍 عقارات خارج العراق</h2>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">المعلومات الأساسية</h3>
+      <div class="form-grid">
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صورة الغلاف <span class="required">*</span></label>
+          <input type="file" name="cover_image" accept="image/*" class="form-control" required>
+          <small style="color: rgba(255,255,255,0.6);">صورة الغلاف الرئيسية للعقار</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صورة شخصية</label>
+          <input type="file" name="personal_image" accept="image/*" class="form-control">
+          <small style="color: rgba(255,255,255,0.6);">صورة شخصية لصاحب العقار (اختياري)</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>عنوان الإعلان <span class="required">*</span></label>
+          <input type="text" name="title" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label>نوع العقار <span class="required">*</span></label>
+          <select name="type" class="form-control" required>
+            <option value="">اختر نوع العقار</option>
+            <option value="outside_apartment">شقة خارج العراق</option>
+            <option value="outside_villa">فيلا خارج العراق</option>
+            <option value="outside_palace">قصر خارج العراق</option>
+            <option value="outside_house">منزل خارج العراق</option>
+            <option value="outside_land">أرض خارج العراق</option>
+            <option value="outside_commercial">عقار تجاري خارج العراق</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>الغرض</label>
+          <select name="purpose" class="form-control">
+            <option value="">اختر الغرض</option>
+            <option value="sale">بيع</option>
+            <option value="rent">إيجار</option>
+            <option value="investment">استثمار</option>
+            <option value="auction">مزاد</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>حالة العقار</label>
+          <select name="property_condition" class="form-control">
+            <option value="">اختر الحالة</option>
+            <option value="new">جديد</option>
+            <option value="used">مستعمل</option>
+            <option value="under_construction">قيد الإنشاء</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>حالة الملكية</label>
+          <select name="ownership_status" class="form-control">
+            <option value="">اختر حالة الملكية</option>
+            <option value="title_deed">طابو</option>
+            <option value="agricultural">زراعي</option>
+            <option value="investment">استثماري</option>
+            <option value="commercial">تجاري</option>
+            <option value="other">أخرى</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>رقم الإعلان</label>
+          <input type="text" name="property_number" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>اسم المالك (اختياري)</label>
+          <input type="text" name="owner_name" class="form-control">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">معلومات السعر</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>السعر <span class="required">*</span></label>
+          <input type="number" name="price" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label>العملة</label>
+          <select name="currency" class="form-control">
+            <option value="IQD">دينار عراقي</option>
+            <option value="USD">دولار أمريكي</option>
+            <option value="EUR">يورو</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>قابل للتفاوض</label>
+          <select name="negotiable" class="form-control">
+            <option value="yes">نعم</option>
+            <option value="no">لا</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>سعر المتر</label>
+          <input type="number" name="price_per_meter" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>الدفعة الأولى</label>
+          <input type="number" name="down_payment" class="form-control">
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>الأقساط (إن وجدت)</label>
+          <textarea name="installments" class="form-control" rows="2"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>رسوم الصيانة السنوية</label>
+          <input type="number" name="annual_maintenance_fee" class="form-control">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الموقع خارج العراق</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>الدولة <span class="required">*</span></label>
+          <input type="text" name="country" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label>المدينة</label>
+          <input type="text" name="city_outside" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>المنطقة</label>
+          <input type="text" name="area_outside" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>الرمز البريدي</label>
+          <input type="text" name="postal_code" class="form-control">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">المساحة والبناء</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>المساحة الكلية (م²)</label>
+          <input type="number" name="total_area" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>مساحة البناء (م²)</label>
+          <input type="number" name="building_area" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>الواجهة</label>
+          <input type="text" name="facade" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>الاتجاه</label>
+          <input type="text" name="direction" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>سنة البناء</label>
+          <input type="number" name="year_built" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>حالة البناء</label>
+          <input type="text" name="building_condition" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>عدد الطوابق</label>
+          <input type="number" name="total_floors" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>رقم الطابق</label>
+          <input type="number" name="floor_number" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>نوع الأرضية</label>
+          <input type="text" name="floor_type" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>نوع السقف</label>
+          <input type="text" name="roof_type" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>نوع الجدران</label>
+          <input type="text" name="wall_type" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>حالة التشطيب</label>
+          <input type="text" name="finish_condition" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>آخر صيانة</label>
+          <input type="date" name="last_maintenance" class="form-control">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">تفاصيل الغرف</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>عدد الغرف</label>
+          <input type="number" name="bedrooms" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>عدد الصالات</label>
+          <input type="number" name="living_rooms" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>عدد غرف الطعام</label>
+          <input type="number" name="dining_rooms" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>عدد الحمامات</label>
+          <input type="number" name="bathrooms" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>عدد المطابخ</label>
+          <input type="number" name="kitchens" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>عدد الشرفات</label>
+          <input type="number" name="balconies" class="form-control">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">معلومات إضافية</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>الضرائب</label>
+          <input type="number" name="taxes" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>رسوم التسجيل</label>
+          <input type="number" name="registration_fees" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>رسوم الصيانة</label>
+          <input type="number" name="maintenance_fee" class="form-control">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>قوانين تملك الأجانب</label>
+        <textarea name="foreign_ownership_laws" class="form-control" rows="3"></textarea>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الوصف</h3>
+      <div class="form-group">
+        <textarea name="description" class="form-control" rows="5"></textarea>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الوسائط</h3>
+      <div class="form-grid">
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صورة الغلاف الأمامية <span class="required">*</span></label>
+          <input type="file" name="cover_image" accept="image/*" class="form-control" required>
+          <small style="color: rgba(255,255,255,0.6);">الصورة الرئيسية التي ستظهر في نتائج البحث</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صور إضافية (حتى 10 صور)</label>
+          <input type="file" name="additional_images" accept="image/*" multiple class="form-control">
+          <small style="color: rgba(255,255,255,0.6);">يمكنك رفع حتى 10 صور إضافية</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>فيديو العقار</label>
+          <input type="file" name="property_video" accept="video/*" class="form-control">
+          <small style="color: rgba(255,255,255,0.6);">رفع فيديو يعرض تفاصيل العقار</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صور 360°</label>
+          <input type="file" name="360_images" accept="image/*" multiple class="form-control" id="360-images-input" onchange="preview360Images(this)">
+          <small style="color: rgba(255,255,255,0.6);">رفع صور بانورامية بتقنية 360°</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>تصوير فيديو 360° مباشر 🎥</label>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary" onclick="start360Camera()" id="start-camera-btn">
+              <span class="btn-icon">📹</span>
+              <span class="btn-text">بدء التصوير 360°</span>
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="stop360Camera()" id="stop-camera-btn" style="display: none;">
+              <span class="btn-icon">⏹️</span>
+              <span class="btn-text">إيقاف التصوير</span>
+            </button>
+            <button type="button" class="btn btn-primary" onclick="capture360Photo()" id="capture-btn" style="display: none;">
+              <span class="btn-icon">📸</span>
+              <span class="btn-text">التقاط صورة</span>
+            </button>
+          </div>
+          <video id="360-camera-preview" style="display: none; width: 100%; max-width: 400px; margin-top: 10px; border-radius: 8px;" autoplay playsinline></video>
+          <canvas id="360-canvas" style="display: none;"></canvas>
+          <small style="color: rgba(255,255,255,0.6);">يمكنك التقاط صور 360° مباشرة من الكاميرا وحفظها</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>معاينة الصور 360°</label>
+          <div id="360-preview-container" style="display: none; width: 100%; height: 300px; border-radius: 8px; overflow: hidden; margin-top: 10px;"></div>
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">نوع النشر</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>نوع الإعلان</label>
+          <select name="publication_type" class="form-control">
+            <option value="normal">عادي</option>
+            <option value="featured">مميز ⭐</option>
+            <option value="pinned">مثبت في الأعلى 📌</option>
+          </select>
+          <small style="color: rgba(255,255,255,0.6);">اختر نوع النشر (يتطلب اشتراك مميز)</small>
+        </div>
+        
+        <div class="form-group">
+          <label>مدة النشر (أيام)</label>
+          <input type="number" name="publication_days" class="form-control" placeholder="30" min="1" max="365">
+          <small style="color: rgba(255,255,255,0.6);">مدة ظهور الإعلان</small>
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">بيانات التواصل</h3>
+      <div class="form-group">
+        <label>رقم الهاتف <span class="required">*</span></label>
+        <input type="tel" name="phone" class="form-control" required>
+      </div>
+    </div>
+    
+    <!-- Hotel Form -->
+    <div id="hotel-form" class="form-section {% if category == 'hotel' %}active{% endif %}">
+      <h2 class="section-title">🏨 فنادق</h2>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">المعلومات الأساسية</h3>
+      <div class="form-grid">
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صورة الغلاف <span class="required">*</span></label>
+          <input type="file" name="cover_image" accept="image/*" class="form-control" required>
+          <small style="color: rgba(255,255,255,0.6);">صورة الغلاف الرئيسية للفندق</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صورة شخصية</label>
+          <input type="file" name="personal_image" accept="image/*" class="form-control">
+          <small style="color: rgba(255,255,255,0.6);">صورة شخصية لصاحب الفندق (اختياري)</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>اسم الفندق <span class="required">*</span></label>
+          <input type="text" name="hotel_name" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label>عدد النجوم <span class="required">*</span></label>
+          <select name="star_rating" class="form-control" required>
+            <option value="">اختر عدد النجوم</option>
+            <option value="1">نجمة واحدة</option>
+            <option value="2">نجمتان</option>
+            <option value="3">3 نجوم</option>
+            <option value="4">4 نجوم</option>
+            <option value="5">5 نجوم</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>التصنيف</label>
+          <select name="classification" class="form-control">
+            <option value="">اختر التصنيف</option>
+            <option value="luxury">فاخر</option>
+            <option value="business">أعمال</option>
+            <option value="budget">اقتصادي</option>
+            <option value="boutique">بوتيك</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>عدد الغرف <span class="required">*</span></label>
+          <input type="number" name="total_rooms" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label>عدد الأجنحة</label>
+          <input type="number" name="suites" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>عدد الغرف العائلية</label>
+          <input type="number" name="family_rooms" class="form-control">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الحجز</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>سعر الليلة <span class="required">*</span></label>
+          <input type="number" name="price_per_night" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label>العملة <span class="required">*</span></label>
+          <select name="currency" class="form-control" required>
+            <option value="IQD">دينار عراقي</option>
+            <option value="USD">دولار أمريكي</option>
+            <option value="EUR">يورو</option>
+          </select>
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الخدمات</h3>
+      <div class="checkbox-group">
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_restaurant" value="true">
+          <label>مطاعم</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_cafe" value="true">
+          <label>مقاهي</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_pool" value="true">
+          <label>مسابح</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_gym" value="true">
+          <label>نادي رياضي</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_spa" value="true">
+          <label>سبا</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" name="has_conference_hall" value="true">
+          <label>قاعة مؤتمرات</label>
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الحجز المباشر</h3>
+      <div class="form-grid">
+        <div class="checkbox-item">
+          <input type="checkbox" name="direct_booking" value="true">
+          <label>تفعيل الحجز المباشر</label>
+        </div>
+        
+        <div class="form-group">
+          <label>رابط الحجز</label>
+          <input type="url" name="booking_url" class="form-control" placeholder="https://">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الموقع</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>الدولة <span class="required">*</span></label>
+          <input type="text" name="country" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label>المدينة</label>
+          <input type="text" name="city_outside" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>المنطقة</label>
+          <input type="text" name="area_outside" class="form-control">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الوصف</h3>
+      <div class="form-group">
+        <textarea name="description" class="form-control" rows="5"></textarea>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الوسائط</h3>
+      <div class="form-grid">
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صورة الغلاف الأمامية <span class="required">*</span></label>
+          <input type="file" name="cover_image" accept="image/*" class="form-control" required>
+          <small style="color: rgba(255,255,255,0.6);">الصورة الرئيسية التي ستظهر في نتائج البحث</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صور إضافية (حتى 10 صور)</label>
+          <input type="file" name="additional_images" accept="image/*" multiple class="form-control">
+          <small style="color: rgba(255,255,255,0.6);">يمكنك رفع حتى 10 صور إضافية</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>فيديو العقار</label>
+          <input type="file" name="property_video" accept="video/*" class="form-control">
+          <small style="color: rgba(255,255,255,0.6);">رفع فيديو يعرض تفاصيل الفندق</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صور 360°</label>
+          <input type="file" name="360_images" accept="image/*" multiple class="form-control" id="360-images-input" onchange="preview360Images(this)">
+          <small style="color: rgba(255,255,255,0.6);">رفع صور بانورامية بتقنية 360°</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>تصوير فيديو 360° مباشر 🎥</label>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary" onclick="start360Camera()" id="start-camera-btn">
+              <span class="btn-icon">📹</span>
+              <span class="btn-text">بدء التصوير 360°</span>
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="stop360Camera()" id="stop-camera-btn" style="display: none;">
+              <span class="btn-icon">⏹️</span>
+              <span class="btn-text">إيقاف التصوير</span>
+            </button>
+            <button type="button" class="btn btn-primary" onclick="capture360Photo()" id="capture-btn" style="display: none;">
+              <span class="btn-icon">📸</span>
+              <span class="btn-text">التقاط صورة</span>
+            </button>
+          </div>
+          <video id="360-camera-preview" style="display: none; width: 100%; max-width: 400px; margin-top: 10px; border-radius: 8px;" autoplay playsinline></video>
+          <canvas id="360-canvas" style="display: none;"></canvas>
+          <small style="color: rgba(255,255,255,0.6);">يمكنك التقاط صور 360° مباشرة من الكاميرا وحفظها</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>معاينة الصور 360°</label>
+          <div id="360-preview-container" style="display: none; width: 100%; height: 300px; border-radius: 8px; overflow: hidden; margin-top: 10px;"></div>
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">نوع النشر</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>نوع الإعلان</label>
+          <select name="publication_type" class="form-control">
+            <option value="normal">عادي</option>
+            <option value="featured">مميز ⭐</option>
+            <option value="pinned">مثبت في الأعلى 📌</option>
+          </select>
+          <small style="color: rgba(255,255,255,0.6);">اختر نوع النشر (يتطلب اشتراك مميز)</small>
+        </div>
+        
+        <div class="form-group">
+          <label>مدة النشر (أيام)</label>
+          <input type="number" name="publication_days" class="form-control" placeholder="30" min="1" max="365">
+          <small style="color: rgba(255,255,255,0.6);">مدة ظهور الإعلان</small>
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">بيانات التواصل</h3>
+      <div class="form-group">
+        <label>رقم الهاتف <span class="required">*</span></label>
+        <input type="tel" name="phone" class="form-control" required>
+      </div>
+    </div>
+    
+    <!-- Resort Form -->
+    <div id="resort-form" class="form-section {% if category == 'resort' %}active{% endif %}">
+      <h2 class="section-title">🏖️ منتجعات وأماكن سياحية</h2>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">المعلومات الأساسية</h3>
+      <div class="form-grid">
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صورة الغلاف <span class="required">*</span></label>
+          <input type="file" name="cover_image" accept="image/*" class="form-control" required>
+          <small style="color: rgba(255,255,255,0.6);">صورة الغلاف الرئيسية للمنتجع</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صورة شخصية</label>
+          <input type="file" name="personal_image" accept="image/*" class="form-control">
+          <small style="color: rgba(255,255,255,0.6);">صورة شخصية لصاحب المنتجع (اختياري)</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>اسم المنتجع <span class="required">*</span></label>
+          <input type="text" name="name" maxlength="200" class="form-control" required id="id_resort_name">
+        </div>
+        
+        <div class="form-group">
+          <label>نوع المنتجع <span class="required">*</span></label>
+          <select name="resort_type" class="form-control" id="id_resort_type" required>
+            <option value="">اختر النوع</option>
+            <option value="resort">منتجع سياحي</option>
+            <option value="hotel">فندق</option>
+            <option value="chalet">شاليه</option>
+            <option value="cabin">كوخ</option>
+            <option value="camp">مخيم سياحي</option>
+            <option value="amusement_park">مدينة ألعاب</option>
+            <option value="park">منتزه</option>
+            <option value="public_garden">حديقة عامة</option>
+            <option value="pool">مسبح</option>
+            <option value="rest_house">استراحة</option>
+            <option value="tourist_farm">مزرعة سياحية</option>
+            <option value="tourist_island">جزيرة سياحية</option>
+            <option value="archaeological_site">موقع أثري</option>
+            <option value="tourist_restaurant">مطعم سياحي</option>
+            <option value="tourist_cafe">مقهى سياحي</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>ساعات العمل</label>
+          <input type="text" name="working_hours" class="form-control" placeholder="مثال: 9 صباحاً - 10 مساءً">
+        </div>
+        
+        <div class="form-group">
+          <label>أيام العمل</label>
+          <input type="text" name="working_days" class="form-control" placeholder="مثال: يومياً">
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>الوصف <span class="required">*</span></label>
+          <textarea name="description" class="form-control" rows="4" required></textarea>
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الموقع</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>المحافظة <span class="required">*</span></label>
+          <select name="governorate" class="form-control" required>
+            <option value="">اختر المحافظة</option>
+            <option value="بغداد">بغداد</option>
+            <option value="البصرة">البصرة</option>
+            <option value="نينوى">نينوى</option>
+            <option value="أربيل">أربيل</option>
+            <option value="النجف">النجف</option>
+            <option value="كربلاء">كربلاء</option>
+            <option value="السليمانية">السليمانية</option>
+            <option value="ديالى">ديالى</option>
+            <option value="بابل">بابل</option>
+            <option value="واسط">واسط</option>
+            <option value="ميسان">ميسان</option>
+            <option value="ذي قار">ذي قار</option>
+            <option value="المثنى">المثنى</option>
+            <option value="القادسية">القادسية</option>
+            <option value="كركوك">كركوك</option>
+            <option value="صلاح الدين">صلاح الدين</option>
+            <option value="الأنبار">الأنبار</option>
+            <option value="دهوك">دهوك</option>
+            <option value="حلبجة">حلبجة</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>المدينة <span class="required">*</span></label>
+          <input type="text" name="city" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label>المنطقة</label>
+          <input type="text" name="district" class="form-control">
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>العنوان الكامل <span class="required">*</span></label>
+          <textarea name="full_address" class="form-control" rows="2" required></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>خط العرض</label>
+          <input type="number" step="any" name="latitude" class="form-control" placeholder="مثال: 33.3152">
+        </div>
+        
+        <div class="form-group">
+          <label>خط الطول</label>
+          <input type="number" step="any" name="longitude" class="form-control" placeholder="مثال: 44.3661">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">معلومات الاتصال</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>رقم الهاتف <span class="required">*</span></label>
+          <input type="tel" name="phone" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label>واتساب</label>
+          <input type="tel" name="whatsapp" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>البريد الإلكتروني</label>
+          <input type="email" name="email" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>الموقع الإلكتروني</label>
+          <input type="url" name="website" class="form-control" placeholder="https://">
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الأسعار</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>أقل سعر</label>
+          <input type="number" step="0.01" name="min_price" class="form-control" placeholder="0.00">
+        </div>
+        
+        <div class="form-group">
+          <label>أعلى سعر</label>
+          <input type="number" step="0.01" name="max_price" class="form-control" placeholder="0.00">
+        </div>
+        
+        <div class="form-group">
+          <label>العملة</label>
+          <select name="currency" class="form-control">
+            <option value="د.ع" selected>دينار عراقي (د.ع)</option>
+            <option value="$">دولار أمريكي ($)</option>
+            <option value="€">يورو (€)</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>الحجز المسبق</label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="advance_booking" checked>
+            <span>يتطلب حجز مسبق</span>
+          </label>
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">المرافق</h3>
+      <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="parking">
+          <span>موقف سيارات</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="wifi">
+          <span>واي فاي</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="pool">
+          <span>مسبح</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="playground">
+          <span>ألعاب أطفال</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="restaurant">
+          <span>مطعم</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="cafeteria">
+          <span>كافتيريا</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="family_seating">
+          <span>جلسات عائلية</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="private_seating">
+          <span>جلسات خاصة</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="ac">
+          <span>تكييف</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="elevator">
+          <span>مصعد</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="event_hall">
+          <span>قاعة مناسبات</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="conference_hall">
+          <span>قاعة مؤتمرات</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="beach">
+          <span>شاطئ</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="gym">
+          <span>صالة رياضية</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="spa">
+          <span>سبا</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="sauna">
+          <span>ساونا</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="jacuzzi">
+          <span>جاكوزي</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="security">
+          <span>أمن وحراسة</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="cctv">
+          <span>كاميرات مراقبة</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="generator">
+          <span>مولد كهرباء</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="amenities" value="disability_access">
+          <span>خدمات لذوي الإعاقة</span>
+        </label>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الخدمات</h3>
+      <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        <label class="checkbox-label">
+          <input type="checkbox" name="services" value="online_booking">
+          <span>الحجز الإلكتروني</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="services" value="online_payment">
+          <span>الدفع الإلكتروني</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="services" value="offers_discounts">
+          <span>العروض والخصومات</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="services" value="events">
+          <span>الفعاليات</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="services" value="trips">
+          <span>الرحلات</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="services" value="hall_rental">
+          <span>تأجير القاعات</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="services" value="cabin_rental">
+          <span>تأجير الأكواخ</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="services" value="chalet_rental">
+          <span>تأجير الشاليهات</span>
+        </label>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">الوسائط</h3>
+      <div class="form-grid">
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صورة الغلاف الأمامية <span class="required">*</span></label>
+          <input type="file" name="cover_image" accept="image/*" class="form-control" required>
+          <small style="color: rgba(255,255,255,0.6);">الصورة الرئيسية التي ستظهر في نتائج البحث</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صور إضافية (حتى 10 صور)</label>
+          <input type="file" name="additional_images" accept="image/*" multiple class="form-control">
+          <small style="color: rgba(255,255,255,0.6);">يمكنك رفع حتى 10 صور إضافية</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>فيديو العقار</label>
+          <input type="file" name="property_video" accept="video/*" class="form-control">
+          <small style="color: rgba(255,255,255,0.6);">رفع فيديو يعرض تفاصيل المنتجع</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>صور 360°</label>
+          <input type="file" name="360_images" accept="image/*" multiple class="form-control" id="360-images-input" onchange="preview360Images(this)">
+          <small style="color: rgba(255,255,255,0.6);">رفع صور بانورامية بتقنية 360°</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>تصوير فيديو 360° مباشر 🎥</label>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary" onclick="start360Camera()" id="start-camera-btn">
+              <span class="btn-icon">📹</span>
+              <span class="btn-text">بدء التصوير 360°</span>
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="stop360Camera()" id="stop-camera-btn" style="display: none;">
+              <span class="btn-icon">⏹️</span>
+              <span class="btn-text">إيقاف التصوير</span>
+            </button>
+            <button type="button" class="btn btn-primary" onclick="capture360Photo()" id="capture-btn" style="display: none;">
+              <span class="btn-icon">📸</span>
+              <span class="btn-text">التقاط صورة</span>
+            </button>
+          </div>
+          <video id="360-camera-preview" style="display: none; width: 100%; max-width: 400px; margin-top: 10px; border-radius: 8px;" autoplay playsinline></video>
+          <canvas id="360-canvas" style="display: none;"></canvas>
+          <small style="color: rgba(255,255,255,0.6);">يمكنك التقاط صور 360° مباشرة من الكاميرا وحفظها</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>معاينة الصور 360°</label>
+          <div id="360-preview-container" style="display: none; width: 100%; height: 300px; border-radius: 8px; overflow: hidden; margin-top: 10px;"></div>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>الشعار</label>
+          <input type="file" name="logo" class="form-control" accept="image/*">
+          <small style="color: rgba(255,255,255,0.6);">شعار المنتجع (اختياري)</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>رابط الفيديو (YouTube, Vimeo)</label>
+          <input type="url" name="video_url" class="form-control" placeholder="https://youtube.com/watch?v=...">
+          <small style="color: rgba(255,255,255,0.6);">رابط فيديو خارجي (اختياري)</small>
+        </div>
+      </div>
+      
+      <h3 class="section-title" style="font-size: 1.2rem;">تحسين محركات البحث (SEO)</h3>
+      <div class="form-grid">
+        <div class="form-group" style="grid-column: span 2;">
+          <label>عنوان SEO</label>
+          <input type="text" name="meta_title" class="form-control" maxlength="70" placeholder="عنوان جذاب لمحركات البحث">
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>وصف SEO</label>
+          <textarea name="meta_description" class="form-control" rows="2" maxlength="160" placeholder="وصف مختصر للمنتجع"></textarea>
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2;">
+          <label>كلمات مفتاحية</label>
+          <input type="text" name="keywords" class="form-control" placeholder="منتجع, سياحة, استراحة">
+        </div>
+      </div>
+    </div>
+    
+    <!-- Submit Button -->
+    <div class="form-actions">
+      <button type="submit" class="btn-submit" id="submit-btn">
+        <span class="btn-icon">📝</span>
+        <span class="btn-text" id="submit-text">إضافة العقار</span>
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Pannellum 360° Viewer Library -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
+<script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+
+<script>
+// 360° Camera and Preview Functions
+let cameraStream = null;
+let viewer = null;
+
+function preview360Images(input) {
+  const container = document.getElementById('360-preview-container');
+  container.style.display = 'none';
+  
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+      container.style.display = 'block';
+      
+      // Destroy previous viewer if exists
+      if (viewer) {
+        viewer.destroy();
+        viewer = null;
+      }
+      
+      // Initialize Pannellum viewer
+      viewer = pannellum.viewer('360-preview-container', {
+        "type": "equirectangular",
+        "panorama": e.target.result,
+        "autoLoad": true,
+        "showControls": true,
+        "mouseZoom": true,
+        "draggable": true,
+        "disableKeyboardCtrl": false,
+        "keyboardControls": true,
+        "showFullscreenCtrl": true,
+        "autoRotate": true,
+        "autoRotateSpeed": 0.3,
+        "minHfov": 30,
+        "maxHfov": 110,
+        "minPitch": -90,
+        "maxPitch": 90,
+        "hfov": 100,
+        "pitch": 0,
+        "yaw": 0
+      });
+    };
+    
+    reader.readAsDataURL(file);
+  }
+}
+
+async function start360Camera() {
+  try {
+    const videoElement = document.getElementById('360-camera-preview');
+    const startBtn = document.getElementById('start-camera-btn');
+    const stopBtn = document.getElementById('stop-camera-btn');
+    const captureBtn = document.getElementById('capture-btn');
+    
+    // Request camera access
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment',
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      }
+    });
+    
+    videoElement.srcObject = cameraStream;
+    videoElement.style.display = 'block';
+    startBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-block';
+    captureBtn.style.display = 'inline-block';
+    
+    console.log('Camera started successfully');
+  } catch (error) {
+    console.error('Error accessing camera:', error);
+    alert('تعذر الوصول إلى الكاميرا. يرجى التأكد من منح صلاحيات الكاميرا.');
+  }
+}
+
+function stop360Camera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+  }
+  
+  const videoElement = document.getElementById('360-camera-preview');
+  const startBtn = document.getElementById('start-camera-btn');
+  const stopBtn = document.getElementById('stop-camera-btn');
+  const captureBtn = document.getElementById('capture-btn');
+  
+  videoElement.style.display = 'none';
+  startBtn.style.display = 'inline-block';
+  stopBtn.style.display = 'none';
+  captureBtn.style.display = 'none';
+  
+  console.log('Camera stopped');
+}
+
+function capture360Photo() {
+  const videoElement = document.getElementById('360-camera-preview');
+  const canvas = document.getElementById('360-canvas');
+  
+  if (!cameraStream || !videoElement.srcObject) {
+    alert('يرجى بدء الكاميرا أولاً');
+    return;
+  }
+  
+  canvas.width = videoElement.videoWidth;
+  canvas.height = videoElement.videoHeight;
+  
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+  
+  // Convert to blob and create download link
+  canvas.toBlob(function(blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '360-photo-' + Date.now() + '.jpg';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, 'image/jpeg', 0.95);
+  
+  console.log('Photo captured');
+}
+
+function selectCategory(category) {
+  console.log('=== selectCategory called ===');
+  console.log('Category:', category);
+  
+  // Hide all form sections
+  const formSections = document.querySelectorAll('.form-section');
+  console.log('Form sections found:', formSections.length);
+  formSections.forEach(section => {
+    section.classList.remove('active');
+    section.style.setProperty('display', 'none', 'important');
+    console.log('Removed active from:', section.id);
+  });
+  
+  // Remove active class from all buttons
+  const buttons = document.querySelectorAll('.category-btn');
+  console.log('Buttons found:', buttons.length);
+  buttons.forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Show selected form section
+  const selectedForm = document.getElementById(category + '-form');
+  console.log('Looking for form ID:', category + '-form');
+  console.log('Selected form element:', selectedForm);
+  if (selectedForm) {
+    selectedForm.classList.add('active');
+    selectedForm.style.setProperty('display', 'block', 'important');
+    console.log('Added active to form:', selectedForm.id);
+  } else {
+    console.error('Form section not found!');
+  }
+  
+  // Add active class to clicked button using ID
+  const clickedBtn = document.getElementById('btn-' + category);
+  console.log('Looking for button ID:', 'btn-' + category);
+  console.log('Clicked button element:', clickedBtn);
+  if (clickedBtn) {
+    clickedBtn.classList.add('active');
+    console.log('Added active to button:', clickedBtn.id);
+  } else {
+    console.error('Button not found!');
+  }
+  
+  // Update hidden input
+  const hiddenCategory = document.getElementById('hidden-category');
+  console.log('Hidden category input:', hiddenCategory);
+  if (hiddenCategory) {
+    hiddenCategory.value = category;
+    console.log('Updated hidden category to:', category);
+  }
+  
+  // Show/hide no selection message
+  const noSelection = document.getElementById('no-selection');
+  if (noSelection) {
+    noSelection.style.display = 'none';
+  }
+  
+  // Update submit button text based on category
+  const submitText = document.getElementById('submit-text');
+  if (submitText) {
+    const buttonTexts = {
+      'inside_iraq': 'إضافة عقار داخل العراق',
+      'outside_iraq': 'إضافة عقار خارج العراق',
+      'hotel': 'إضافة فندق',
+      'resort': 'إضافة منتجع'
+    };
+    submitText.textContent = buttonTexts[category] || 'إضافة العقار';
+  }
+  
+  console.log('=== selectCategory completed ===');
+  
+  // Force browser repaint
+  setTimeout(() => {
+    if (selectedForm) {
+      selectedForm.style.display = 'none';
+      setTimeout(() => {
+        selectedForm.style.setProperty('display', 'block', 'important');
+      }, 10);
+    }
+  }, 10);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('=== DOMContentLoaded ===');
+  const category = '{{ category|default:"" }}';
+  console.log('Initial category from template:', category);
+  if (category) {
+    selectCategory(category);
+  } else {
+    console.log('No category selected, defaulting to inside_iraq');
+    selectCategory('inside_iraq');
+  }
+});
+</script>
+{% endblock %}

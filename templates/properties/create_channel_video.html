@@ -1,0 +1,222 @@
+{% extends 'properties/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}رفع فيديو جديد - {{ channel.name }}{% endblock %}
+
+{% block dashboard_title %}رفع فيديو جديد{% endblock %}
+
+{% block dashboard_subtitle %}
+<p style="margin:4px 0 0;color:var(--text-muted);font-size:0.9rem;">
+  رفع فيديو قصير في قناة {{ channel.name }}
+</p>
+{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'my_channel' %}" class="btn btn-outline">← العودة لقناتي</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.create-video-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.video-form {
+  background: var(--card-bg);
+  padding: 30px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.form-group {
+  margin-bottom: 25px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.form-group textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.form-group input[type="file"] {
+  padding: 8px;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.btn-submit {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-submit:hover {
+  background: var(--primary-dark);
+}
+
+.upload-area {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 40px;
+  text-align: center;
+  background: var(--bg);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+  border-color: var(--primary);
+  background: rgba(13, 148, 136, 0.05);
+}
+
+.upload-area .icon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+}
+
+.upload-area .text {
+  color: var(--text-light);
+  margin-bottom: 10px;
+}
+
+.upload-area .subtext {
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+.video-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .video-info {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="create-video-container">
+  <form method="post" enctype="multipart/form-data" class="video-form">
+    {% csrf_token %}
+    
+    <div class="form-group">
+      <label for="title">عنوان الفيديو</label>
+      <input 
+        type="text" 
+        name="title" 
+        id="title" 
+        placeholder="أدخل عنوان الفيديو..."
+        required
+      >
+    </div>
+    
+    <div class="form-group">
+      <label for="description">وصف الفيديو</label>
+      <textarea 
+        name="description" 
+        id="description" 
+        placeholder="اكتب وصفاً للفيديو..."
+      ></textarea>
+    </div>
+    
+    <div class="form-group">
+      <label>ملف الفيديو</label>
+      <div class="upload-area" onclick="document.getElementById('video_file').click()">
+        <div class="icon">🎥</div>
+        <div class="text">اضغط لرفع الفيديو أو اسحبه هنا</div>
+        <div class="subtext">MP4, WebM, MOV (حد أقصى 100MB)</div>
+      </div>
+      <input type="file" name="video_file" id="video_file" accept="video/*" style="display: none;" required onchange="updateFileName(this)">
+      <div id="file-name" style="margin-top: 10px; color: var(--text);"></div>
+    </div>
+    
+    <div class="form-group">
+      <label for="thumbnail">صورة مصغرة (اختياري)</label>
+      <input type="file" name="thumbnail" id="thumbnail" accept="image/*">
+    </div>
+    
+    <div class="video-info">
+      <div class="form-group">
+        <label for="duration">مدة الفيديو (ثانية)</label>
+        <input 
+          type="number" 
+          name="duration" 
+          id="duration" 
+          placeholder="مثال: 60"
+          min="1"
+        >
+      </div>
+      
+      <div class="form-group">
+        <label for="tags">الوسوم</label>
+        <input 
+          type="text" 
+          name="tags" 
+          id="tags" 
+          placeholder="عقارات، دلال، بغداد (مفصولة بفاصلة)"
+        >
+      </div>
+    </div>
+    
+    <div class="form-group checkbox-group">
+      <input type="checkbox" name="is_featured" id="is_featured">
+      <label for="is_featured">تمييز الفيديو</label>
+    </div>
+    
+    <button type="submit" class="btn-submit">رفع الفيديو</button>
+  </form>
+</div>
+
+<script>
+function updateFileName(input) {
+  const fileName = input.files[0] ? input.files[0].name : '';
+  document.getElementById('file-name').textContent = fileName ? `تم اختيار: ${fileName}` : '';
+}
+</script>
+{% endblock %}

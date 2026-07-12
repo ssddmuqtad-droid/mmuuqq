@@ -1,0 +1,81 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}حذف المستخدم - {{ target_user.username }}{% endblock %}
+{% block dashboard_title %}حذف <span>المستخدم</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'user_moderation_detail' target_user.id %}" class="btn btn-outline">العودة للتفاصيل</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card">
+  <div class="card-header bg-danger text-white">
+    <h5>🗑️ حذف المستخدم: {{ target_user.username }}</h5>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-danger">
+      <h6>⚠️ تحذير خطير</h6>
+      <p>أنت على وشك حذف هذا المستخدم نهائياً. سيتم:</p>
+      <ul>
+        <li>حذف حساب المستخدم نهائياً</li>
+        <li>حذف جميع البيانات المرتبطة به</li>
+        <li>حذف جميع العقارات والتعليقات والرسائل</li>
+        <li>لا يمكن التراجع عن هذا الإجراء</li>
+      </ul>
+    </div>
+
+    <div class="alert alert-info">
+      <h6>📋 معلومات المستخدم</h6>
+      <p><strong>الاسم:</strong> {{ target_user.get_full_name|default:target_user.username }}</p>
+      <p><strong>البريد الإلكتروني:</strong> {{ target_user.email }}</p>
+      <p><strong>تاريخ التسجيل:</strong> {{ target_user.date_joined|date:"Y-m-d" }}</p>
+      <p><strong>عدد العقارات:</strong> {{ target_user.property_set.count }}</p>
+      <p><strong>عدد التعليقات:</strong> {{ target_user.comments.count|default:0 }}</p>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="mb-3">
+        <label for="reason" class="form-label">سبب الحذف</label>
+        <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="اشرح سبب الحذف (اختياري)..."></textarea>
+        <small class="form-text text-muted">سيتم تسجيل هذا السبب في سجل المراقبة</small>
+      </div>
+
+      <div class="alert alert-warning">
+        <h6>🔐 تأكيد الإجراء النهائي</h6>
+        <p>هل أنت متأكد تماماً من أنك تريد حذف هذا المستخدم؟</p>
+        <p class="mb-0"><strong>هذا الإجراء لا يمكن التراجع عنه!</strong></p>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-danger">🗑️ تأكيد الحذف النهائي</button>
+        <a href="{% url 'user_moderation_detail' target_user.id %}" class="btn btn-outline-secondary">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.card {
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.btn {
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.form-control:focus {
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+</style>
+{% endblock %}

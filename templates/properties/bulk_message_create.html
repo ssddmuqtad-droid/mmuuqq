@@ -1,0 +1,222 @@
+{% extends "properties/base.html" %}
+{% load static %}
+
+{% block title %}إرسال رسالة جماعية{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-info">
+      <h1>إرسال رسالة جماعية</h1>
+      <p>إرسال رسائل إلى المستخدمين أو الدلالين</p>
+    </div>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'bulk_message_list' %}" class="btn btn-outline">الرسائل الجماعية</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم</a>
+    </div>
+  </div>
+
+  <div class="bulk-message-container">
+    <form method="post" class="bulk-message-form">
+      {% csrf_token %}
+      
+      <!-- Target Selection -->
+      <div class="form-section">
+        <h2>اختر المستهدفين</h2>
+        
+        <div class="form-group">
+          <label>نوع المستهدفين</label>
+          <select name="target_type" id="targetType" class="form-select" onchange="toggleRecipientSelection()">
+            <option value="all_users">جميع المستخدمين</option>
+            <option value="all_brokers">جميع الدلالين</option>
+            <option value="active_users">المستخدمين النشطين (آخر 30 يوم)</option>
+            <option value="active_brokers">الدلالين النشطين (آخر 30 يوم)</option>
+            <option value="specific_users">مستخدمين محددين</option>
+            <option value="specific_brokers">دلالين محددين</option>
+          </select>
+        </div>
+        
+        <div class="form-group" id="specificUsersSection" style="display:none;">
+          <label>اختر المستخدمين</label>
+          <div class="recipient-list">
+            {% for user in all_users %}
+            <label class="recipient-item">
+              <input type="checkbox" name="user_ids" value="{{ user.id }}">
+              <span>{{ user.username }} ({{ user.email }})</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        
+        <div class="form-group" id="specificBrokersSection" style="display:none;">
+          <label>اختر الدلالين</label>
+          <div class="recipient-list">
+            {% for broker in all_brokers %}
+            <label class="recipient-item">
+              <input type="checkbox" name="broker_ids" value="{{ broker.broker.id }}">
+              <span>{{ broker.username }} ({{ broker.broker.display_name }})</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Message Content -->
+      <div class="form-section">
+        <h2>محتوى الرسالة</h2>
+        
+        <div class="form-group">
+          <label>العنوان</label>
+          <input type="text" name="title" class="form-input" required placeholder="عنوان الرسالة">
+        </div>
+        
+        <div class="form-group">
+          <label>الرسالة</label>
+          <textarea name="message" class="form-textarea" rows="6" required placeholder="اكتب رسالتك هنا..."></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>موعد الإرسال المجدول (اختياري)</label>
+          <input type="datetime-local" name="scheduled_at" class="form-input">
+          <small>اتركه فارغاً للإرسال الفوري</small>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">إرسال الرسالة</button>
+        <a href="{% url 'bulk_message_list' %}" class="btn btn-outline">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.bulk-message-container {
+  max-width: 900px;
+  margin: 2rem auto;
+}
+
+.form-section {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.form-section h2 {
+  margin: 0 0 1rem 0;
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.form-textarea {
+  resize: vertical;
+}
+
+.recipient-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  background: var(--bg);
+}
+
+.recipient-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.recipient-item:hover {
+  background: var(--bg-alt);
+}
+
+.recipient-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.recipient-item span {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-outline:hover {
+  background: var(--bg-alt);
+  border-color: var(--primary);
+}
+</style>
+
+<script>
+function toggleRecipientSelection() {
+  const targetType = document.getElementById('targetType').value;
+  const specificUsersSection = document.getElementById('specificUsersSection');
+  const specificBrokersSection = document.getElementById('specificBrokersSection');
+  
+  specificUsersSection.style.display = targetType === 'specific_users' ? 'block' : 'none';
+  specificBrokersSection.style.display = targetType === 'specific_brokers' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

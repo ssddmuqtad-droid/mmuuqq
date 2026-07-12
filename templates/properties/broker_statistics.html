@@ -1,0 +1,294 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}إحصائيات الدلالين{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-info">
+      <h1>إحصائيات الدلالين</h1>
+      <p>تقارير وإحصائيات متقدمة عن الدلالين</p>
+    </div>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'broker_list' %}" class="btn btn-outline">← إدارة الدلالين</a>
+      <a href="{% url 'activity_log' %}" class="btn btn-outline">سجل النشاطات</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم</a>
+    </div>
+  </div>
+
+  <!-- General Stats -->
+  <div class="dashboard-stats" style="margin-bottom: 2rem;">
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ total_brokers|default:0 }}</div>
+        <div class="stat-label">إجمالي الدلالين</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🟢</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ active_brokers|default:0 }}</div>
+        <div class="stat-label">الدلالين النشطين</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🏠</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ total_properties|default:0 }}</div>
+        <div class="stat-label">إجمالي العقارات</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🔴</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ suspended_brokers|default:0 }}</div>
+        <div class="stat-label">الدلالين الموقوفين</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">✅</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ verified_brokers|default:0 }}</div>
+        <div class="stat-label">الدلالين الموثقين</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <!-- Role Statistics -->
+    <div class="stats-card">
+      <h3>إحصائيات حسب الدور</h3>
+      <div class="stats-list">
+        {% for stat in role_stats %}
+        <div class="stat-item">
+          <span class="stat-label">{{ stat.role }}</span>
+          <span class="stat-value">{{ stat.count }}</span>
+        </div>
+        {% empty %}
+        <div class="no-data">لا توجد بيانات</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Subscription Statistics -->
+    <div class="stats-card">
+      <h3>إحصائيات الاشتراكات</h3>
+      <div class="stats-list">
+        {% for stat in subscription_stats %}
+        <div class="stat-item">
+          <span class="stat-label">{{ stat.subscription_plan__name|default:"بدون اشتراك" }}</span>
+          <span class="stat-value">{{ stat.count }}</span>
+        </div>
+        {% empty %}
+        <div class="no-data">لا توجد بيانات</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Top Brokers -->
+    <div class="stats-card full-width">
+      <h3>الدلالين الأكثر نشاطاً</h3>
+      <div class="broker-stats-table">
+        <table>
+          <thead>
+            <tr>
+              <th>الدلال</th>
+              <th>العقارات</th>
+              <th>الحالة</th>
+              <th>الاشتراك</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for broker in top_brokers %}
+            <tr>
+              <td>{{ broker.display_name }}</td>
+              <td>{{ broker.property_count|default:0 }}</td>
+              <td>
+                {% if broker.is_active %}
+                <span class="badge badge-success">نشط</span>
+                {% else %}
+                <span class="badge badge-danger">موقوف</span>
+                {% endif %}
+              </td>
+              <td>{{ broker.subscription_plan.name|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" style="text-align: center;">لا توجد بيانات</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Activity Statistics -->
+    <div class="stats-card">
+      <h3>إحصائيات النشاطات</h3>
+      <div class="stats-list">
+        {% for stat in activity_stats %}
+        <div class="stat-item">
+          <span class="stat-label">{{ stat.action }}</span>
+          <span class="stat-value">{{ stat.count }}</span>
+        </div>
+        {% empty %}
+        <div class="no-data">لا توجد بيانات</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Monthly Activities -->
+    {% if monthly_activities %}
+    <div class="stats-card full-width">
+      <h3>نشاطات الأشهر الستة الماضية</h3>
+      <div class="monthly-activities">
+        {% for activity in monthly_activities %}
+        <div class="activity-month">
+          <div class="month-name">{{ activity.month|date:"F Y" }}</div>
+          <div class="activity-item">
+            <span>{{ activity.action }}</span>
+            <strong>{{ activity.count }}</strong>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stats-card {
+  background: var(--card-bg);
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+}
+
+.stats-card.full-width {
+  grid-column: 1 / -1;
+}
+
+.stats-card h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: var(--text);
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+}
+
+.stat-label {
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.stat-value {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.no-data {
+  text-align: center;
+  color: var(--text-light);
+  padding: 1rem;
+  font-style: italic;
+}
+
+.monthly-activities {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.activity-month {
+  background: var(--bg-alt);
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+}
+
+.month-name {
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.activity-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.activity-item strong {
+  color: var(--text);
+}
+
+.broker-stats-table {
+  overflow-x: auto;
+}
+
+.broker-stats-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.broker-stats-table th,
+.broker-stats-table td {
+  padding: 0.75rem;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+
+.broker-stats-table th {
+  background: var(--bg-alt);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.broker-stats-table tr:hover {
+  background: var(--bg-alt);
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.badge-success {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.badge-danger {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+</style>
+{% endblock %}

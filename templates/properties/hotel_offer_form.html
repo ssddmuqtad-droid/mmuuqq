@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if action == 'create' %}إضافة عرض جديد{% else %}تعديل العرض{% endif %} - {{ page.name }}
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        {% if action == 'create' %}
+                            <i class="fas fa-plus-circle me-2"></i>إضافة عرض جديد
+                        {% else %}
+                            <i class="fas fa-edit me-2"></i>تعديل العرض
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.offer_type.id_for_label }}" class="form-label">نوع العرض</label>
+                            {{ form.offer_type }}
+                            {% if form.offer_type.errors %}
+                                <div class="text-danger">{{ form.offer_type.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">العنوان</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="text-danger">{{ form.title.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">الوصف</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.original_price.id_for_label }}" class="form-label">السعر الأصلي</label>
+                                    {{ form.original_price }}
+                                    {% if form.original_price.errors %}
+                                        <div class="text-danger">{{ form.original_price.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.discounted_price.id_for_label }}" class="form-label">السعر بعد الخصم</label>
+                                    {{ form.discounted_price }}
+                                    {% if form.discounted_price.errors %}
+                                        <div class="text-danger">{{ form.discounted_price.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.discount_percentage.id_for_label }}" class="form-label">نسبة الخصم (%)</label>
+                                    {{ form.discount_percentage }}
+                                    {% if form.discount_percentage.errors %}
+                                        <div class="text-danger">{{ form.discount_percentage.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.available_rooms.id_for_label }}" class="form-label">الغرف المتاحة</label>
+                                    {{ form.available_rooms }}
+                                    {% if form.available_rooms.errors %}
+                                        <div class="text-danger">{{ form.available_rooms.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.valid_from.id_for_label }}" class="form-label">صالح من</label>
+                                    {{ form.valid_from }}
+                                    {% if form.valid_from.errors %}
+                                        <div class="text-danger">{{ form.valid_from.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.valid_until.id_for_label }}" class="form-label">صالح حتى</label>
+                                    {{ form.valid_until }}
+                                    {% if form.valid_until.errors %}
+                                        <div class="text-danger">{{ form.valid_until.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.terms_conditions.id_for_label }}" class="form-label">الشروط والأحكام</label>
+                            {{ form.terms_conditions }}
+                            {% if form.terms_conditions.errors %}
+                                <div class="text-danger">{{ form.terms_conditions.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.image.id_for_label }}" class="form-label">الصورة</label>
+                            {{ form.image }}
+                            {% if form.image.errors %}
+                                <div class="text-danger">{{ form.image.errors }}</div>
+                            {% endif %}
+                            {% if offer.image %}
+                                <div class="mt-2">
+                                    <img src="{{ offer.image.url }}" alt="{{ offer.title }}" class="img-thumbnail" style="max-height: 200px;">
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">الحالة</label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="text-danger">{{ form.status.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                {% if action == 'create' %}إضافة{% else %}حفظ التغييرات{% endif %}
+                            </button>
+                            <a href="{% url 'hotel_page_detail' slug=page.slug %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>إلغاء
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-control, form-select {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--bg-primary);
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+}
+
+.card {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+.card-header {
+    background-color: var(--bg-tertiary);
+    border-color: var(--border-color);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}إصدار إنذار - {{ target_user.username }}{% endblock %}
+{% block dashboard_title %}إصدار <span>إنذار</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'user_moderation_detail' target_user.id %}" class="btn btn-outline">العودة للتفاصيل</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card">
+  <div class="card-header">
+    <h5>⚠️ إصدار إنذار جديد للمستخدم: {{ target_user.username }}</h5>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info">
+      <h6>📋 معلومات المستخدم</h6>
+      <p><strong>الاسم:</strong> {{ target_user.get_full_name|default:target_user.username }}</p>
+      <p><strong>البريد الإلكتروني:</strong> {{ target_user.email }}</p>
+      <p><strong>الإنذارات السابقة:</strong> {{ target_user.warnings.count }}</p>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="mb-3">
+        <label for="warning_type" class="form-label">نوع الإنذار *</label>
+        <select class="form-select" id="warning_type" name="warning_type" required>
+          <option value="">اختر نوع الإنذار</option>
+          {% for value, label in warning_types %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="severity" class="form-label">الشدة *</label>
+        <select class="form-select" id="severity" name="severity" required>
+          <option value="low">منخفض</option>
+          <option value="medium" selected>متوسط</option>
+          <option value="high">عالي</option>
+          <option value="critical">حرج</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="reason" class="form-label">السبب *</label>
+        <textarea class="form-control" id="reason" name="reason" rows="4" required placeholder="اشرح سبب الإنذار بالتفصيل..."></textarea>
+      </div>
+
+      <div class="mb-3">
+        <label for="duration_days" class="form-label">مدة الإنذار (أيام)</label>
+        <input type="number" class="form-control" id="duration_days" name="duration_days" min="1" placeholder="اتركه فارغاً للإنذار الدائم">
+        <small class="form-text text-muted">الإنذار سينتهي تلقائياً بعد هذه المدة</small>
+      </div>
+
+      <div class="alert alert-warning">
+        <h6>⚠️ تنبيه</h6>
+        <p>سيتم إرسال إشعار للمستخدم بوجود إنذار جديد. سيتم تسجيل هذا الإجراء في سجل المراقبة.</p>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-warning">⚠️ إصدار الإنذار</button>
+        <a href="{% url 'user_moderation_detail' target_user.id %}" class="btn btn-outline-secondary">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.card {
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.btn {
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.form-control:focus,
+.form-select:focus {
+  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+}
+</style>
+{% endblock %}

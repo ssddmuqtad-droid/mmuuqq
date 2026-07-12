@@ -1,0 +1,9 @@
+{% extends 'properties/dashboard_base.html' %}
+{% block title %}إشعارات المزادات{% endblock %}
+{% block dashboard_content %}
+<div class="card" style="padding:20px;">
+  {% for n in notifications %}
+  <div style="padding:12px 0; border-bottom:1px solid var(--border);">{{ n.message }}</div>
+  {% empty %}<p>لا توجد إشعارات</p>{% endfor %}
+</div>
+{% endblock %}

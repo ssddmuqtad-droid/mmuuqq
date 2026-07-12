@@ -1,0 +1,329 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}من نحن{% endblock %}
+
+{% block content %}
+<section class="about-hero">
+  <div class="about-hero-bg"></div>
+  <div class="container about-hero-content">
+    <div class="about-badge">
+      <span class="badge-icon">🏠</span>
+      <span>من نحن</span>
+    </div>
+    <h1>{{ site_settings.about_title|default:'من نحن' }}</h1>
+    <p>{{ site_settings.tagline }}</p>
+  </div>
+</section>
+
+<div class="container about-container">
+  <div class="about-content-card">
+    <div class="about-header">
+      <div class="about-icon">👋</div>
+      <h2>مرحباً بكم في {{ site_settings.site_name }}</h2>
+    </div>
+    
+    {% if site_settings.about_content %}
+    <div class="about-text">{{ site_settings.about_content }}</div>
+    {% else %}
+    <div class="about-text">
+      <p>منصة عقارات عراقية رائدة تربط الباحثين عن العقار بالدلالين المحترفين. نحن نسعى لتوفير تجربة سهلة وآمنة للبحث عن العقارات في جميع أنحاء العراق.</p>
+    </div>
+    {% endif %}
+
+    {% if site_settings.mission %}
+    <div class="mission-section">
+      <div class="mission-header">
+        <div class="mission-icon">🎯</div>
+        <h3>رسالتنا</h3>
+      </div>
+      <div class="mission-text">{{ site_settings.mission }}</div>
+    </div>
+    {% endif %}
+
+    <div class="stats-section">
+      <div class="stat-card">
+        <div class="stat-icon">🏠</div>
+        <div class="stat-content">
+          <div class="stat-number">{{ total_properties }}</div>
+          <div class="stat-label">عقار</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="about-actions">
+      <a href="{% url 'home' %}" class="btn btn-primary btn-lg">
+        <span class="btn-icon">🔍</span>
+        <span>تصفح العقارات</span>
+      </a>
+      <a href="{% url 'contact' %}" class="btn btn-outline btn-lg">
+        <span class="btn-icon">💬</span>
+        <span>تواصل معنا</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+.about-hero {
+  position: relative;
+  padding: 100px 20px 60px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.about-hero-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 140, 90, 0.05) 50%, rgba(255, 107, 53, 0.1) 100%);
+  z-index: 1;
+}
+
+.about-hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+.about-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 107, 53, 0.2);
+  border: 1px solid rgba(255, 107, 53, 0.3);
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 24px;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.about-hero h1 {
+  font-size: 3rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ffffff 0%, #ff8c5a 50%, #ff6b35 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 16px;
+  letter-spacing: -0.5px;
+}
+
+.about-hero p {
+  font-size: 1.2rem;
+  color: var(--text-light);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.about-container {
+  padding: 60px 20px;
+  max-width: 900px;
+}
+
+.about-content-card {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 48px;
+  position: relative;
+  overflow: hidden;
+}
+
+.about-content-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.about-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.about-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.about-header h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 8px;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.about-text {
+  line-height: 1.9;
+  font-size: 1.05rem;
+  color: var(--text-light);
+  white-space: pre-line;
+  margin-bottom: 40px;
+}
+
+.about-text p {
+  margin-bottom: 16px;
+}
+
+.mission-section {
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  margin-bottom: 40px;
+}
+
+.mission-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.mission-icon {
+  font-size: 2rem;
+}
+
+.mission-header h3 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin: 0;
+}
+
+.mission-text {
+  color: var(--text-light);
+  line-height: 1.8;
+  white-space: pre-line;
+}
+
+.stats-section {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  border-radius: var(--radius-lg);
+  padding: 24px 40px;
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.3);
+}
+
+.stat-icon {
+  font-size: 3rem;
+}
+
+.stat-number {
+  font-size: 3rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.about-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.about-actions .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 32px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.about-actions .btn-primary {
+  background: var(--gradient-primary);
+  border: none;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+}
+
+.about-actions .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(255, 107, 53, 0.4);
+}
+
+.about-actions .btn-outline {
+  background: transparent;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+}
+
+.about-actions .btn-outline:hover {
+  background: var(--primary);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+}
+
+@media (max-width: 768px) {
+  .about-hero h1 {
+    font-size: 2rem;
+  }
+
+  .about-hero p {
+    font-size: 1rem;
+  }
+
+  .about-content-card {
+    padding: 28px;
+  }
+
+  .about-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .stat-card {
+    padding: 20px 28px;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .stat-number {
+    font-size: 2.5rem;
+  }
+
+  .about-actions {
+    flex-direction: column;
+  }
+
+  .about-actions .btn {
+    width: 100%;
+  }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}تعديل حالة التواجد | دلال{% endblock %}
+
+{% block extra_css %}
+<style>
+.edit-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.edit-card {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.edit-card h3 {
+  margin-bottom: 25px;
+  color: #333;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.form-group {
+  margi n-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #555;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #0d9488;
+}
+
+.btn-primary {
+  background: #0d9488;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: #0b7e73;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+.alert {
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.alert-success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-container">
+  <div class="edit-header">
+    <h1>تعديل حالة التواجد - {{ presence.office.name }}</h1>
+    <a href="{% url 'admin_presence_dashboard' %}" class="btn-secondary">عودة للوحة الإدارة</a>
+  </div>
+  
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+  
+  <div class="edit-card">
+    <h3>تعديل حالة التواجد</h3>
+    <form method="POST">
+      {% csrf_token %}
+      
+      <div class="form-group">
+        <label for="{{ form.status.id_for_label }}">الحالة</label>
+        {{ form.status }}
+      </div>
+      
+      <div class="form-group">
+        <label for="{{ form.expected_return.id_for_label }}">العودة المتوقعة</label>
+        {{ form.expected_return }}
+      </div>
+      
+      <div class="form-group">
+        <label for="{{ form.absence_reason.id_for_label }}">سبب الغياب (اختياري)</label>
+        {{ form.absence_reason }}
+      </div>
+      
+      <div class="form-group">
+        <label for="{{ form.auto_update_enabled.id_for_label }}">تحديث تلقائي حسب ساعات العمل</label>
+        {{ form.auto_update_enabled }}
+      </div>
+      
+      <div class="form-group">
+        <label for="{{ form.work_start.id_for_label }}">بداية العمل</label>
+        {{ form.work_start }}
+      </div>
+      
+      <div class="form-group">
+        <label for="{{ form.work_end.id_for_label }}">نهاية العمل</label>
+        {{ form.work_end }}
+      </div>
+      
+      <div class="form-group">
+        <label for="{{ form.work_days.id_for_label }}">أيام العمل</label>
+        {{ form.work_days }}
+      </div>
+      
+      <button type="submit" class="btn-primary">حفظ التغييرات</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

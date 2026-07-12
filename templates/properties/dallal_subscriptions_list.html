@@ -1,0 +1,71 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}اشتراكات الدلال{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>اشتراكات الدلال</h1>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'dallal_subscription_create' %}" class="btn btn-primary">➕ إنشاء اشتراك</a>
+      <a href="{% url 'dallal_settings' %}" class="btn btn-outline">الإعدادات</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">← لوحة التحكم</a>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>الدلال</th>
+          <th>النوع</th>
+          <th>تاريخ البداية</th>
+          <th>تاريخ النهاية</th>
+          <th>العقارات المستخدمة</th>
+          <th>الظهور</th>
+          <th>الحالة</th>
+          <th>التجديد التلقائي</th>
+          <th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for subscription in subscriptions %}
+        <tr>
+          <td>{{ subscription.broker.display_name }}</td>
+          <td>
+            {% if subscription.subscription_type == 'basic' %}
+              <span class="badge badge-secondary">🏷️ عادي</span>
+            {% else %}
+              <span class="badge badge-warning">⭐ مميز</span>
+            {% endif %}
+          </td>
+          <td>{{ subscription.start_date }}</td>
+          <td>{{ subscription.end_date }}</td>
+          <td>{{ subscription.properties_used }}</td>
+          <td>{{ subscription.impressions_count }}</td>
+          <td>
+            {% if subscription.is_active %}
+              <span class="badge badge-success">نشط</span>
+            {% else %}
+              <span class="badge badge-danger">منتهي</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if subscription.auto_renewal %}
+              <span class="badge badge-info">مفعل</span>
+            {% else %}
+              <span class="badge badge-secondary">معطل</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'dallal_subscription_edit' subscription.id %}" class="btn btn-sm btn-outline">تعديل</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" style="text-align:center">لا توجد اشتراكات</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

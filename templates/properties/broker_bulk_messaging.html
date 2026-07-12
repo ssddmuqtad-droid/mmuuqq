@@ -1,0 +1,126 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}المراسلة الجماعية{% endblock %}
+{% block dashboard_title %}المراسلة <span>الجماعية</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم</a>
+<a href="{% url 'conversations_list' %}" class="btn btn-primary">💬 المحادثات</a>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>💬 المراسلة الجماعية</h1>
+    <p>إرسال رسائل جماعية للمستخدمين</p>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h5>📊 الإحصائيات</h5>
+        </div>
+        <div class="card-body">
+          <div class="stat-item">
+            <span class="stat-label">عدد المستخدمين:</span>
+            <span class="stat-value">{{ total_users }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">
+          <h5>✉️ إرسال رسالة جماعية</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" id="bulk-message-form">
+            {% csrf_token %}
+            
+            <div class="form-group mb-3">
+              <label for="message_type">نوع الرسالة:</label>
+              <select class="form-control" id="message_type" name="message_type">
+                <option value="text">نص</option>
+                <option value="image">صورة</option>
+                <option value="link">رابط</option>
+              </select>
+            </div>
+
+            <div class="form-group mb-3">
+              <label>اختر المستخدمين:</label>
+              <div class="checkbox-list" style="max-height: 300px; overflow-y: auto;">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="select-all-users" onchange="toggleAllUsers(this)">
+                  <label class="form-check-label" for="select-all-users">تحديد الكل</label>
+                </div>
+                {% for user in users %}
+                <div class="form-check">
+                  <input class="form-check-input user-checkbox" type="checkbox" name="selected_users" value="{{ user.id }}" id="user-{{ user.id }}">
+                  <label class="form-check-label" for="user-{{ user.id }}">
+                    {{ user.username }} - {{ user.user_profile.phone|default:"بدون رقم" }}
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="content">محتوى الرسالة:</label>
+              <textarea class="form-control" id="content" name="content" rows="5" required placeholder="اكتب رسالتك هنا..."></textarea>
+            </div>
+
+            <div class="form-group mb-3">
+              <button type="submit" class="btn btn-success btn-lg btn-block">
+                📤 إرسال الرسالة
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  font-weight: 600;
+  color: #666;
+}
+
+.stat-value {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.checkbox-list {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  background: #f9f9f9;
+}
+
+.form-check {
+  padding: 5px 0;
+}
+</style>
+
+<script>
+function toggleAllUsers(checkbox) {
+  const userCheckboxes = document.querySelectorAll('.user-checkbox');
+  userCheckboxes.forEach(cb => cb.checked = checkbox.checked);
+}
+</script>
+{% endblock %}

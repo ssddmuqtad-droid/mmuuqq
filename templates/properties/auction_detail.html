@@ -1,0 +1,330 @@
+{% extends 'properties/base.html' %}
+{% load price_filters %}
+
+{% block title %}{{ auction.title }} - المزادات العقارية{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="background: #0a0a0a; min-height: 100vh;">
+  <div class="row">
+    <div class="col-12 mb-4">
+      <div class="card shadow-lg" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: none;">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+              <div class="d-flex gap-2 mb-2 flex-wrap">
+                <span class="badge" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white;">
+                  {% if auction.approval_status == 'approved' %}موافق عليه{% elif auction.approval_status == 'pending' %}قيد المراجعة{% elif auction.approval_status == 'rejected' %}مرفوض{% else %}يحتاج تعديل{% endif %}
+                </span>
+                <span class="badge" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                  {% if auction.status == 'upcoming' %}قادم{% elif auction.status == 'active' %}نشط{% elif auction.status == 'ended' %}منتهي{% else %}ملغي{% endif %}
+                </span>
+                {% if auction.is_featured %}
+                <span class="badge bg-warning text-dark">⭐ مميز</span>
+                {% endif %}
+                {% if auction.access_type == 'private' %}
+                <span class="badge" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">🔐 خاص برقم</span>
+                {% elif auction.access_type == 'invitation_only' %}
+                <span class="badge" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white;">📧 بدعوة فقط</span>
+                {% endif %}
+              </div>
+              <h1 class="text-white mb-2">{{ auction.title }}</h1>
+              <p class="text-white-50 mb-0">{{ auction.property.display_title }}</p>
+            </div>
+            <div class="text-end">
+              <div class="display-6 fw-bold text-white" style="color: #ff6b35 !important;" id="current-price">
+                {{ highest_bid|floatformat:0 }} د.ع
+              </div>
+              <small class="text-white-50">السعر الحالي</small>
+            </div>
+          </div>
+          
+          {% if auction.broker and auction.broker.user == request.user %}
+          <div class="d-flex gap-2 mt-3 flex-wrap">
+            <a href="{% url 'create_auction_invitation' auction.id %}" class="btn btn-sm btn-outline-light">
+              📧 إرسال دعوة
+            </a>
+            <a href="{% url 'auction_invitations' auction.id %}" class="btn btn-sm btn-outline-light">
+              📋 عرض الدعوات
+            </a>
+            <a href="{% url 'create_auction_advertisement' auction.id %}" class="btn btn-sm btn-outline-light">
+              📢 إعلانات المزاد
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-8 mb-4">
+      <div class="card shadow-lg mb-4" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: none;">
+        <div class="card-body p-4">
+          <img src="{{ auction.property.get_main_image }}" alt="{{ auction.property.display_title }}" class="img-fluid rounded mb-4" style="width: 100%; height: 400px; object-fit: cover;">
+          
+          <h3 class="text-white mb-3">وصف المزاد</h3>
+          <p class="text-white-50 mb-4">{{ auction.description }}</p>
+          
+          <h3 class="text-white mb-3">شروط المزاد</h3>
+          <p class="text-white-50">{{ auction.terms }}</p>
+        </div>
+      </div>
+
+      {% if auction.approval_status == 'approved' and auction.status == 'active' %}
+      <div class="card shadow-lg" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: none;">
+        <div class="card-body p-4">
+          <h3 class="text-white mb-4">⏰ العداد التنازلي</h3>
+          <div class="countdown-timer text-center py-4 mb-4" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); border-radius: 15px;">
+            <div class="timer-display d-flex justify-content-center gap-3">
+              <div class="timer-block">
+                <div class="timer-value text-white" id="days">00</div>
+                <div class="timer-label text-white-50">يوم</div>
+              </div>
+              <div class="timer-block">
+                <div class="timer-value text-white">:</div>
+              </div>
+              <div class="timer-block">
+                <div class="timer-value text-white" id="hours">00</div>
+                <div class="timer-label text-white-50">ساعة</div>
+              </div>
+              <div class="timer-block">
+                <div class="timer-value text-white">:</div>
+              </div>
+              <div class="timer-block">
+                <div class="timer-value text-white" id="minutes">00</div>
+                <div class="timer-label text-white-50">دقيقة</div>
+              </div>
+              <div class="timer-block">
+                <div class="timer-value text-white">:</div>
+              </div>
+              <div class="timer-block">
+                <div class="timer-value text-white" id="seconds">00</div>
+                <div class="timer-label text-white-50">ثانية</div>
+              </div>
+            </div>
+            <div class="text-white-50 mt-3">
+              تمديد تلقائي: {{ auction.auto_extend_minutes }} دقائق
+            </div>
+          </div>
+
+          {% if user.is_authenticated %}
+            {% if not is_participant %}
+              <form method="POST" action="{% url 'join_auction' auction.id %}" class="join-form">
+                {% csrf_token %}
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label text-white">رقم الهاتف *</label>
+                    <input type="text" name="phone" class="form-control bg-dark text-white border-secondary" placeholder="07xxxxxxxxx" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label text-white">البريد الإلكتروني *</label>
+                    <input type="email" name="email" class="form-control bg-dark text-white border-secondary" placeholder="email@example.com" required>
+                  </div>
+                </div>
+                <div class="form-check mb-3">
+                  <input type="checkbox" name="terms_accepted" class="form-check-input" id="termsCheck" required>
+                  <label class="form-check-label text-white-50" for="termsCheck">
+                    أوافق على شروط وأحكام المزاد
+                  </label>
+                </div>
+                <button type="submit" class="btn btn-lg w-100 text-white fw-bold" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                  الانضمام للمزاد
+                </button>
+              </form>
+            {% else %}
+              <form method="POST" action="{% url 'place_bid' auction.id %}" class="bid-form" id="bidForm">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label class="form-label text-white fw-bold">مبلغ المزايدة (د.ع)</label>
+                  <input type="number" name="bid_amount" id="bidAmount" class="form-control form-control-lg bg-dark text-white border-secondary" 
+                         min="{{ highest_bid|add:auction.minimum_increment }}" 
+                         value="{{ highest_bid|add:auction.minimum_increment }}"
+                         required>
+                  <small class="text-white-50">
+                    أقل زيادة مسموحة: {{ auction.minimum_increment|floatformat:0 }} د.ع
+                  </small>
+                </div>
+                <button type="submit" class="btn btn-lg w-100 text-white fw-bold" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                  إرسال المزايدة
+                </button>
+              </form>
+              <div id="bidMessage" class="mt-3"></div>
+            {% endif %}
+          {% else %}
+            <div class="text-center py-4">
+              <p class="text-white-50 mb-3">يجب تسجيل الدخول للمشاركة في المزاد</p>
+              <a href="{% url 'login' %}" class="btn btn-lg text-white fw-bold" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                تسجيل الدخول
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-lg mb-4" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: none;">
+        <div class="card-body p-4">
+          <h4 class="text-white mb-4">معلومات المزاد</h4>
+          <div class="info-item d-flex justify-content-between py-2 border-bottom border-secondary">
+            <span class="text-white-50">سعر البداية</span>
+            <span class="text-white fw-bold">{{ auction.starting_price|floatformat:0 }} د.ع</span>
+          </div>
+          <div class="info-item d-flex justify-content-between py-2 border-bottom border-secondary">
+            <span class="text-white-50">أقل زيادة</span>
+            <span class="text-white fw-bold">{{ auction.minimum_increment|floatformat:0 }} د.ع</span>
+          </div>
+          <div class="info-item d-flex justify-content-between py-2 border-bottom border-secondary">
+            <span class="text-white-50">عدد المزايدات</span>
+            <span class="text-white fw-bold" id="total-bids">{{ auction.get_total_bids }}</span>
+          </div>
+          <div class="info-item d-flex justify-content-between py-2 border-bottom border-secondary">
+            <span class="text-white-50">عدد المشاركين</span>
+            <span class="text-white fw-bold">{{ auction.get_participant_count }}</span>
+          </div>
+          <div class="info-item d-flex justify-content-between py-2 border-bottom border-secondary">
+            <span class="text-white-50">مبلغ التأمين</span>
+            <span class="text-white fw-bold">{{ auction.deposit_amount|floatformat:0 }} د.ع</span>
+          </div>
+          <div class="info-item d-flex justify-content-between py-2 border-bottom border-secondary">
+            <span class="text-white-50">تاريخ البداية</span>
+            <span class="text-white">{{ auction.start_date|date:"Y-m-d H:i" }}</span>
+          </div>
+          <div class="info-item d-flex justify-content-between py-2">
+            <span class="text-white-50">تاريخ النهاية</span>
+            <span class="text-white">{{ auction.end_date|date:"Y-m-d H:i" }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-lg mb-4" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: none;">
+        <div class="card-body p-4">
+          <h4 class="text-white mb-4">المزايدات الأخيرة</h4>
+          <div class="bids-list" id="bidsList">
+            {% for bid in bids %}
+              <div class="bid-item d-flex justify-content-between align-items-center py-2 border-bottom border-secondary">
+                <div>
+                  <div class="text-white fw-bold">{{ bid.user.username|slice:":8" }}***</div>
+                  <div class="text-white-50 small">{{ bid.created_at|date:"H:i" }}</div>
+                </div>
+                <div class="text-white fw-bold" style="color: #ff6b35 !important;">{{ bid.amount|floatformat:0 }} د.ع</div>
+              </div>
+            {% empty %}
+              <p class="text-white-50 text-center py-3">لا توجد مزايدات بعد</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <a href="{{ auction.property.get_absolute_url }}" class="btn btn-outline-light w-100">
+        عرض تفاصيل العقار
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+.timer-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.timer-label {
+  font-size: 0.9rem;
+}
+
+.form-control:focus {
+  background-color: #2a2a4e !important;
+  border-color: #ff6b35 !important;
+  color: white !important;
+}
+
+.form-control::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Countdown Timer
+  const endDate = new Date('{{ auction.end_date|date:"Y-m-d\TH:i:s" }}').getTime();
+  
+  function updateCountdown() {
+    const now = new Date().getTime();
+    const distance = endDate - now;
+    
+    if (distance < 0) {
+      document.getElementById('days').textContent = '00';
+      document.getElementById('hours').textContent = '00';
+      document.getElementById('minutes').textContent = '00';
+      document.getElementById('seconds').textContent = '00';
+      return;
+    }
+    
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    
+    document.getElementById('days').textContent = String(days).padStart(2, '0');
+    document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+    document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+    document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+  }
+  
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
+
+  // AJAX Bid Form
+  const bidForm = document.getElementById('bidForm');
+  if (bidForm) {
+    bidForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      const bidAmount = document.getElementById('bidAmount').value;
+      
+      fetch('{% url 'place_bid' auction.id %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        const messageDiv = document.getElementById('bidMessage');
+        if (data.success) {
+          messageDiv.innerHTML = '<div class="alert alert-success">تمت المزايدة بنجاح!</div>';
+          document.getElementById('current-price').textContent = data.current_highest + ' د.ع';
+          document.getElementById('total-bids').textContent = parseInt(document.getElementById('total-bids').textContent) + 1;
+          document.getElementById('bidAmount').value = parseInt(data.current_highest) + {{ auction.minimum_increment }};
+          document.getElementById('bidAmount').min = parseInt(data.current_highest) + {{ auction.minimum_increment }};
+          
+          // Add new bid to list
+          const bidsList = document.getElementById('bidsList');
+          const newBid = document.createElement('div');
+          newBid.className = 'bid-item d-flex justify-content-between align-items-center py-2 border-bottom border-secondary';
+          newBid.innerHTML = `
+            <div>
+              <div class="text-white fw-bold">{{ request.user.username|slice:":8" }}***</div>
+              <div class="text-white-50 small">الآن</div>
+            </div>
+            <div class="text-white fw-bold" style="color: #ff6b35 !important;">${data.bid_amount} د.ع</div>
+          `;
+          bidsList.insertBefore(newBid, bidsList.firstChild);
+        } else {
+          messageDiv.innerHTML = '<div class="alert alert-danger">' + data.error + '</div>';
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('bidMessage').innerHTML = '<div class="alert alert-danger">حدث خطأ في المزايدة</div>';
+      });
+    });
+  }
+});
+</script>
+{% endblock %}

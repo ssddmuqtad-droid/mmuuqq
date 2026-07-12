@@ -1,0 +1,528 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}منصة دلال - العقارات العراقية{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-icon">👤</div>
+      <h1>إنشاء حساب جديد</h1>
+      <p>انضم إلى دلال - منصة العقارات</p>
+    </div>
+    
+    <form method="post" action="{% url 'register' %}" class="auth-form">
+      {% csrf_token %}
+      
+      <div class="form-group">
+        <label for="username">
+          <span class="label-icon">👤</span>
+          اسم المستخدم
+        </label>
+        <input type="text" name="username" id="username" class="form-control" required autocomplete="username" placeholder="أدخل اسم المستخدم">
+      </div>
+      
+      <div class="form-group">
+        <label for="email">
+          <span class="label-icon">📧</span>
+          البريد الإلكتروني
+        </label>
+        <input type="email" name="email" id="email" class="form-control" required autocomplete="email" placeholder="أدخل البريد الإلكتروني">
+      </div>
+      
+      <div class="form-group">
+        <label for="first_name">
+          <span class="label-icon">📝</span>
+          الاسم الأول
+        </label>
+        <input type="text" name="first_name" id="first_name" class="form-control" autocomplete="given-name" placeholder="الاسم الأول">
+      </div>
+      
+      <div class="form-group">
+        <label for="last_name">
+          <span class="label-icon">📝</span>
+          الاسم الأخير
+        </label>
+        <input type="text" name="last_name" id="last_name" class="form-control" autocomplete="family-name" placeholder="الاسم الأخير">
+      </div>
+      
+      <div class="form-group">
+        <label for="phone">
+          <span class="label-icon">📱</span>
+          رقم الهاتف *
+        </label>
+        <input type="tel" name="phone" id="phone" class="form-control" required autocomplete="tel" placeholder="07XXXXXXXXX">
+      </div>
+      
+      <div class="form-group">
+        <label for="gender">
+          <span class="label-icon">👤</span>
+          الجنس
+        </label>
+        <select name="gender" id="gender" class="form-control">
+          <option value="">اختر الجنس</option>
+          <option value="male">ذكر</option>
+          <option value="female">أنثى</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="birth_date">
+          <span class="label-icon">📅</span>
+          تاريخ الميلاد
+        </label>
+        <input type="date" name="birth_date" id="birth_date" class="form-control" autocomplete="bday">
+      </div>
+      
+      <div class="form-group">
+        <label for="city">
+          <span class="label-icon">🏙️</span>
+          المدينة
+        </label>
+        <input type="text" name="city" id="city" class="form-control" autocomplete="address-level2" placeholder="المدينة">
+      </div>
+      
+      <div class="form-group">
+        <label for="governorate">
+          <span class="label-icon">📍</span>
+          المحافظة
+        </label>
+        <select name="governorate" id="governorate" class="form-control">
+          <option value="">اختر المحافظة</option>
+          <option value="baghdad">بغداد</option>
+          <option value="basra">البصرة</option>
+          <option value="erbil">أربيل</option>
+          <option value="mosul">الموصل</option>
+          <option value="najaf">النجف</option>
+          <option value="karbala">كربلاء</option>
+          <option value="kirkuk">كركوك</option>
+          <option value="dhi_qar">ذي قار</option>
+          <option value="maysan">ميسان</option>
+          <option value="wassit">واسط</option>
+          <option value="babil">بابل</option>
+          <option value="anbar">الأنبار</option>
+          <option value="saladin">صلاح الدين</option>
+          <option value="dahuk">دهوك</option>
+          <option value="sulaymaniyah">السليمانية</option>
+          <option value="muthanna">المثنى</option>
+          <option value="qadisiyyah">القادسية</option>
+          <option value="diyala">ديالى</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="address">
+          <span class="label-icon">🏠</span>
+          العنوان التفصيلي
+        </label>
+        <textarea name="address" id="address" class="form-control" rows="2" autocomplete="street-address" placeholder="العنوان التفصيلي"></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label for="profile_image">
+          <span class="label-icon">📷</span>
+          صورة الملف الشخصي
+        </label>
+        <input type="file" name="profile_image" id="profile_image" class="form-control" accept="image/*">
+        <small class="form-text">اختياري - صورة شخصية (JPG, PNG)</small>
+      </div>
+      
+      <div class="form-group">
+        <label for="password">
+          <span class="label-icon">🔒</span>
+          كلمة المرور
+        </label>
+        <input type="password" name="password" id="password" class="form-control" required autocomplete="new-password" placeholder="أدخل كلمة المرور (8 أحرف على الأقل)">
+      </div>
+      
+      <div class="form-group">
+        <label for="confirm_password">
+          <span class="label-icon">🔒</span>
+          تأكيد كلمة المرور
+        </label>
+        <input type="password" name="confirm_password" id="confirm_password" class="form-control" required autocomplete="new-password" placeholder="أعد إدخال كلمة المرور">
+      </div>
+      
+      <button type="submit" class="btn btn-primary btn-lg auth-submit" onclick="console.log('Button clicked');">
+        <span class="btn-icon">🚀</span>
+        إنشاء الحساب
+      </button>
+    </form>
+
+    <!-- Social Login Divider -->
+    <div class="social-divider">
+      <span>أو</span>
+    </div>
+
+    <!-- Social Login Buttons -->
+    <div class="social-login-buttons">
+      <form action="{% url 'social:begin' 'google-oauth2' %}" method="post">
+        {% csrf_token %}
+        <button type="submit" class="social-btn google-btn">
+          <svg class="social-icon" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          <span>المتابعة باستخدام Google</span>
+        </button>
+      </form>
+      <form action="{% url 'social:begin' 'facebook' %}" method="post">
+        {% csrf_token %}
+        <button type="submit" class="social-btn facebook-btn">
+          <svg class="social-icon" viewBox="0 0 24 24">
+            <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+          </svg>
+          <span>المتابعة باستخدام Facebook</span>
+        </button>
+      </form>
+    </div>
+    
+    <div class="auth-footer">
+      <div class="auth-links">
+        <p>لديك حساب بالفعل؟ <a href="{% url 'login' %}">سجل دخول</a></p>
+      </div>
+      <a href="{% url 'home' %}" class="back-link">
+        <span class="back-icon">←</span>
+        العودة للرئيسية
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--bg);
+}
+
+.auth-card {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.auth-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.auth-header h1 {
+  font-size: 2rem;
+  font-weight: 900;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.auth-header p {
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.auth-form {
+  margin-bottom: 24px;
+}
+
+.auth-form .form-group {
+  margin-bottom: 20px;
+}
+
+.auth-form label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.label-icon {
+  font-size: 1.1rem;
+}
+
+.auth-form .form-control {
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.auth-form .form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.auth-form .form-control::placeholder {
+  color: var(--text-light);
+}
+
+.auth-submit {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 10;
+}
+
+.auth-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+}
+
+.auth-submit:active {
+  transform: translateY(0);
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+}
+
+.auth-footer {
+  text-align: center;
+}
+
+.auth-links {
+  margin-bottom: 16px;
+}
+
+.auth-links p {
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.auth-links a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-links a:hover {
+  text-decoration: underline;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-light);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+}
+
+.back-link:hover {
+  color: var(--primary);
+  background: rgba(255, 107, 53, 0.1);
+}
+
+.back-icon {
+  transition: transform 0.3s ease;
+}
+
+.back-link:hover .back-icon {
+  transform: translateX(-4px);
+}
+
+.account-type-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.account-type-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.account-type-option:hover {
+  border-color: var(--primary);
+  background: rgba(255, 107, 53, 0.05);
+}
+
+.account-type-option input[type="radio"] {
+  display: none;
+}
+
+.account-type-option input[type="radio"]:checked + .account-type-icon {
+  transform: scale(1.2);
+}
+
+.account-type-option input[type="radio"]:checked ~ .account-type-label {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.account-type-icon {
+  font-size: 1.5rem;
+  transition: transform 0.3s ease;
+}
+
+.account-type-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.broker-field {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.social-divider {
+  display: flex;
+  align-items: center;
+  margin: 24px 0;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.social-divider::before,
+.social-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.social-divider span {
+  padding: 0 16px;
+  font-weight: 500;
+}
+
+.social-login-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-alt);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.social-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.google-btn:hover {
+  border-color: #4285F4;
+  background: rgba(66, 133, 244, 0.05);
+}
+
+.facebook-btn:hover {
+  border-color: #1877F2;
+  background: rgba(24, 119, 242, 0.05);
+}
+
+.social-icon {
+  width: 24px;
+  height: 24px;
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 28px;
+  }
+  
+  .auth-header h1 {
+    font-size: 1.6rem;
+  }
+  
+  .auth-icon {
+    font-size: 2.5rem;
+  }
+  
+  .account-type-selector {
+    flex-direction: column;
+  }
+}
+</style>
+{% endblock %}

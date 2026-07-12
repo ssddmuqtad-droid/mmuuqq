@@ -1,0 +1,131 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}العقارات - {{ broker.display_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>🏠 إدارة العقارات</h1>
+                <div class="btn-group">
+                    <a href="{% url 'sub_broker_panel' %}" class="btn btn-outline-primary">الرئيسية</a>
+                    <a href="{% url 'sub_broker_commissions' %}" class="btn btn-outline-primary">العمولات</a>
+                    <a href="{% url 'sub_broker_settings' %}" class="btn btn-outline-primary">الإعدادات</a>
+                    {% if permissions.can_add %}
+                    <a href="{% url 'add_property' %}" class="btn btn-success">+ إضافة عقار</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permissions Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card {% if not permissions.can_add %}bg-warning{% endif %}">
+                <div class="card-body">
+                    <h5 class="card-title">الصلاحيات</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            {% if permissions.can_add %}
+                                <span class="badge bg-success">✓</span> يمكن إضافة عقارات
+                            {% else %}
+                                <span class="badge bg-danger">✗</span> لا يمكن إضافة عقارات
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            {% if permissions.can_edit %}
+                                <span class="badge bg-success">✓</span> يمكن تعديل عقارات
+                            {% else %}
+                                <span class="badge bg-danger">✗</span> لا يمكن تعديل عقارات
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            {% if permissions.can_delete %}
+                                <span class="badge bg-success">✓</span> يمكن حذف عقارات
+                            {% else %}
+                                <span class="badge bg-danger">✗</span> لا يمكن حذف عقارات
+                            {% endif %}
+                        </div>
+                    </div>
+                    <p class="mt-2 mb-0"><strong>الحد الأقصى للعقارات:</strong> {{ permissions.max_properties }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Properties List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">العقارات ({{ properties.count }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if properties %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>العنوان</th>
+                                    <th>النوع</th>
+                                    <th>الحالة</th>
+                                    <th>السعر</th>
+                                    <th>المساحة</th>
+                                    <th>المحافظة</th>
+                                    <th>تاريخ الإضافة</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for property in properties %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'property_detail' property.slug %}" target="_blank">
+                                            {{ property.display_title }}
+                                        </a>
+                                    </td>
+                                    <td>{{ property.get_type_display }}</td>
+                                    <td>
+                                        <span class="badge {% if property.status == 'active' %}bg-success{% elif property.status == 'sold' %}bg-primary{% elif property.status == 'pending' %}bg-warning{% endif %}">
+                                            {{ property.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ property.price_formatted }}</td>
+                                    <td>{{ property.area }} م²</td>
+                                    <td>{{ property.governorate }}</td>
+                                    <td>{{ property.created_at|date:"Y-m-d" }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            {% if permissions.can_edit %}
+                                            <a href="{% url 'edit_property' property.id %}" class="btn btn-outline-primary">تعديل</a>
+                                            {% endif %}
+                                            {% if permissions.can_delete %}
+                                            <a href="{% url 'delete_property' property.id %}" class="btn btn-outline-danger" 
+                                               onclick="return confirm('هل أنت متأكد من حذف هذا العقار؟')">حذف</a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <h4 class="text-muted">لا توجد عقارات</h4>
+                        {% if permissions.can_add %}
+                        <p>يمكنك إضافة عقار جديد من الزر أعلاه</p>
+                        {% else %}
+                        <p>ليس لديك صلاحية لإضافة عقارات</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

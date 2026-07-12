@@ -278,6 +278,87 @@ def broker_profile(request, username):
     })
 
 
+def broker_standalone_page(request, slug):
+    """Display broker's standalone page with their properties only."""
+    broker = get_object_or_404(Broker, slug=slug, has_standalone_page=True)
+    
+    # Get only this broker's properties
+    properties = Property.objects.filter(
+        Q(broker=broker) | Q(owner=broker.user),
+        status__in=['ready', 'under-construction', 'rent']
+    ).select_related().prefetch_related('gallery_images')
+    
+    # Apply search filters
+    properties = filter_properties(properties, request.GET)
+    properties = sort_properties(properties, request.GET.get('sort'))
+    
+    # Pagination
+    paginator = Paginator(properties, 12)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    query_string = request.GET.urlencode()
+    
+    # Get broker stats
+    property_count = broker.get_published_properties_count()
+    property_limit = broker.get_property_limit()
+    remaining_properties = broker.get_remaining_properties()
+    days_elapsed = broker.get_days_elapsed()
+    days_remaining = broker.get_days_remaining()
+    
+    return render(request, 'properties/broker_standalone_page.html', {
+        'broker': broker,
+        'properties': page_obj,
+        'page_obj': page_obj,
+        'query_string': query_string,
+        'property_count': property_count,
+        'property_limit': property_limit,
+        'remaining_properties': remaining_properties,
+        'days_elapsed': days_elapsed,
+        'days_remaining': days_remaining,
+    })
+
+
+@login_required
+@broker_required
+def broker_standalone_settings(request):
+    """Handle broker standalone page settings."""
+    broker = get_broker(request.user)
+    
+    if request.method == 'POST':
+        # Toggle standalone page
+        has_standalone_page = request.POST.get('has_standalone_page') == 'on'
+        broker.has_standalone_page = has_standalone_page
+        
+        # Update slug if provided
+        slug = request.POST.get('slug', '').strip()
+        if slug:
+            # Check if slug is unique
+            if Broker.objects.filter(slug=slug).exclude(id=broker.id).exists():
+                messages.error(request, 'هذا الرابط مستخدم بالفعل، اختر رابطاً آخر')
+                return redirect('broker_panel')
+            broker.slug = slug
+        
+        # Update cover image if provided
+        if 'cover_image' in request.FILES:
+            broker.cover_image = request.FILES['cover_image']
+        
+        # Update bio
+        bio = request.POST.get('bio', '').strip()
+        broker.bio = bio
+        
+        broker.save()
+        
+        if has_standalone_page:
+            messages.success(request, 'تم تفعيل الصفحة المستقلة بنجاح')
+        else:
+            messages.success(request, 'تم إلغاء الصفحة المستقلة')
+        
+        return redirect('broker_panel')
+    
+    return redirect('broker_panel')
+
+
 def login_view(request):
     from .permissions import get_redirect_after_login, get_user_type, can_access_dashboard, get_broker
 

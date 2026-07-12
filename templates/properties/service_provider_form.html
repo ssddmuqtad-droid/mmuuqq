@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    {{ title }} - {{ site_name }}
+{% endblock %}
+
+{% block content %}
+<div class="service-provider-form-container">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="form-card">
+                    <div class="form-header">
+                        <h1 class="form-title">{{ title }}</h1>
+                        <p class="form-subtitle">أكمل المعلومات أدناه لإنشاء صفحة مقدم الخدمة</p>
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data" class="service-provider-form">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <ul>
+                                {% for field, errors in form.errors.items %}
+                                    {% for error in errors %}
+                                    <li>{{ field }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Basic Information -->
+                        <div class="form-section">
+                            <h3 class="section-title">المعلومات الأساسية</h3>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.page_type.id_for_label }}" class="form-label">نوع الصفحة</label>
+                                {{ form.page_type }}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">الاسم</label>
+                                {{ form.name }}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">النبذة</label>
+                                {{ form.description }}
+                            </div>
+                        </div>
+                        
+                        <!-- Branding -->
+                        <div class="form-section">
+                            <h3 class="section-title">الهوية البصرية</h3>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.profile_image.id_for_label }}" class="form-label">الصورة الشخصية</label>
+                                {{ form.profile_image }}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.cover_image.id_for_label }}" class="form-label">صورة الغلاف</label>
+                                {{ form.cover_image }}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.logo.id_for_label }}" class="form-label">الشعار</label>
+                                {{ form.logo }}
+                            </div>
+                        </div>
+                        
+                        <!-- Professional Info -->
+                        <div class="form-section">
+                            <h3 class="section-title">المعلومات المهنية</h3>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">الفئة الرئيسية</label>
+                                {{ form.category }}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.sub_categories.id_for_label }}" class="form-label">الفئات الفرعية</label>
+                                {{ form.sub_categories }}
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.years_of_experience.id_for_label }}" class="form-label">سنوات الخبرة</label>
+                                        {{ form.years_of_experience }}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.projects_count.id_for_label }}" class="form-label">عدد المشاريع</label>
+                                        {{ form.projects_count }}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.clients_count.id_for_label }}" class="form-label">عدد العملاء</label>
+                                        {{ form.clients_count }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Location -->
+                        <div class="form-section">
+                            <h3 class="section-title">الموقع</h3>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.governorate.id_for_label }}" class="form-label">المحافظة</label>
+                                        {{ form.governorate }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.city.id_for_label }}" class="form-label">المدينة</label>
+                                        {{ form.city }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.working_areas.id_for_label }}" class="form-label">المناطق التي يعمل بها</label>
+                                {{ form.working_areas }}
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.latitude.id_for_label }}" class="form-label">خط العرض</label>
+                                        {{ form.latitude }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.longitude.id_for_label }}" class="form-label">خط الطول</label>
+                                        {{ form.longitude }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Contact -->
+                        <div class="form-section">
+                            <h3 class="section-title">معلومات التواصل</h3>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.phone.id_for_label }}" class="form-label">رقم الهاتف</label>
+                                        {{ form.phone }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.whatsapp.id_for_label }}" class="form-label">واتساب</label>
+                                        {{ form.whatsapp }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.telegram.id_for_label }}" class="form-label">تلغرام</label>
+                                {{ form.telegram }}
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.facebook.id_for_label }}" class="form-label">فيسبوك</label>
+                                        {{ form.facebook }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.instagram.id_for_label }}" class="form-label">انستغرام</label>
+                                        {{ form.instagram }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.website.id_for_label }}" class="form-label">الموقع الإلكتروني</label>
+                                {{ form.website }}
+                            </div>
+                        </div>
+                        
+                        <!-- Working Hours -->
+                        <div class="form-section">
+                            <h3 class="section-title">أوقات العمل</h3>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.working_hours.id_for_label }}" class="form-label">أوقات الدوام</label>
+                                {{ form.working_hours }}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.availability.id_for_label }}" class="form-label">الحالة</label>
+                                {{ form.availability }}
+                            </div>
+                        </div>
+                        
+                        <!-- SEO -->
+                        <div class="form-section">
+                            <h3 class="section-title">تحسين محركات البحث (SEO)</h3>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.meta_title.id_for_label }}" class="form-label">عنوان SEO</label>
+                                {{ form.meta_title }}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.meta_description.id_for_label }}" class="form-label">وصف SEO</label>
+                                {{ form.meta_description }}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.meta_keywords.id_for_label }}" class="form-label">كلمات مفتاحية</label>
+                                {{ form.meta_keywords }}
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>حفظ
+                            </button>
+                            <a href="{% url 'service_provider_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>إلغاء
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.service-provider-form-container {
+    padding: 40px 20px;
+}
+
+.form-card {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 30px;
+}
+
+.form-header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.form-title {
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.form-subtitle {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.form-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.form-control, .form-select {
+    background-color: var(--bg-primary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--bg-primary);
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+}
+
+.form-label {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: rgba(220, 53, 69, 0.3);
+    color: var(--text-primary);
+}
+</style>
+{% endblock %}

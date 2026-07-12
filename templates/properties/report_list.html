@@ -1,0 +1,264 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}إدارة البلاغات{% endblock %}
+
+{% block content %}
+<section class="admin-section">
+  <div class="container">
+    <div class="section-header">
+      <h1 class="section-title">إدارة البلاغات</h1>
+      <p class="section-subtitle">عرض وإدارة جميع البلاغات</p>
+    </div>
+
+    <div class="filters-container">
+      <form method="GET" class="filters-form">
+        <div class="filter-group">
+          <select name="status" class="form-control">
+            <option value="">كل الحالات</option>
+            <option value="new" {% if request.GET.status == 'new' %}selected{% endif %}>جديد</option>
+            <option value="reviewing" {% if request.GET.status == 'reviewing' %}selected{% endif %}>قيد المراجعة</option>
+            <option value="waiting_reporter" {% if request.GET.status == 'waiting_reporter' %}selected{% endif %}>بانتظار رد المبلغ</option>
+            <option value="waiting_reported" {% if request.GET.status == 'waiting_reported' %}selected{% endif %}>بانتظار رد الطرف الآخر</option>
+            <option value="resolved" {% if request.GET.status == 'resolved' %}selected{% endif %}>تم الحل</option>
+            <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>مرفوض</option>
+            <option value="closed" {% if request.GET.status == 'closed' %}selected{% endif %}>مغلق</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <select name="type" class="form-control">
+            <option value="">كل الأنواع</option>
+            <option value="user" {% if request.GET.type == 'user' %}selected{% endif %}>بلاغ على مستخدم</option>
+            <option value="office" {% if request.GET.type == 'office' %}selected{% endif %}>بلاغ على مكتب عقاري</option>
+            <option value="comment" {% if request.GET.type == 'comment' %}selected{% endif %}>بلاغ على تعليق</option>
+            <option value="technical" {% if request.GET.type == 'technical' %}selected{% endif %}>بلاغ تقني</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <select name="priority" class="form-control">
+            <option value="">كل الأولويات</option>
+            <option value="low" {% if request.GET.priority == 'low' %}selected{% endif %}>منخفضة</option>
+            <option value="medium" {% if request.GET.priority == 'medium' %}selected{% endif %}>متوسطة</option>
+            <option value="high" {% if request.GET.priority == 'high' %}selected{% endif %}>عالية</option>
+            <option value="urgent" {% if request.GET.priority == 'urgent' %}selected{% endif %}>عاجلة</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">تصفية</button>
+      </form>
+    </div>
+
+    <div class="reports-table-container">
+      <table class="reports-table">
+        <thead>
+          <tr>
+            <th>رقم البلاغ</th>
+            <th>النوع</th>
+            <th>السبب</th>
+            <th>المُبلِّغ</th>
+            <th>الحالة</th>
+            <th>الأولوية</th>
+            <th>التاريخ</th>
+            <th>الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in reports %}
+          <tr class="report-row">
+            <td>#{{ report.id }}</td>
+            <td>{{ report.get_report_type_display }}</td>
+            <td>{{ report.get_reason_display }}</td>
+            <td>{{ report.reporter.username }}</td>
+            <td>
+              <span class="status-badge status-{{ report.status }}">
+                {{ report.get_status_display }}
+              </span>
+            </td>
+            <td>
+              <span class="priority-badge priority-{{ report.priority }}">
+                {{ report.get_priority_display }}
+              </span>
+            </td>
+            <td>{{ report.created_at|date:"Y-m-d H:i" }}</td>
+            <td>
+              <a href="{% url 'report_detail' report.id %}" class="btn btn-sm btn-primary">
+                عرض التفاصيل
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center">لا توجد بلاغات</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <nav class="pagination">
+      {% if page_obj.has_previous %}
+        <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">‹</a>
+      {% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <span class="current">{{ num }}</span>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ num }}">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">›</a>
+      {% endif %}
+    </nav>
+    {% endif %}
+  </div>
+</section>
+
+<style>
+.admin-section {
+  padding: 40px 0;
+}
+
+.section-header {
+  margin-bottom: 30px;
+}
+
+.section-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+}
+
+.section-subtitle {
+  color: #666;
+  margin: 0;
+}
+
+.filters-container {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.filters-form {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.reports-table-container {
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.reports-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reports-table th,
+.reports-table td {
+  padding: 15px;
+  text-align: right;
+  border-bottom: 1px solid #eee;
+}
+
+.reports-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+.report-row:hover {
+  background: #f8f9fa;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.status-new { background: #ffd700; color: #333; }
+.status-reviewing { background: #3498db; color: white; }
+.status-waiting_reporter { background: #e67e22; color: white; }
+.status-waiting_reported { background: #9b59b6; color: white; }
+.status-resolved { background: #27ae60; color: white; }
+.status-rejected { background: #e74c3c; color: white; }
+.status-closed { background: #95a5a6; color: white; }
+
+.priority-badge {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.priority-low { background: #95a5a6; color: white; }
+.priority-medium { background: #3498db; color: white; }
+.priority-high { background: #e67e22; color: white; }
+.priority-urgent { background: #e74c3c; color: white; }
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-primary {
+  background: #667eea;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #5568d3;
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 0.9rem;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 20px;
+}
+
+.pagination a,
+.pagination span {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  text-decoration: none;
+}
+
+.pagination .current {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+</style>
+{% endblock %}

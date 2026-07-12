@@ -1,0 +1,83 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}رفع تعطيل المستخدم - {{ target_user.username }}{% endblock %}
+{% block dashboard_title %}رفع <span>التعطيل</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'user_moderation_detail' target_user.id %}" class="btn btn-outline">العودة للتفاصيل</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card">
+  <div class="card-header">
+    <h5>✅ رفع تعطيل المستخدم: {{ target_user.username }}</h5>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-success">
+      <h6>📋 معلومات التعطيل الحالي</h6>
+      <p><strong>السبب:</strong> {{ suspension.get_reason_display }}</p>
+      <p><strong>الوصف:</strong> {{ suspension.description }}</p>
+      <p><strong>تاريخ البدء:</strong> {{ suspension.start_date|date:"Y-m-d H:i" }}</p>
+      {% if suspension.end_date %}
+        <p><strong>تاريخ الانتهاء المحدد:</strong> {{ suspension.end_date|date:"Y-m-d H:i" }}</p>
+      {% endif %}
+      <p><strong>المعطل من قبل:</strong> {{ suspension.suspended_by.username|default:'النظام' }}</p>
+    </div>
+
+    <div class="alert alert-info">
+      <h6>📋 معلومات المستخدم</h6>
+      <p><strong>الاسم:</strong> {{ target_user.get_full_name|default:target_user.username }}</p>
+      <p><strong>البريد الإلكتروني:</strong> {{ target_user.email }}</p>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="mb-3">
+        <label for="lift_reason" class="form-label">سبب رفع التعطيل</label>
+        <textarea class="form-control" id="lift_reason" name="lift_reason" rows="3" placeholder="اشرح سبب رفع التعطيل (اختياري)..."></textarea>
+        <small class="form-text text-muted">يمكنك ترك هذا الحقل فارغاً</small>
+      </div>
+
+      <div class="alert alert-success">
+        <h6>✅ تأكيد الإجراء</h6>
+        <p>سيتم:</p>
+        <ul>
+          <li>رفع التعطيل عن حساب المستخدم</li>
+          <li>تفعيل صلاحيات المستخدم</li>
+          <li>إرسال إشعار للمستخدم</li>
+          <li>تسجيل الإجراء في سجل المراقبة</li>
+        </ul>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success">✅ تأكيد رفع التعطيل</button>
+        <a href="{% url 'user_moderation_detail' target_user.id %}" class="btn btn-outline-secondary">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.card {
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.btn {
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.form-control:focus {
+  box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+</style>
+{% endblock %}

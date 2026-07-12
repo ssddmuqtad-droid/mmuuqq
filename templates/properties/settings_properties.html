@@ -1,0 +1,252 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}إعدادات العقارات{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-badge"><span class="badge-icon">🏢</span><span>إعدادات العقارات</span></div>
+    <h1>إعدادات العقارات</h1>
+    <p>إعدادات العقارات والوحدات</p>
+  </div>
+
+  <div class="settings-layout">
+    <div class="settings-sidebar">
+      <a href="{% url 'settings_general' %}" class="sidebar-link">
+        <span class="link-icon">🌐</span>
+        الإعدادات العامة
+      </a>
+      <a href="{% url 'settings_theme' %}" class="sidebar-link">
+        <span class="link-icon">🎨</span>
+        المظهر
+      </a>
+      <a href="{% url 'settings_homepage' %}" class="sidebar-link">
+        <span class="link-icon">🏠</span>
+        الصفحة الرئيسية
+      </a>
+      <a href="{% url 'settings_users' %}" class="sidebar-link">
+        <span class="link-icon">👥</span>
+        المستخدمون
+      </a>
+      <a href="{% url 'settings_properties' %}" class="sidebar-link active">
+        <span class="link-icon">🏢</span>
+        العقارات
+      </a>
+      <a href="{% url 'settings_media' %}" class="sidebar-link">
+        <span class="link-icon">📷</span>
+        الوسائط
+      </a>
+      <a href="{% url 'settings_notifications' %}" class="sidebar-link">
+        <span class="link-icon">🔔</span>
+        الإشعارات
+      </a>
+      <a href="{% url 'settings_payments' %}" class="sidebar-link">
+        <span class="link-icon">💳</span>
+        المدفوعات
+      </a>
+      <a href="{% url 'settings_security' %}" class="sidebar-link">
+        <span class="link-icon">🔒</span>
+        الأمان
+      </a>
+      <a href="{% url 'settings_reports' %}" class="sidebar-link">
+        <span class="link-icon">📋</span>
+        البلاغات
+      </a>
+      <a href="{% url 'settings_backup' %}" class="sidebar-link">
+        <span class="link-icon">💾</span>
+        النسخ الاحتياطي
+      </a>
+      <a href="{% url 'settings_seo' %}" class="sidebar-link">
+        <span class="link-icon">🔍</span>
+        SEO
+      </a>
+      <a href="{% url 'settings_api' %}" class="sidebar-link">
+        <span class="link-icon">🔌</span>
+        API
+      </a>
+      <a href="{% url 'settings_system' %}" class="sidebar-link">
+        <span class="link-icon">ℹ️</span>
+        النظام
+      </a>
+    </div>
+
+    <div class="settings-content">
+      <form method="POST" class="settings-form">
+        {% csrf_token %}
+        
+        <div class="form-section">
+          <h2>الوحدات والعملات</h2>
+          <div class="form-group">
+            <label>العملة الافتراضية</label>
+            <select name="default_currency" class="form-control">
+              <option value="IQD" {% if settings.default_currency == 'IQD' %}selected{% endif %}>دينار عراقي (IQD)</option>
+              <option value="USD" {% if settings.default_currency == 'USD' %}selected{% endif %}>دولار أمريكي (USD)</option>
+              <option value="SAR" {% if settings.default_currency == 'SAR' %}selected{% endif %}>ريال سعودي (SAR)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>وحدة المساحة</label>
+            <select name="area_unit" class="form-control">
+              <option value="m2" {% if settings.area_unit == 'm2' %}selected{% endif %}>متر مربع (م²)</option>
+              <option value="ft2" {% if settings.area_unit == 'ft2' %}selected{% endif %}>قدم مربع (قدم²)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2>الصور والفيديو</h2>
+          <div class="form-group">
+            <label>الحد الأقصى للصور لكل عقار</label>
+            <input type="number" name="max_images_per_property" value="{{ settings.max_images_per_property }}" class="form-control" min="1" max="50">
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" name="allow_video_upload" {% if settings.allow_video_upload %}checked{% endif %}>
+              السماح برفع الفيديو
+            </label>
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" name="allow_virtual_tours" {% if settings.allow_virtual_tours %}checked{% endif %}>
+              السماح بالجولات الافتراضية
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">حفظ الإعدادات</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.settings-layout {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.settings-sidebar {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  height: fit-content;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  color: var(--text);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  transition: all 0.3s;
+}
+
+.sidebar-link:hover,
+.sidebar-link.active {
+  background: var(--primary);
+  color: white;
+}
+
+.link-icon {
+  font-size: 1.2rem;
+}
+
+.settings-content {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.form-section {
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 30px;
+}
+
+.form-section:last-child {
+  border-bottom: none;
+}
+
+.form-section h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 20px 0;
+  color: var(--text);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  background: var(--bg-alt);
+  color: var(--text);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+@media (max-width: 768px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .settings-sidebar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .sidebar-link {
+    flex: 1;
+    min-width: 150px;
+    text-align: center;
+  }
+}
+</style>
+{% endblock %}

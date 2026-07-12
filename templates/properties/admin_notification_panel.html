@@ -1,0 +1,119 @@
+{% extends "properties/dashboard_base.html" %}
+{% load static %}
+
+{% block title %}إدارة الإشعارات{% endblock %}
+{% block dashboard_title %}إدارة <span>الإشعارات</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'admin_panel' %}" class="btn btn-outline">لوحة الإدارة</a>
+<a href="{% url 'admin_create_notification' %}" class="btn btn-primary">
+    <span>➕</span> إنشاء إشعار جديد
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5">
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">المرسلة</h5>
+                    <h2 class="display-4">{{ total_sent }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">المسودات</h5>
+                    <h2 class="display-4">{{ total_draft }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">المجدولة</h5>
+                    <h2 class="display-4">{{ total_scheduled }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">جميع الإشعارات</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>العنوان</th>
+                            <th>النوع</th>
+                            <th>الأولوية</th>
+                            <th>الحالة</th>
+                            <th>المستلمين</th>
+                            <th>المقروءة</th>
+                            <th>تاريخ الإنشاء</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for notification in notifications %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if notification.icon %}
+                                    <span class="me-2">{{ notification.icon }}</span>
+                                    {% endif %}
+                                    {{ notification.title }}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ notification.get_notification_type_display }}</span>
+                            </td>
+                            <td>
+                                <span class="badge {% if notification.priority == 'urgent' %}bg-danger{% elif notification.priority == 'high' %}bg-warning{% elif notification.priority == 'low' %}bg-success{% else %}bg-info{% endif %}">
+                                    {{ notification.get_priority_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {% if notification.status == 'sent' %}bg-success{% elif notification.status == 'draft' %}bg-secondary{% elif notification.status == 'scheduled' %}bg-info{% else %}bg-danger{% endif %}">
+                                    {{ notification.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ notification.get_recipients_count }}</td>
+                            <td>{{ notification.get_read_count }}</td>
+                            <td>{{ notification.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'admin_notification_detail' notification.id %}" class="btn btn-sm btn-outline-primary">
+                                        عرض
+                                    </a>
+                                    {% if notification.status == 'draft' %}
+                                    <a href="{% url 'admin_send_notification' notification.id %}" class="btn btn-sm btn-outline-success">
+                                        إرسال
+                                    </a>
+                                    {% endif %}
+                                    <a href="{% url 'admin_delete_notification' notification.id %}" class="btn btn-sm btn-outline-danger"
+                                       onclick="return confirm('هل أنت متأكد من حذف هذا الإشعار؟')">
+                                        حذف
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">لا توجد إشعارات</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

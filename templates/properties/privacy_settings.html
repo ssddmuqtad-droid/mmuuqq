@@ -1,0 +1,188 @@
+{% extends "properties/base.html" %}
+{% load static %}
+
+{% block title %}إعدادات الخصوصية{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-info">
+      <h1>إعدادات الخصوصية</h1>
+      <p>تحكم في خصوصية حسابك ومعلوماتك</p>
+    </div>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">لوحة التحكم</a>
+    </div>
+  </div>
+
+  <div class="settings-container">
+    <form method="post" class="settings-form">
+      {% csrf_token %}
+      
+      <!-- Profile Visibility -->
+      <div class="settings-section">
+        <h2>رؤية الملف الشخصي</h2>
+        
+        <div class="form-group">
+          <label>من يمكنه رؤية ملفك الشخصي؟</label>
+          <select name="profile_visibility" class="form-select">
+            <option value="public" {% if settings.profile_visibility == 'public' %}selected{% endif %}>الجميع</option>
+            <option value="private" {% if settings.profile_visibility == 'private' %}selected{% endif %}>الأصدقاء فقط</option>
+            <option value="hidden" {% if settings.profile_visibility == 'hidden' %}selected{% endif %}>مخفي</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Contact Information -->
+      <div class="settings-section">
+        <h2>معلومات الاتصال</h2>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="show_email" {% if settings.show_email %}checked{% endif %}>
+            <span>إظهار البريد الإلكتروني للجميع</span>
+          </label>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="show_phone" {% if settings.show_phone %}checked{% endif %}>
+            <span>إظهار رقم الهاتف للجميع</span>
+          </label>
+        </div>
+      </div>
+      
+      <!-- Communication -->
+      <div class="settings-section">
+        <h2>التواصل</h2>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="allow_messages" {% if settings.allow_messages %}checked{% endif %}>
+            <span>السماح للغرباء بإرسال رسائل</span>
+          </label>
+        </div>
+      </div>
+      
+      <!-- Activity -->
+      <div class="settings-section">
+        <h2>النشاط</h2>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="show_activity" {% if settings.show_activity %}checked{% endif %}>
+            <span>إظهار نشاطي للآخرين</span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.settings-container {
+  max-width: 800px;
+  margin: 2rem auto;
+}
+
+.settings-section {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.settings-section h2 {
+  margin: 0 0 1rem 0;
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.form-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  transition: background 0.3s ease;
+}
+
+.checkbox-label:hover {
+  background: var(--bg-alt);
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.checkbox-label span {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-outline:hover {
+  background: var(--bg-alt);
+  border-color: var(--primary);
+}
+</style>
+{% endblock %}

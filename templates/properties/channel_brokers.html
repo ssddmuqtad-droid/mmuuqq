@@ -1,0 +1,204 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}{{ channel_icon }} {{ channel_name }} - منصة العقارات{% endblock %}
+
+{% block extra_css %}
+<style>
+.channel-header {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  padding: 40px 20px;
+  text-align: center;
+  color: white;
+  margin-bottom: 30px;
+}
+
+.channel-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.channel-header p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.channel-filters {
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: var(--radius);
+  margin-bottom: 30px;
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.channel-filters select {
+  padding: 10px 15px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+  min-width: 150px;
+}
+
+.channel-filters button {
+  padding: 10px 25px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.channel-filters button:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 0 20px 40px;
+}
+
+.property-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.property-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.property-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.property-info {
+  padding: 15px;
+}
+
+.property-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+
+.property-price {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
+.property-location {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 10px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.badge-broker {
+  background: rgba(13, 148, 136, 0.1);
+  color: var(--primary);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-light);
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="channel-header">
+  <h1>{{ channel_icon }} {{ channel_name }}</h1>
+  <p>تصفح جميع العقارات المعروضة من قبل الدلالين المعتمدين</p>
+  <a href="{% url 'channels' %}" class="btn" style="display: inline-block; margin-top: 15px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); text-decoration: none;">
+    📺 العودة للقنوات
+  </a>
+</div>
+
+<div class="container">
+  <form method="get" class="channel-filters">
+    <select name="district">
+      <option value="">كل المناطق</option>
+      {% for dist in districts %}
+      <option value="{{ dist }}" {% if district == dist %}selected{% endif %}>{{ dist }}</option>
+      {% endfor %}
+    </select>
+    
+    <select name="property_type">
+      <option value="all" {% if property_type == 'all' %}selected{% endif %}>كل أنواع العقارات</option>
+      <option value="villa" {% if property_type == 'villa' %}selected{% endif %}>فيلا</option>
+      <option value="apartment" {% if property_type == 'apartment' %}selected{% endif %}>شقة</option>
+      <option value="land" {% if property_type == 'land' %}selected{% endif %}}>أرض</option>
+      <option value="office" {% if property_type == 'office' %}selected{% endif %}>مكتب</option>
+    </select>
+    
+    <select name="listing_type">
+      <option value="all" {% if listing_type == 'all' %}selected{% endif %}>كل العروض</option>
+      <option value="sale" {% if listing_type == 'sale' %}selected{% endif %}>للبيع</option>
+      <option value="rent" {% if listing_type == 'rent' %}selected{% endif %}>للإيجار</option>
+    </select>
+    
+    <button type="submit">🔍 بحث</button>
+  </form>
+
+  {% if properties %}
+  <div class="properties-grid">
+    {% for property in properties %}
+    <div class="property-card">
+      {% if property.gallery_images.first %}
+      <img src="{{ property.gallery_images.first.image.url }}" alt="{{ property.title }}" class="property-image">
+      {% else %}
+      <div class="property-image" style="background: var(--border); display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 3rem;">🏢</span>
+      </div>
+      {% endif %}
+      
+      <div class="property-info">
+        <h3 class="property-title">{{ property.title|truncatechars:50 }}</h3>
+        <div class="property-price">{{ property.price|floatformat:0 }} د.ع</div>
+        <div class="property-location">📍 {{ property.governorate }}</div>
+        <span class="badge badge-broker">🧑‍💼 دلال</span>
+        <a href="{{ property.get_absolute_url }}" class="btn btn-primary" style="display: block; margin-top: 10px; text-align: center;">عرض التفاصيل</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">🏢</div>
+    <h3>لا توجد عقارات</h3>
+    <p>لم يتم العثور على عقارات تطابق البحث</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,224 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}إدارة اشتراكات الدلالين | دلال{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card h3 {
+  margin: 0 0 10px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.stat-card .value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0d9488;
+}
+
+.subscriptions-table {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.subscriptions-table h3 {
+  margin-bottom: 25px;
+  color: #333;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  background: #f8f9fa;
+  padding: 15px;
+  text-align: right;
+  font-weight: 600;
+  color: #555;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.table td {
+  padding: 15px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.status-active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-inactive {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.btn-primary {
+  background: #0d9488;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-primary:hover {
+  background: #0b7e73;
+  text-decoration: none;
+  color: white;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+  text-decoration: none;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .table {
+    font-size: 12px;
+  }
+  
+  .table th,
+  .table td {
+    padding: 10px;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <div class="admin-header">
+    <h1>إدارة اشتراكات الدلالين</h1>
+    <a href="{% url 'dashboard' %}" class="btn-secondary">عودة للوحة التحكم</a>
+  </div>
+  
+  <div class="stats-cards">
+    <div class="stat-card">
+      <h3>إجمالي الاشتراكات النشطة</h3>
+      <div class="value">{{ total_subscriptions }}</div>
+    </div>
+    <div class="stat-card">
+      <h3>إجمالي الدلالين</h3>
+      <div class="value">{{ total_brokers }}</div>
+    </div>
+    <div class="stat-card">
+      <h3>متوسط المشتركين</h3>
+      <div class="value">{{ avg_subscribers|floatformat:1 }}</div>
+    </div>
+  </div>
+  
+  <div class="subscriptions-table">
+    <h3>جميع الاشتراكات</h3>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>المستخدم</th>
+          <th>الدلال</th>
+          <th>الحالة</th>
+          <th>تاريخ الاشتراك</th>
+          <th>الإشعارات المرسلة</th>
+          <th>الإشعارات المقروءة</th>
+          <th>الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sub in subscriptions %}
+        <tr>
+          <td>{{ sub.user.get_full_name|default:sub.user.username }}</td>
+          <td>{{ sub.broker.display_name }}</td>
+          <td>
+            <span class="status-badge {% if sub.is_active %}status-active{% else %}status-inactive{% endif %}">
+              {% if sub.is_active %}نشط{% else %}غير نشط{% endif %}
+            </span>
+          </td>
+          <td>{{ sub.subscribed_at|date:"Y-m-d" }}</td>
+          <td>{{ sub.notifications_sent }}</td>
+          <td>{{ sub.notifications_read }}</td>
+          <td>
+            <a href="{% url 'update_broker_notification_settings' sub.broker.id %}" class="btn-primary">إعدادات</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+            لا توجد اشتراكات
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

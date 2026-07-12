@@ -1,0 +1,87 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}تغيير نوع المستخدم{% endblock %}
+{% block dashboard_title %}تغيير <span>نوع المستخدم</span>{% endblock %}
+{% block dashboard_subtitle %}
+<p style="margin:0;color:var(--text-muted);font-size:0.9rem;">{{ user.get_full_name|default:user.username }} — @{{ user.username }}</p>
+{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'admin_edit_user' user.id %}" class="btn btn-outline">تعديل المستخدم</a>
+<a href="{% url 'admin_users_list' %}" class="btn btn-outline">← المستخدمين</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="user-info-card">
+  <h3>المستخدم الحالي</h3>
+  <div class="info-row">
+    <span class="label">الاسم:</span>
+    <span class="value">{{ user.get_full_name|default:'غير محدد' }}</span>
+  </div>
+  <div class="info-row">
+    <span class="label">اسم المستخدم:</span>
+    <span class="value">@{{ user.username }}</span>
+  </div>
+  <div class="info-row">
+    <span class="label">البريد:</span>
+    <span class="value">{{ user.email }}</span>
+  </div>
+  <div class="info-row">
+    <span class="label">النوع الحالي:</span>
+    <span class="value">
+      {% if user.is_superuser %}👑 مدير النظام
+      {% elif user.broker_profile %}👔 دلال
+      {% elif user.user_profile %}👤 مستخدم عادي
+      {% else %}❓ غير معروف{% endif %}
+    </span>
+  </div>
+</div>
+
+<div class="card" style="padding:28px;">
+  <form method="post" class="admin-form">
+    {% csrf_token %}
+
+    <div class="form-section">
+      <h3>تغيير النوع</h3>
+
+      <div class="form-group">
+        <label for="user_type">النوع الجديد *</label>
+        <select id="user_type" name="user_type" class="form-control" required>
+          <option value="user" {% if user.user_profile %}selected{% endif %}>👤 مستخدم عادي</option>
+          <option value="broker" {% if user.broker_profile and not user.is_superuser %}selected{% endif %}>👔 دلال</option>
+          <option value="admin" {% if user.is_superuser %}selected{% endif %}>👑 مدير</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="phone">رقم الهاتف</label>
+        <input type="tel" id="phone" name="phone" class="form-control" value="{% if user.broker_profile %}{{ user.broker_profile.phone }}{% elif user.user_profile %}{{ user.user_profile.phone }}{% endif %}" placeholder="رقم الهاتف">
+      </div>
+
+      <div class="warning-box">
+        <h4>⚠️ تحذير مهم</h4>
+        <p>تغيير نوع المستخدم سيؤدي إلى:</p>
+        <ul>
+          <li>حذف البروفايل الحالي وإنشاء بروفايل جديد</li>
+          <li>تغيير صلاحيات الوصول</li>
+          <li>قد يؤثر على الوصول إلى البيانات السابقة</li>
+        </ul>
+      </div>
+
+      <div class="info-box">
+        <h4>أنواع الحسابات</h4>
+        <ul>
+          <li><strong>مستخدم عادي:</strong> تصفح العقارات فقط</li>
+          <li><strong>دلال:</strong> إضافة وإدارة العقارات</li>
+          <li><strong>مدير:</strong> صلاحيات كاملة على النظام</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">🔄 تغيير النوع</button>
+      <a href="{% url 'admin_users_list' %}" class="btn btn-outline">إلغاء</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,167 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}إرسال رسالة{% endblock %}
+
+{% block content %}
+<section class="message-section">
+  <div class="container">
+    <div class="section-header">
+      <h1 class="section-title">إرسال رسالة</h1>
+      <p class="section-subtitle">التواصل مع دلال آخر</p>
+    </div>
+
+    <div class="message-form-container">
+      <form method="POST" class="message-form">
+        {% csrf_token %}
+        
+        <div class="form-group">
+          <label for="recipient_id" class="form-label">
+            <span class="label-icon">👤</span>
+            المستلم
+          </label>
+          <select name="recipient_id" id="recipient_id" class="form-control" required>
+            <option value="">اختر الدلال</option>
+            {% for broker in brokers %}
+              <option value="{{ broker.user.id }}" {% if recipient_broker and recipient_broker.id == broker.id %}selected{% endif %}>
+                {{ broker.user.get_full_name|default:broker.user.username }} - {{ broker.office_name|default:"دلال مستقل" }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="message" class="form-label">
+            <span class="label-icon">📝</span>
+            الرسالة
+          </label>
+          <textarea name="message" id="message" class="form-control" rows="6" required placeholder="اكتب رسالتك هنا..."></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary btn-lg">
+            <span class="btn-icon">📤</span>
+            إرسال الرسالة
+          </button>
+          <a href="{% url 'broker_messages' %}" class="btn btn-secondary btn-lg">
+            إلغاء
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<style>
+.message-section {
+  padding: 60px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}
+
+.section-header {
+  text-align: center;
+  color: white;
+  margin-bottom: 40px;
+}
+
+.section-title {
+  font-size: 2.5rem;
+  font-weight: 900;
+  margin: 0 0 10px 0;
+}
+
+.section-subtitle {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.message-form-container {
+  max-width: 700px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.message-form .form-group {
+  margin-bottom: 25px;
+}
+
+.message-form .form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+}
+
+.message-form .label-icon {
+  margin-left: 8px;
+}
+
+.message-form .form-control {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.message-form .form-control:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.btn {
+  padding: 15px 30px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+.btn-lg {
+  padding: 15px 30px;
+}
+
+.btn-icon {
+  margin-left: 8px;
+}
+</style>
+{% endblock %}

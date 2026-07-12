@@ -9,11 +9,12 @@ PUBLIC_STATUSES = ['ready', 'under-construction', 'rent']
 
 @cache_result(timeout=300, key_prefix='public_properties')
 def get_public_properties():
-    """Get public properties, excluding those from suspended/expired brokers."""
+    """Get public properties, excluding those from suspended/expired brokers and brokers with standalone pages."""
     from .models import Broker
-    # Get active brokers with valid subscriptions
+    # Get active brokers with valid subscriptions and NO standalone page
     active_brokers = Broker.objects.filter(
-        is_active=True
+        is_active=True,
+        has_standalone_page=False
     ).select_related('user')
     
     # Filter out suspended or expired brokers

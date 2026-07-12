@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}الفنادق والمنتجعات - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="hotel-page-list-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="container">
+            <h1 class="page-title">الفنادق والمنتجعات</h1>
+            <p class="page-subtitle">اكتشف أفضل الفنادق والمنتجعات في العراق</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+        <div class="container">
+            <form method="get" class="filters-form">
+                <div class="row">
+                    <div class="col-md-3">
+                        <select name="governorate" class="form-select">
+                            <option value="">كل المحافظات</option>
+                            {% for gov in governorates %}
+                                <option value="{{ gov.0 }}" {% if request.GET.governorate == gov.0 %}selected{% endif %}>{{ gov.1 }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="type" class="form-select">
+                            <option value="">كل الأنواع</option>
+                            <option value="hotel" {% if request.GET.type == 'hotel' %}selected{% endif %}>فندق</option>
+                            <option value="resort" {% if request.GET.type == 'resort' %}selected{% endif %}>منتجع</option>
+                            <option value="chalet" {% if request.GET.type == 'chalet' %}selected{% endif %}>شاليه</option>
+                            <option value="cabin" {% if request.GET.type == 'cabin' %}selected{% endif %}>كوخ</option>
+                            <option value="guesthouse" {% if request.GET.type == 'guesthouse' %}selected{% endif %}>بيت ضيافة</option>
+                            <option value="inn" {% if request.GET.type == 'inn' %}selected{% endif %}>نُزل</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" name="search" class="form-control" placeholder="بحث..." value="{{ request.GET.search }}">
+                    </div>
+                    <div class="col-md-3">
+                        <select name="sort" class="form-select">
+                            <option value="followers" {% if request.GET.sort == 'followers' %}selected{% endif %}>الأكثر متابعة</option>
+                            <option value="rating" {% if request.GET.sort == 'rating' %}selected{% endif %}>الأعلى تقييماً</option>
+                            <option value="newest" {% if request.GET.sort == 'newest' %}selected{% endif %}>الأحدث</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary">بحث</button>
+                        <a href="{% url 'hotel_page_list' %}" class="btn btn-secondary">إعادة تعيين</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Pages Grid -->
+    <div class="pages-grid-section">
+        <div class="container">
+            <div class="row">
+                {% for page in pages %}
+                <div class="col-md-4 col-lg-3 mb-4">
+                    <div class="hotel-page-card">
+                        <div class="card-image">
+                            {% if page.cover_image %}
+                                <img src="{{ page.cover_image.url }}" alt="{{ page.name }}">
+                            {% else %}
+                                <div class="placeholder-image">
+                                    <i class="fas fa-hotel"></i>
+                                </div>
+                            {% endif %}
+                            {% if page.is_verified %}
+                                <span class="verified-badge"><i class="fas fa-check-circle"></i></span>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            <div class="card-header">
+                                <div class="logo">
+                                    {% if page.logo %}
+                                        <img src="{{ page.logo.url }}" alt="{{ page.name }}">
+                                    {% else %}
+                                        <div class="logo-placeholder">
+                                            <i class="fas fa-building"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="info">
+                                    <h3 class="page-name">{{ page.name }}</h3>
+                                    <p class="page-location">
+                                        <i class="fas fa-map-marker-alt"></i> {{ page.city }}, {{ page.get_governorate_display }}
+                                    </p>
+                                </div>
+                            </div>
+                            <p class="page-description">{{ page.description|truncatewords:15 }}</p>
+                            <div class="card-stats">
+                                <div class="stat">
+                                    <i class="fas fa-users"></i>
+                                    <span>{{ page.followers_count }}</span>
+                                </div>
+                                <div class="stat">
+                                    <i class="fas fa-star"></i>
+                                    <span>{{ page.rating }}</span>
+                                </div>
+                                <div class="stat">
+                                    <i class="fas fa-eye"></i>
+                                    <span>{{ page.views_count }}</span>
+                                </div>
+                            </div>
+                            <a href="{% url 'hotel_page_detail' page.slug %}" class="btn btn-primary btn-block">زيارة الصفحة</a>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="no-results">
+                        <i class="fas fa-search"></i>
+                        <p>لا توجد نتائج</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hotel-page-list-container {
+    background: var(--bg-primary);
+    min-height: 100vh;
+}
+
+.page-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #ff8c42 100%);
+    color: white;
+    padding: 60px 0;
+    text-align: center;
+}
+
+.page-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.page-subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+
+.filters-section {
+    background: var(--bg-secondary);
+    padding: 30px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.filters-form .form-select,
+.filters-form .form-control {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 12px 15px;
+    border-radius: 8px;
+}
+
+.pages-grid-section {
+    padding: 40px 0;
+}
+
+.hotel-page-card {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.hotel-page-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.card-image {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.placeholder-image {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #ff8c42 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: white;
+}
+
+.verified-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #4CAF50;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.logo {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-left: 15px;
+    flex-shrink: 0;
+}
+
+.logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.logo-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+}
+
+.info {
+    flex: 1;
+}
+
+.page-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+.page-location {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.page-description {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.card-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 15px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat i {
+    color: var(--primary-color);
+    margin-bottom: 5px;
+}
+
+.stat span {
+    display: block;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.btn-block {
+    width: 100%;
+}
+
+.no-results {
+    text-align: center;
+    padding: 60px 0;
+    color: var(--text-secondary);
+}
+
+.no-results i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    color: var(--text-secondary);
+}
+</style>
+{% endblock %}

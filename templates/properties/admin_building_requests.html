@@ -1,0 +1,408 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}إدارة طلبات البناء{% endblock %}
+{% block dashboard_title %}إدارة طلبات <span>البناء</span>{% endblock %}
+
+{% block dashboard_actions %}
+<a href="{% url 'admin_panel' %}" class="btn btn-outline">لوحة الإدارة</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="padding: 28px;">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Filters -->
+  <div class="filters-section">
+    <form method="get" class="filter-form">
+      <div class="form-group">
+        <label for="status">الحالة</label>
+        <select id="status" name="status" class="form-control">
+          <option value="all" {% if status_filter == 'all' %}selected{% endif %}>الكل</option>
+          <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>قيد الانتظار</option>
+          <option value="in_review" {% if status_filter == 'in_review' %}selected{% endif %}>قيد المراجعة</option>
+          <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>موافق عليه</option>
+          <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>قيد التنفيذ</option>
+          <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>مكتمل</option>
+          <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>ملغي</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="governorate">المحافظة</label>
+        <select id="governorate" name="governorate" class="form-control">
+          <option value="all" {% if governorate_filter == 'all' %}selected{% endif %}>الكل</option>
+          <option value="baghdad" {% if governorate_filter == 'baghdad' %}selected{% endif %}>بغداد</option>
+          <option value="basra" {% if governorate_filter == 'basra' %}selected{% endif %}>البصرة</option>
+          <option value="erbil" {% if governorate_filter == 'erbil' %}selected{% endif %}>أربيل</option>
+          <option value="mosul" {% if governorate_filter == 'mosul' %}selected{% endif %}>الموصل</option>
+          <option value="najaf" {% if governorate_filter == 'najaf' %}selected{% endif %}>النجف</option>
+          <option value="karbala" {% if governorate_filter == 'karbala' %}selected{% endif %}>كربلاء</option>
+          <option value="kirkuk" {% if governorate_filter == 'kirkuk' %}selected{% endif %}>كركوك</option>
+          <option value="dhi_qar" {% if governorate_filter == 'dhi_qar' %}selected{% endif %}>ذي قار</option>
+          <option value="maysan" {% if governorate_filter == 'maysan' %}selected{% endif %}>ميسان</option>
+          <option value="wassit" {% if governorate_filter == 'wassit' %}selected{% endif %}>واسط</option>
+          <option value="babil" {% if governorate_filter == 'babil' %}selected{% endif %}>بابل</option>
+          <option value="anbar" {% if governorate_filter == 'anbar' %}selected{% endif %}>الأنبار</option>
+          <option value="saladin" {% if governorate_filter == 'saladin' %}selected{% endif %}>صلاح الدين</option>
+          <option value="dahuk" {% if governorate_filter == 'dahuk' %}selected{% endif %}>دهوك</option>
+          <option value="sulaymaniyah" {% if governorate_filter == 'sulaymaniyah' %}selected{% endif %}>السليمانية</option>
+          <option value="muthanna" {% if governorate_filter == 'muthanna' %}selected{% endif %}>المثنى</option>
+          <option value="qadisiyyah" {% if governorate_filter == 'qadisiyyah' %}selected{% endif %}>القادسية</option>
+          <option value="diyala" {% if governorate_filter == 'diyala' %}selected{% endif %}>ديالى</option>
+        </select>
+      </div>
+      
+      <button type="submit" class="btn btn-primary">تصفية</button>
+      <a href="{% url 'admin_building_requests' %}" class="btn btn-outline">إعادة تعيين</a>
+    </form>
+  </div>
+
+  <!-- Requests Table -->
+  <div class="requests-table">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>العميل</th>
+          <th>المشروع</th>
+          <th>الموقع</th>
+          <th>الدلال</th>
+          <th>الحالة</th>
+          <th>الأولوية</th>
+          <th>التاريخ</th>
+          <th>الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for request in requests %}
+        <tr>
+          <td>
+            <div class="client-info">
+              <strong>{{ request.full_name }}</strong>
+              <small>{{ request.phone }}</small>
+            </div>
+          </td>
+          <td>{{ request.project_type }}</td>
+          <td>
+            <div class="location-info">
+              <span>{{ request.city }}</span>
+              <small>{{ request.get_governorate_display }}</small>
+            </div>
+          </td>
+          <td>
+            {% if request.broker %}
+              <span class="broker-name">{{ request.broker.display_name }}</span>
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="status-badge status-{{ request.status }}">
+              {{ request.get_status_display }}
+            </span>
+          </td>
+          <td>
+            <span class="priority-badge priority-{{ request.priority }}">
+              {{ request.get_priority_display }}
+            </span>
+          </td>
+          <td>{{ request.created_at|date:"Y-m-d" }}</td>
+          <td>
+            <div class="actions-dropdown">
+              <button class="btn btn-sm btn-action" onclick="toggleActions('{{ request.id }}')">⋯</button>
+              <div id="actions-{{ request.id }}" class="actions-menu" style="display: none;">
+                <a href="{% url 'building_request_detail' request.id %}" class="action-item">👁️ عرض التفاصيل</a>
+                {% if request.status == 'pending' or request.status == 'in_review' %}
+                  <a href="{% url 'admin_approve_building_request' request.id %}" class="action-item success" onclick="return confirm('هل أنت متأكد من الموافقة على هذا الطلب؟')">✅ موافقة</a>
+                  <a href="{% url 'admin_reject_building_request' request.id %}" class="action-item danger" onclick="return confirm('هل أنت متأكد من رفض هذا الطلب؟')">❌ رفض</a>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center">
+            <div class="empty-state">لا توجد طلبات بناء</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+.filters-section {
+  background: var(--bg-alt);
+  padding: 20px;
+  border-radius: var(--radius);
+  margin-bottom: 30px;
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.filter-form {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 200px;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+.form-control {
+  padding: 10px 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: white;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.requests-table {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead {
+  background: var(--bg-alt);
+}
+
+.table th {
+  padding: 15px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 2px solid var(--border);
+}
+
+.table td {
+  padding: 15px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.client-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.client-info strong {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.client-info small {
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+.location-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.location-info span {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.location-info small {
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+.broker-name {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-pending {
+  background: #ffc107;
+  color: #000;
+}
+
+.status-in_review {
+  background: #17a2b8;
+  color: white;
+}
+
+.status-approved {
+  background: #28a745;
+  color: white;
+}
+
+.status-in_progress {
+  background: #007bff;
+  color: white;
+}
+
+.status-completed {
+  background: #6c757d;
+  color: white;
+}
+
+.status-cancelled {
+  background: #dc3545;
+  color: white;
+}
+
+.priority-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.priority-low {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.priority-medium {
+  background: #ffc107;
+  color: #000;
+}
+
+.priority-high {
+  background: #fd7e14;
+  color: white;
+}
+
+.priority-urgent {
+  background: #dc3545;
+  color: white;
+}
+
+.actions-dropdown {
+  position: relative;
+}
+
+.btn-action {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.btn-action:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.actions-menu {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  min-width: 180px;
+  z-index: 1000;
+}
+
+.action-item {
+  display: block;
+  padding: 10px 15px;
+  text-decoration: none;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.3s ease;
+}
+
+.action-item:last-child {
+  border-bottom: none;
+}
+
+.action-item:hover {
+  background: var(--bg-alt);
+}
+
+.action-item.success {
+  color: #198754;
+}
+
+.action-item.danger {
+  color: #dc3545;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-light);
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  border: 1px dashed var(--border);
+}
+
+.text-muted {
+  color: var(--text-light);
+}
+</style>
+
+<script>
+function toggleActions(requestId) {
+  const menu = document.getElementById('actions-' + requestId);
+  const allMenus = document.querySelectorAll('.actions-menu');
+  
+  allMenus.forEach(m => {
+    if (m.id !== 'actions-' + requestId) {
+      m.style.display = 'none';
+    }
+  });
+  
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.actions-dropdown')) {
+    document.querySelectorAll('.actions-menu').forEach(menu => {
+      menu.style.display = 'none';
+    });
+  }
+});
+</script>
+{% endblock %}

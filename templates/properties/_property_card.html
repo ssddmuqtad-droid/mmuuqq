@@ -1,0 +1,68 @@
+{% load static %}
+<article class="property-card" data-property-id="{{ property.id }}" data-property-url="{{ property.get_absolute_url }}" data-property-title="{{ property.display_title }}">
+  <div class="property-card-image">
+    <div class="property-card-actions">
+      <button type="button" class="btn-favorite" aria-label="مفضلة" data-fav-id="{{ property.id }}" data-fav-url="{{ property.get_absolute_url }}" data-fav-title="{{ property.display_title }}">
+        <span class="fav-icon">❤️</span>
+      </button>
+      <button type="button" class="btn-compare-add" aria-label="مقارنة"
+        data-compare-id="{{ property.id }}"
+        data-compare-url="{{ property.get_absolute_url }}"
+        data-compare-title="{{ property.display_title }}"
+        data-compare-price="{{ property.price_formatted }}"
+        data-compare-area="{{ property.area }}"
+        data-compare-city="{{ property.city }}"
+        data-compare-type="{{ property.get_type_display }}">
+        <span class="compare-icon">⚖️</span>
+      </button>
+    </div>
+    <a href="{{ property.get_absolute_url }}" class="property-card-image-link">
+      {% if property.get_main_image %}
+      <img src="{{ property.get_main_image }}" alt="{{ property.display_title }}" loading="lazy">
+      {% else %}
+      <div class="property-card-placeholder">
+        <span class="placeholder-icon">🏠</span>
+        <span class="placeholder-text">لا توجد صور</span>
+      </div>
+      {% endif %}
+    </a>
+    <div class="property-card-badges">
+      {% if property.is_featured %}<span class="badge badge-featured">⭐ مميز</span>{% endif %}
+      {% if property.is_promoted %}<span class="badge badge-promoted">📢 خاص</span>{% endif %}
+      <span class="badge badge-status">{{ property.get_status_display }}</span>
+    </div>
+  </div>
+  <a href="{{ property.get_absolute_url }}" class="property-card-body">
+    <div class="property-card-type">
+      <span class="type-icon">{% if property.type == 'apartment' %}🏢{% elif property.type == 'house' %}🏡{% elif property.type == 'land' %}🌳{% elif property.type == 'building' %}🏗{% else %}🏠{% endif %}</span>
+      <span>{{ property.get_type_display }}</span>
+    </div>
+    <h3 class="property-card-title">{{ property.display_title }}</h3>
+    <p class="property-card-location">
+      <span class="location-icon">📍</span>
+      <span>{{ property.city }}{% if property.district %} — {{ property.district }}{% endif %}</span>
+    </p>
+    <div class="property-card-meta">
+      <div class="meta-item">
+        <span class="meta-icon">📐</span>
+        <span>{{ property.area }} م²</span>
+      </div>
+      {% if property.bedrooms %}
+      <div class="meta-item">
+        <span class="meta-icon">🛏</span>
+        <span>{{ property.bedrooms }}</span>
+      </div>
+      {% endif %}
+      {% if property.bathrooms %}
+      <div class="meta-item">
+        <span class="meta-icon">🚿</span>
+        <span>{{ property.bathrooms }}</span>
+      </div>
+      {% endif %}
+    </div>
+    <div class="property-card-price">
+      <span class="price-value">{{ property.price_formatted }}</span>
+      <span class="price-currency">د.ع</span>
+    </div>
+  </a>
+</article>

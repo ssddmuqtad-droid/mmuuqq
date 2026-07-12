@@ -1,0 +1,475 @@
+{% extends 'properties/base.html' %}
+{% load price_filters %}
+
+{% block title %}اللوحة المالية{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="financial-dashboard">
+    <div class="dashboard-header">
+      <h1>اللوحة المالية</h1>
+      <p class="subtitle">إدارة الأرباح والعمولات والمصاريف</p>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+      <div class="stat-card sales">
+        <div class="stat-icon">💰</div>
+        <div class="stat-content">
+          <h3>إجمالي المبيعات</h3>
+          <p class="stat-value">{{ total_sales|format_price }}</p>
+          <p class="stat-subtitle">اليوم: {{ daily_sales|format_price }}</p>
+        </div>
+      </div>
+
+      <div class="stat-card commissions">
+        <div class="stat-icon">💵</div>
+        <div class="stat-content">
+          <h3>إجمالي العمولات</h3>
+          <p class="stat-value">{{ total_commissions|format_price }}</p>
+          <p class="stat-subtitle">اليوم: {{ daily_commissions|format_price }}</p>
+        </div>
+      </div>
+
+      <div class="stat-card profit">
+        <div class="stat-icon">📈</div>
+        <div class="stat-content">
+          <h3>صافي الأرباح</h3>
+          <p class="stat-value">{{ net_profit|format_price }}</p>
+          <p class="stat-subtitle">الشهر: {{ monthly_commissions|format_price }}</p>
+        </div>
+      </div>
+
+      <div class="stat-card expenses">
+        <div class="stat-icon">📉</div>
+        <div class="stat-content">
+          <h3>إجمالي المصاريف</h3>
+          <p class="stat-value">{{ total_expenses|format_price }}</p>
+          <p class="stat-subtitle">الشهر: {{ monthly_expenses|format_price }}</p>
+        </div>
+      </div>
+
+      <div class="stat-card properties">
+        <div class="stat-icon">🏠</div>
+        <div class="stat-content">
+          <h3>العقارات المباعة</h3>
+          <p class="stat-value">{{ properties_sold }}</p>
+          <p class="stat-subtitle">صفقات مكتملة</p>
+        </div>
+      </div>
+
+      <div class="stat-card transactions">
+        <div class="stat-icon">🤝</div>
+        <div class="stat-content">
+          <h3>الصفقات المكتملة</h3>
+          <p class="stat-value">{{ completed_transactions }}</p>
+          <p class="stat-subtitle">معاملة مكتملة</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wallet Section -->
+    <div class="wallet-section">
+      <div class="wallet-card">
+        <div class="wallet-header">
+          <h2>المحفظة المالية</h2>
+          <a href="{% url 'wallet_details' %}" class="btn btn-outline">عرض التفاصيل</a>
+        </div>
+        <div class="wallet-balance">
+          <div class="balance-item">
+            <span class="label">الرصيد الحالي:</span>
+            <span class="value">{{ wallet.current_balance|format_price }}</span>
+          </div>
+          <div class="balance-item">
+            <span class="label">الأرباح المعلقة:</span>
+            <span class="value">{{ wallet.pending_commissions|format_price }}</span>
+          </div>
+          <div class="balance-item">
+            <span class="label">الأرباح المستلمة:</span>
+            <span class="value">{{ wallet.received_commissions|format_price }}</span>
+          </div>
+          <div class="balance-item">
+            <span class="label">الأرباح المسحوبة:</span>
+            <span class="value">{{ wallet.withdrawn_amount|format_price }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <a href="{% url 'add_financial_transaction' %}" class="btn btn-primary">
+        ➕ إضافة معاملة مالية
+      </a>
+      <a href="{% url 'add_expense' %}" class="btn btn-secondary">
+        ➕ إضافة مصروف
+      </a>
+      <a href="{% url 'add_profit' %}" class="btn btn-success">
+        ➕ إضافة ربح
+      </a>
+      <a href="{% url 'financial_reports' %}" class="btn btn-outline">
+        📊 التقارير المالية
+      </a>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="recent-section">
+      <div class="section-header">
+        <h2>المعاملات الأخيرة</h2>
+        <a href="{% url 'financial_reports' %}" class="view-all">عرض الكل</a>
+      </div>
+      <div class="transactions-list">
+        {% if recent_transactions %}
+          {% for transaction in recent_transactions %}
+          <div class="transaction-item">
+            <div class="transaction-info">
+              <div class="transaction-type">{{ transaction.get_transaction_type_display }}</div>
+              <div class="transaction-date">{{ transaction.created_at|date:"Y-m-d H:i" }}</div>
+            </div>
+            <div class="transaction-amount">
+              {% if transaction.sale_price %}
+                <span class="sale-price">{{ transaction.sale_price|format_price }}</span>
+              {% endif %}
+              {% if transaction.commission_amount %}
+                <span class="commission">عمولة: {{ transaction.commission_amount|format_price }}</span>
+              {% endif %}
+            </div>
+            <div class="transaction-status status-{{ transaction.status }}">
+              {{ transaction.get_status_display }}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="no-data">لا توجد معاملات بعد</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recent Expenses -->
+    <div class="recent-section">
+      <div class="section-header">
+        <h2>المصاريف الأخيرة</h2>
+        <a href="{% url 'financial_reports' %}" class="view-all">عرض الكل</a>
+      </div>
+      <div class="expenses-list">
+        {% if recent_expenses %}
+          {% for expense in recent_expenses %}
+          <div class="expense-item">
+            <div class="expense-info">
+              <div class="expense-category">{{ expense.get_category_display }}</div>
+              <div class="expense-title">{{ expense.title }}</div>
+              <div class="expense-date">{{ expense.date|date:"Y-m-d" }}</div>
+            </div>
+            <div class="expense-amount">
+              {{ expense.amount|format_price }}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="no-data">لا توجد مصاريف بعد</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recent Profits -->
+    <div class="recent-section">
+      <div class="section-header">
+        <h2>الأرباح الأخيرة</h2>
+        <a href="{% url 'financial_reports' %}" class="view-all">عرض الكل</a>
+      </div>
+      <div class="profits-list">
+        {% if recent_profits %}
+          {% for profit in recent_profits %}
+          <div class="profit-item">
+            <div class="profit-info">
+              <div class="profit-type">{{ profit.get_profit_type_display }}</div>
+              <div class="profit-client">{{ profit.client_name|default:"—" }}</div>
+              <div class="profit-date">{{ profit.date|date:"Y-m-d" }}</div>
+            </div>
+            <div class="profit-amount">
+              {{ profit.amount|format_price }}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="no-data">لا توجد أرباح بعد</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.financial-dashboard {
+  padding: 40px 0;
+}
+
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.dashboard-header h1 {
+  font-size: 2.5rem;
+  color: var(--text);
+  margin: 0 0 8px 0;
+}
+
+.subtitle {
+  color: var(--text-light);
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.stat-card {
+  background: var(--bg);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  font-size: 3rem;
+  min-width: 60px;
+}
+
+.stat-content h3 {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin: 0 0 8px 0;
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 4px 0;
+}
+
+.stat-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin: 0;
+}
+
+.stat-card.sales .stat-value { color: #10b981; }
+.stat-card.commissions .stat-value { color: #3b82f6; }
+.stat-card.profit .stat-value { color: #8b5cf6; }
+.stat-card.expenses .stat-value { color: #ef4444; }
+.stat-card.properties .stat-value { color: #f59e0b; }
+.stat-card.transactions .stat-value { color: #06b6d4; }
+
+.wallet-section {
+  margin-bottom: 40px;
+}
+
+.wallet-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  color: white;
+}
+
+.wallet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.wallet-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.wallet-header .btn-outline {
+  border-color: rgba(255, 255, 255, 0.5);
+  color: white;
+}
+
+.wallet-header .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.wallet-balance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.balance-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.balance-item .label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.balance-item .value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+}
+
+.action-buttons .btn {
+  flex: 1;
+  min-width: 200px;
+}
+
+.recent-section {
+  background: var(--bg);
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: var(--text);
+}
+
+.view-all {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.transactions-list,
+.expenses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.transaction-item,
+.expense-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  gap: 16px;
+}
+
+.transaction-info,
+.expense-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.transaction-type,
+.expense-category {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.transaction-date,
+.expense-date {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.transaction-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.sale-price {
+  font-weight: 700;
+  color: #10b981;
+  font-size: 1.1rem;
+}
+
+.commission {
+  font-size: 0.85rem;
+  color: #3b82f6;
+}
+
+.transaction-status {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-pending { background: #fef3c7; color: #92400e; }
+.status-completed { background: #d1fae5; color: #065f46; }
+.status-cancelled { background: #fee2e2; color: #991b1b; }
+
+.expense-amount {
+  font-weight: 700;
+  color: #ef4444;
+  font-size: 1.1rem;
+}
+
+.no-data {
+  text-align: center;
+  color: var(--text-light);
+  padding: 40px 0;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .wallet-balance {
+    grid-template-columns: 1fr;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .transaction-item,
+  .expense-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .transaction-amount {
+    align-items: flex-start;
+  }
+}
+</style>
+{% endblock %}

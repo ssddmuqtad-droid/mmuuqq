@@ -1,0 +1,126 @@
+{% extends 'properties/base.html' %}
+{% load static %}
+
+{% block title %}إرسال رسالة - {% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>✉️ إرسال رسالة جديدة</h1>
+                <a href="{% url 'user_messages' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-right"></i> العودة للرسائل
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">كتابة رسالة</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if recipient_broker %}
+                        <input type="hidden" name="recipient_id" value="{{ recipient_broker.user.id }}">
+                        <div class="mb-3">
+                            <label class="form-label">إلى:</label>
+                            <div class="p-3 bg-light rounded">
+                                <strong>{{ recipient_broker.display_name }}</strong>
+                                {% if recipient_broker.phone %}
+                                <br><small class="text-muted">{{ recipient_broker.phone }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label for="recipient_id" class="form-label">اختر الدلال:</label>
+                            <select class="form-select" id="recipient_id" name="recipient_id" required>
+                                <option value="">-- اختر دلال --</option>
+                                {% for broker in brokers %}
+                                <option value="{{ broker.user.id }}">
+                                    {{ broker.display_name }}
+                                    {% if broker.office_name %} - {{ broker.office_name }}{% endif %}
+                                    {% if broker.governorate %} ({{ broker.governorate }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="property_id" class="form-label">العقار (اختياري):</label>
+                            <select class="form-select" id="property_id" name="property_id">
+                                <option value="">-- بدون عقار --</option>
+                                {% for property in form.property.field.queryset %}
+                                <option value="{{ property.id }}">{{ property.display_title }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">اختر العقار إذا كانت الرسالة تتعلق بعقار معين</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="message" class="form-label">الرسالة:</label>
+                            <textarea class="form-control" id="message" name="message" rows="6" required placeholder="اكتب رسالتك هنا..."></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> إرسال الرسالة
+                            </button>
+                            <a href="{% url 'user_messages' %}" class="btn btn-outline-secondary">
+                                إلغاء
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">نصائح</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            كن واضحاً ومحدداً في رسالتك
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            اذكر تفاصيل العقار إذا كانت الرسالة عن عقار معين
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            استخدم لغة مهنية ومحترمة
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            اذكر رقم هاتفك للتواصل السريع
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            {% if not recipient_broker %}
+            <div class="card mt-3">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0">الدلالين المتاحين</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">عدد الدلالين المتاحين: {{ brokers.count }}</p>
+                    <small class="text-muted">يمكنك إرسال رسالة لأي دلال نشط</small>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

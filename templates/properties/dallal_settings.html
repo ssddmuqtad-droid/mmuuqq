@@ -1,0 +1,187 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}إعدادات نظام الدلال{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>إعدادات نظام الدلال</h1>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'dallal_subscriptions_list' %}" class="btn btn-outline">اشتراكات الدلال</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline">← لوحة التحكم</a>
+    </div>
+  </div>
+
+  <!-- إحصائيات -->
+  <div class="dashboard-stats">
+    <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-content"><div class="stat-number">{{ stats.basic_active }}</div><div class="stat-label">دلال عادي نشط</div></div></div>
+    <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-content"><div class="stat-number">{{ stats.basic_expired }}</div><div class="stat-label">دلال عادي منتهي</div></div></div>
+    <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-content"><div class="stat-number">{{ stats.premium_active }}</div><div class="stat-label">دلال مميز نشط</div></div></div>
+    <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-content"><div class="stat-number">{{ stats.premium_expired }}</div><div class="stat-label">دلال مميز منتهي</div></div></div>
+  </div>
+
+  <!-- الإعدادات العامة -->
+  <div class="form-card" style="margin-top: 1.5rem;">
+    <h3>⚙️ الإعدادات العامة</h3>
+    <form method="post" style="margin-top: 1rem;">
+      {% csrf_token %}
+      <input type="hidden" name="update_global" value="1">
+      
+      <div class="form-group">
+        <label class="form-label">تفعيل نظام الدلال</label>
+        <div class="form-check">
+          <input type="checkbox" name="is_dallal_system_enabled" class="form-check-input" {% if global_settings.is_dallal_system_enabled %}checked{% endif %}>
+          <label class="form-check-label">تفعيل نظام الدلال بالكامل</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">الحد الأقصى للدلالات لكل مستخدم</label>
+        <input type="number" name="max_brokers_per_user" class="form-control" value="{{ global_settings.max_brokers_per_user }}" min="1">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">الحد الأقصى للعقارات لكل دلال</label>
+        <input type="number" name="max_properties_per_dallal" class="form-control" value="{{ global_settings.max_properties_per_dallal }}" min="1">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">عرض الدلال في الصفحة الرئيسية</label>
+        <div class="form-check">
+          <input type="checkbox" name="show_dallal_on_homepage" class="form-check-input" {% if global_settings.show_dallal_on_homepage %}checked{% endif %}>
+          <label class="form-check-label">عرض الدلال في الصفحة الرئيسية</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ترتيب ظهور الدلال</label>
+        <select name="dallal_display_order" class="form-control">
+          <option value="premium_first" {% if global_settings.dallal_display_order == 'premium_first' %}selected{% endif %}>المميز أولاً ثم العادي</option>
+          <option value="basic_first" {% if global_settings.dallal_display_order == 'basic_first' %}selected{% endif %}>العادي أولاً ثم المميز</option>
+          <option value="mixed" {% if global_settings.dallal_display_order == 'mixed' %}selected{% endif %}>مختلط</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">عرض الدلال المنتهي</label>
+        <div class="form-check">
+          <input type="checkbox" name="show_expired_dallal" class="form-check-input" {% if global_settings.show_expired_dallal %}checked{% endif %}>
+          <label class="form-check-label">عرض الدلال المنتهي</label>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">حفظ الإعدادات العامة</button>
+    </form>
+  </div>
+
+  <!-- إعدادات الدلال العادي -->
+  <div class="form-card" style="margin-top: 1.5rem;">
+    <h3>🏷️ إعدادات الدلال العادي</h3>
+    <form method="post" style="margin-top: 1rem;">
+      {% csrf_token %}
+      <input type="hidden" name="update_basic" value="1">
+      
+      <div class="form-group">
+        <label class="form-label">تفعيل الدلال العادي</label>
+        <div class="form-check">
+          <input type="checkbox" name="is_enabled" class="form-check-input" {% if basic_settings.is_enabled %}checked{% endif %}>
+          <label class="form-check-label">تفعيل الدلال العادي</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">الحد الأقصى للعقارات</label>
+        <input type="number" name="max_properties" class="form-control" value="{{ basic_settings.max_properties }}" min="1">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">مدة الاشتراك بالأيام</label>
+        <input type="number" name="duration_days" class="form-control" value="{{ basic_settings.duration_days }}" min="1">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">التجديد التلقائي</label>
+        <div class="form-check">
+          <input type="checkbox" name="auto_renewal" class="form-check-input" {% if basic_settings.auto_renewal %}checked{% endif %}>
+          <label class="form-check-label">تفعيل التجديد التلقائي</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">الحد الأقصى للظهور</label>
+        <input type="number" name="impressions_limit" class="form-control" value="{{ basic_settings.impressions_limit }}" min="0">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">التكلفة</label>
+        <input type="number" name="cost" class="form-control" value="{{ basic_settings.cost }}" step="0.01" min="0">
+      </div>
+
+      <button type="submit" class="btn btn-primary">حفظ إعدادات الدلال العادي</button>
+    </form>
+  </div>
+
+  <!-- إعدادات الدلال المميز -->
+  <div class="form-card" style="margin-top: 1.5rem;">
+    <h3>⭐ إعدادات الدلال المميز</h3>
+    <form method="post" style="margin-top: 1rem;">
+      {% csrf_token %}
+      <input type="hidden" name="update_premium" value="1">
+      
+      <div class="form-group">
+        <label class="form-label">تفعيل الدلال المميز</label>
+        <div class="form-check">
+          <input type="checkbox" name="is_enabled" class="form-check-input" {% if premium_settings.is_enabled %}checked{% endif %}>
+          <label class="form-check-label">تفعيل الدلال المميز</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">الحد الأقصى للعقارات</label>
+        <input type="number" name="max_properties" class="form-control" value="{{ premium_settings.max_properties }}" min="1">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">مدة الاشتراك بالأيام</label>
+        <input type="number" name="duration_days" class="form-control" value="{{ premium_settings.duration_days }}" min="1">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">أولوية الظهور</label>
+        <div class="form-check">
+          <input type="checkbox" name="priority_display" class="form-check-input" {% if premium_settings.priority_display %}checked{% endif %}>
+          <label class="form-check-label">تفعيل أولوية الظهور في أعلى الصفحة</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">الحد الأقصى للظهور</label>
+        <input type="number" name="impressions_limit" class="form-control" value="{{ premium_settings.impressions_limit }}" min="0">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">التكلفة</label>
+        <input type="number" name="cost" class="form-control" value="{{ premium_settings.cost }}" step="0.01" min="0">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">تمييز بصري (Badge)</label>
+        <div class="form-check">
+          <input type="checkbox" name="visual_badge" class="form-check-input" {% if premium_settings.visual_badge %}checked{% endif %}>
+          <label class="form-check-label">تفعيل شارة التمييز</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">تأثير التمييز (Glow)</label>
+        <div class="form-check">
+          <input type="checkbox" name="highlight_effect" class="form-check-input" {% if premium_settings.highlight_effect %}checked{% endif %}>
+          <label class="form-check-label">تفعيل تأثير الإضاءة</label>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">حفظ إعدادات الدلال المميز</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
