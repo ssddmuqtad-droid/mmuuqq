@@ -5,7 +5,7 @@
 # Docker
 .dockerignore
 
-# Documentation
+# Documentation (exclude from Docker build to reduce image size)
 *.md
 CODE_CLEANUP_REPORT.md
 COMPREHENSIVE_AUDIT_REPORT.md
@@ -80,3 +80,15 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Development files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# CI/CD files
+.github
+.gitlab-ci.yml
+.travis.yml
