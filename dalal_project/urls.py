@@ -41,6 +41,8 @@ urlpatterns = [
     path('check-apps/', lambda request: JsonResponse({'apps': [app.name for app in __import__('django.conf').settings.INSTALLED_APPS], 'properties': 'properties' in [app.name for app in __import__('django.conf').settings.INSTALLED_APPS]}), name='check-apps'),
     # Check database connection
     path('check-db/', lambda request: JsonResponse({'db': str(__import__('django.conf').settings.DATABASES['default']['ENGINE'])}), name='check-db'),
+    # Direct home test
+    path('home-test/', lambda request: __import__('properties.views').home(request), name='home-test'),
     path('', include('properties.urls')),
     path('admin/', admin.site.urls),
     path('api/', include('properties.api_urls')),
