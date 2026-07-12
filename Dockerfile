@@ -23,7 +23,6 @@ RUN pip install --upgrade pip && \
 COPY dalal_project /app/dalal_project/
 COPY properties /app/properties/
 COPY templates /app/templates/
-COPY static /app/static/
 COPY locale /app/locale/
 COPY manage.py /app/
 COPY run_server.py /app/
@@ -31,6 +30,9 @@ COPY entrypoint.sh /app/
 COPY nixpacks.toml /app/
 COPY railway.toml /app/
 COPY railway.json /app/
+
+# Copy static directory if it exists
+RUN if [ -d static ]; then cp -r static /app/static/; else mkdir -p /app/static; fi
 
 RUN mkdir -p /app/logs /app/media /app/staticfiles
 
