@@ -5,6 +5,12 @@ nixPkgs = ["python312", "gcc", "pkg-config", "postgresql"]
 cmds = [
     "pip install --upgrade pip",
     "pip install -r requirements.txt",
+    "echo 'Checking if settings.py exists:'",
+    "ls -la dalal_project/settings.py",
+    "echo 'Checking if properties app exists:'",
+    "ls -la properties/",
+    "echo 'Checking if settings.py contains properties:'",
+    "grep -c 'properties' dalal_project/settings.py || echo '0'",
     "python manage.py makemigrations --noinput",
     "python manage.py migrate --noinput",
     "python manage.py collectstatic --noinput"
