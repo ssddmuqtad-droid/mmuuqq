@@ -35,6 +35,8 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    # Direct test of properties.home view
+    path('direct-home/', lambda request: __import__('properties.views').home(request), name='direct-home'),
     path('', include('properties.urls')),
     path('admin/', admin.site.urls),
     path('api/', include('properties.api_urls')),
