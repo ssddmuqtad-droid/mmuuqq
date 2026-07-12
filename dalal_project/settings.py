@@ -72,6 +72,13 @@ if railway_public_domain:
 if DEBUG:
     ALLOWED_HOSTS = _unique(ALLOWED_HOSTS + ['localhost', '127.0.0.1', '[::1]'])
 
+# Log ALLOWED_HOSTS for debugging
+import logging
+logger = logging.getLogger(__name__)
+logger.info(f"DEBUG={DEBUG}, ALLOWED_HOSTS={ALLOWED_HOSTS}")
+logger.info(f"RAILWAY_PUBLIC_DOMAIN={railway_public_domain}")
+logger.info(f"CUSTOM_DOMAIN={custom_domain}")
+
 # CSRF_TRUSTED_ORIGINS
 if DEBUG:
     CSRF_TRUSTED_ORIGINS = [
