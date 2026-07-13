@@ -50,18 +50,22 @@ if not SECRET_KEY:
 custom_domain = os.getenv('CUSTOM_DOMAIN', 'daluailiraq.com')
 
 # Configure ALLOWED_HOSTS
-ALLOWED_HOSTS = _parse_csv_env('ALLOWED_HOSTS')
-if not ALLOWED_HOSTS:
-    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# Start with '*' to accept all hosts (bypass ALLOWED_HOSTS check)
+ALLOWED_HOSTS = ['*']
 
+# Add additional hosts from environment
+ALLOWED_HOSTS = _unique(ALLOWED_HOSTS + _parse_csv_env('ALLOWED_HOSTS'))
+
+# Explicitly add Railway domains
 ALLOWED_HOSTS = _unique(ALLOWED_HOSTS + [
-    '*',
     '.railway.app',
+    'healthcheck.railway.app',
+    '.up.railway.app',
     'mup.up.railway.app',
     'muq.up.railway.app',
     'muqq.up.railway.app',
-    'healthcheck.railway.app',
-    '.up.railway.app',
+    'localhost',
+    '127.0.0.1',
 ])
 
 if custom_domain:
