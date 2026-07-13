@@ -33,6 +33,7 @@ COPY railway.json /app/
 
 # Copy static directory if it exists
 RUN if [ -d static ]; then cp -r static /app/static/; else mkdir -p /app/static; fi
+RUN echo "Static files copied: $(ls -la /app/static/)"
 
 # Copy locale directory if it exists
 RUN if [ -d locale ]; then cp -r locale /app/locale/; else mkdir -p /app/locale; fi

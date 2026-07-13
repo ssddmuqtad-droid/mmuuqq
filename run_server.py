@@ -97,6 +97,13 @@ def main():
     
     print("Running collectstatic...", flush=True)
     run([sys.executable, 'manage.py', 'collectstatic', '--noinput'])
+    
+    # Check if static files were collected
+    static_root = os.path.join(project_root, 'staticfiles')
+    if os.path.exists(static_root):
+        print(f"Static files collected to {static_root}: {len(os.listdir(static_root))} items", flush=True)
+    else:
+        print(f"WARNING: staticfiles directory not found at {static_root}", flush=True)
 
     workers = os.getenv('GUNICORN_WORKERS', '2')
     log_level = os.getenv('GUNICORN_LOG_LEVEL', 'debug')
