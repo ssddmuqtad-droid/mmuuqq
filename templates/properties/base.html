@@ -36,10 +36,6 @@
       <ul class="nav-links">
         <li><a href="{% url 'home' %}" data-nav="home">الرئيسية</a></li>
         <li><a href="{% url 'unified_search' %}" data-nav="search">بحث متقدم</a></li>
-        <li><a href="{% url 'category_inside_iraq' %}" data-nav="inside-iraq">🏠 عقارات داخل العراق</a></li>
-        <li><a href="{% url 'category_outside_iraq' %}" data-nav="outside-iraq">🌍 عقارات خارج العراق</a></li>
-        <li><a href="{% url 'category_hotels' %}" data-nav="hotels">🏨 فنادق</a></li>
-        <li><a href="{% url 'category_resorts' %}" data-nav="resorts">🏖️ منتجعات</a></li>
         {% if request.user.is_authenticated %}
         <li><a href="{% url 'dynamic_add_property' %}" data-nav="add-property" class="btn btn-primary">➕ إضافة عقار</a></li>
         {% endif %}
