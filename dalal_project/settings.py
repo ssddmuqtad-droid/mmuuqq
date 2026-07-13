@@ -96,6 +96,9 @@ if DEBUG:
         'http://localhost:62950',
         'http://127.0.0.1:65407',
         'http://localhost:65407',
+        'https://mup.up.railway.app',
+        'https://muq.up.railway.app',
+        'https://muqq.up.railway.app',
     ]
     CSRF_COOKIE_SECURE = False
     SESSION_COOKIE_SECURE = False
