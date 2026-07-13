@@ -37,6 +37,7 @@ def main():
     print(f"DEBUG={os.getenv('DEBUG', 'False')}", flush=True)
     print(f"DJANGO_SETTINGS_MODULE={os.getenv('DJANGO_SETTINGS_MODULE')}", flush=True)
     print(f"PYTHONPATH={os.getenv('PYTHONPATH')}", flush=True)
+    print(f"Force rebuild - 2026-07-13-07-11 - Fix healthcheck 404", flush=True)
     
     # Check which settings file is being used
     import django.conf
