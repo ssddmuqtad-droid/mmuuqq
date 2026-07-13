@@ -141,8 +141,8 @@ logger.info(f"Properties in INSTALLED_APPS: {'properties' in INSTALLED_APPS}")
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'properties.middleware.HealthCheckMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'properties.middleware.HealthCheckMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

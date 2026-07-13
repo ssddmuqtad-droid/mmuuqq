@@ -146,9 +146,9 @@ logger.info(f"INSTALLED_APPS: {INSTALLED_APPS}")
 logger.info(f"Properties in INSTALLED_APPS: {'properties' in INSTALLED_APPS}")
 
 MIDDLEWARE = [
-    'properties.middleware.HealthCheckMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'properties.middleware.HealthCheckMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -272,9 +272,8 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.ManifestStaticFilesStorage'
 WHITENOISE_MANIFEST_STRICT = False
-WHITENOISE_IGNORE_IF_NOT_FOUND = True
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
