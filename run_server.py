@@ -62,6 +62,51 @@ def main():
         print(f"INSTALLED_APPS: {settings.INSTALLED_APPS}", flush=True)
         print(f"Properties in INSTALLED_APPS: {'properties' in settings.INSTALLED_APPS}", flush=True)
         
+        # Check OAuth configuration
+        print("\n=== OAuth Configuration Check ===", flush=True)
+        
+        # Google OAuth
+        google_key = getattr(settings, 'SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', '')
+        google_secret = getattr(settings, 'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET', '')
+        
+        print("Google OAuth:", flush=True)
+        if google_key:
+            print("✓ Client ID Loaded", flush=True)
+        else:
+            print("✗ Client ID Missing - SOCIAL_AUTH_GOOGLE_OAUTH2_KEY not set", flush=True)
+        
+        if google_secret:
+            print("✓ Client Secret Loaded", flush=True)
+        else:
+            print("✗ Client Secret Missing - SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET not set", flush=True)
+        
+        # Facebook OAuth
+        facebook_key = getattr(settings, 'SOCIAL_AUTH_FACEBOOK_KEY', '')
+        facebook_secret = getattr(settings, 'SOCIAL_AUTH_FACEBOOK_SECRET', '')
+        
+        print("\nFacebook OAuth:", flush=True)
+        if facebook_key:
+            print("✓ App ID Loaded", flush=True)
+        else:
+            print("✗ App ID Missing - SOCIAL_AUTH_FACEBOOK_KEY not set", flush=True)
+        
+        if facebook_secret:
+            print("✓ App Secret Loaded", flush=True)
+        else:
+            print("✗ App Secret Missing - SOCIAL_AUTH_FACEBOOK_SECRET not set", flush=True)
+        
+        # Check BASE_URL
+        base_url = getattr(settings, 'BASE_URL', 'NOT SET')
+        print(f"\nBASE_URL: {base_url}", flush=True)
+        
+        # Check redirect URIs
+        google_redirect = getattr(settings, 'SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI', 'NOT SET')
+        facebook_redirect = getattr(settings, 'SOCIAL_AUTH_FACEBOOK_OAUTH2_REDIRECT_URI', 'NOT SET')
+        print(f"Google Redirect URI: {google_redirect}", flush=True)
+        print(f"Facebook Redirect URI: {facebook_redirect}", flush=True)
+        
+        print("=== OAuth Configuration Check Complete ===\n", flush=True)
+        
         # Check if properties.urls can be imported
         try:
             from properties import urls as properties_urls
