@@ -1,4 +1,5 @@
 # Force Railway rebuild - 2026-07-12-18-27 - Fix locale copy issue
+# Force rebuild - 2026-07-13-07-19 - Fix templates cache issue
 FROM python:3.12-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
