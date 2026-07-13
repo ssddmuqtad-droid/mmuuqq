@@ -3,6 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
+from django.views.generic import RedirectView
 from django.views.generic import TemplateView
 from django.http import JsonResponse
 from django.utils import timezone
@@ -48,8 +49,10 @@ def simple_home(request):
 urlpatterns = [
     # Health check endpoint (move to top for Railway healthcheck)
     path('health/', health_check, name='health-check'),
-    # Include properties URLs as main path
-    path('', include('properties.urls')),
+    # Redirect main path to dashboard
+    path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home'),
+    # Include properties URLs for property pages
+    path('properties/', include('properties.urls')),
     # Admin panel
     path('admin/', admin.site.urls),
     # API endpoints
