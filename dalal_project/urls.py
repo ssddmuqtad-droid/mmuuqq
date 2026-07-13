@@ -79,3 +79,9 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
+else:
+    # Serve static files in production using Django's static serve (fallback)
+    from django.views.static import serve
+    from django.conf.urls.static import static as static_files
+    urlpatterns += static_files(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
+    urlpatterns += static_files(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
