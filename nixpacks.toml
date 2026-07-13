@@ -12,6 +12,8 @@ cmds = [
     "ls -la dalal_project/settings.py",
     "echo 'Checking if properties directory exists:'",
     "ls -la properties/",
+    "echo 'Checking if static directory exists:'",
+    "ls -la static/",
     "echo 'Checking if settings.py contains properties:'",
     "grep -c 'properties' dalal_project/settings.py || echo '0'",
     "echo 'Checking if settings.py contains INSTALLED_APPS:'",
@@ -19,7 +21,9 @@ cmds = [
     "echo '=== Running Django commands ==='",
     "python manage.py makemigrations --noinput",
     "python manage.py migrate --noinput",
-    "python manage.py collectstatic --noinput"
+    "python manage.py collectstatic --noinput --clear",
+    "echo '=== Checking staticfiles after collectstatic ==='",
+    "ls -la staticfiles/"
 ]
 
 [phases.start]
