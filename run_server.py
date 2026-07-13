@@ -78,12 +78,18 @@ def main():
     except Exception as e:
         print(f"Error checking INSTALLED_APPS: {e}", flush=True)
 
+    # Delete old database to fix migration issues
+    db_path = os.path.join(project_root, 'db.sqlite3')
+    if os.path.exists(db_path):
+        print(f"Deleting old database at {db_path}...", flush=True)
+        os.remove(db_path)
+    
     # Run makemigrations first to ensure all migrations are detected
     print("Running makemigrations...", flush=True)
     run([sys.executable, 'manage.py', 'makemigrations', '--noinput'])
     
     print("Running migrate...", flush=True)
-    run([sys.executable, 'manage.py', 'migrate', '--noinput', '--fake-initial'], allow_fail=True)
+    run([sys.executable, 'manage.py', 'migrate', '--noinput'])
     
     # Check if properties migrations were applied
     try:
