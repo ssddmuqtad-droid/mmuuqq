@@ -53,6 +53,11 @@ RUN echo "Settings.py exists: $(ls -la /app/dalal_project/settings.py)"
 RUN echo "Properties app exists: $(ls -la /app/properties/ 2>/dev/null || echo 'NOT FOUND')"
 RUN echo "Settings.py contains properties: $(grep -c 'properties' /app/dalal_project/settings.py || echo '0')"
 
+# Run collectstatic during build
+RUN python manage.py collectstatic --noinput --clear
+RUN echo "Collectstatic completed. Staticfiles directory:"
+RUN ls -la /app/staticfiles/
+
 EXPOSE 8080
 
 ENTRYPOINT ["./entrypoint.sh"]
