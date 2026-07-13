@@ -19,6 +19,10 @@ cmds = [
 [phases.start]
 cmd = "python run_server.py"
 
+[static]
+# Copy static files to be served by Railway
+include = ["static/**"]
+
 [variables]
 DEBUG = "False"
 PORT = "8080"
