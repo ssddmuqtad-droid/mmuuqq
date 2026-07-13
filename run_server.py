@@ -6,6 +6,7 @@ import sys
 
 # Force disable WebSockets to use Gunicorn instead of Daphne
 os.environ['USE_WEBSOCKETS'] = 'false'
+# Force rebuild - 2026-07-13-05-30 - Fix healthcheck 404
 
 # Set up Django settings
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dalal_project.settings')
@@ -36,6 +37,7 @@ def main():
     print(f"DEBUG={os.getenv('DEBUG', 'False')}", flush=True)
     print(f"DJANGO_SETTINGS_MODULE={os.getenv('DJANGO_SETTINGS_MODULE')}", flush=True)
     print(f"PYTHONPATH={os.getenv('PYTHONPATH')}", flush=True)
+    print(f"Force rebuild - 2026-07-13-07-11 - Fix healthcheck 404", flush=True)
     
     # Check which settings file is being used
     import django.conf

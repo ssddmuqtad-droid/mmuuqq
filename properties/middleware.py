@@ -5,10 +5,17 @@ class HealthCheckMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Check if this is a healthcheck request BEFORE any processing
         if request.path in ['/health/', '/health']:
             from django.http import JsonResponse
             from django.utils import timezone
             import os
+            
+            # Bypass ALLOWED_HOSTS check by modifying the request
+            # This must happen before CommonMiddleware processes it
+            request.META['HTTP_HOST'] = 'localhost'
+            request.META['SERVER_NAME'] = 'localhost'
+            request.META['SERVER_PORT'] = '8000'
             
             # Simple health check without database verification
             return JsonResponse({

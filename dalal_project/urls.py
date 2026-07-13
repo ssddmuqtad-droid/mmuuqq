@@ -9,8 +9,12 @@ from django.utils import timezone
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+import sys
 
 from properties.sitemaps import PropertySitemap, StaticViewSitemap
+
+# Force rebuild - 2026-07-13-07-11 - Fix healthcheck 404
+print("URLS.PY LOADED - Force rebuild 2026-07-13-07-11", file=sys.stderr)
 
 def health_check(request):
     try:

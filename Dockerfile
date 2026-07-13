@@ -1,4 +1,5 @@
-# Force Railway rebuild - 2026-07-12-16-32
+# Force Railway rebuild - 2026-07-12-18-27 - Fix locale copy issue
+# Force rebuild - 2026-07-13-07-19 - Fix templates cache issue
 FROM python:3.12-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
@@ -23,14 +24,18 @@ RUN pip install --upgrade pip && \
 COPY dalal_project /app/dalal_project/
 COPY properties /app/properties/
 COPY templates /app/templates/
-COPY static /app/static/
-COPY locale /app/locale/
 COPY manage.py /app/
 COPY run_server.py /app/
 COPY entrypoint.sh /app/
 COPY nixpacks.toml /app/
 COPY railway.toml /app/
 COPY railway.json /app/
+
+# Copy static directory if it exists
+RUN if [ -d static ]; then cp -r static /app/static/; else mkdir -p /app/static; fi
+
+# Copy locale directory if it exists
+RUN if [ -d locale ]; then cp -r locale /app/locale/; else mkdir -p /app/locale; fi
 
 RUN mkdir -p /app/logs /app/media /app/staticfiles
 
