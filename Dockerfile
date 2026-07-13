@@ -42,10 +42,6 @@ RUN if [ -d locale ]; then cp -r locale /app/locale/; else mkdir -p /app/locale;
 
 RUN mkdir -p /app/logs /app/media /app/staticfiles
 
-# Run collectstatic during build
-RUN python manage.py collectstatic --noinput --clear
-RUN echo "Static files collected: $(ls -la /app/staticfiles/)"
-
 # Check if properties app was copied successfully
 RUN if [ ! -d /app/properties ]; then echo "ERROR: Properties app not copied to container"; exit 1; fi
 RUN echo "Properties app exists in container: $(ls -la /app/properties/)"
