@@ -5,13 +5,15 @@ nixPkgs = ["python312", "gcc", "pkg-config", "postgresql"]
 cmds = [
     "pip install --upgrade pip",
     "pip install -r requirements.txt",
-    "echo '=== Checking and copying static files ==='",
+    "echo '=== Checking and copying static files to Railway public folder ==='",
     "echo 'Checking if static directory exists:'",
     "ls -la static/ || echo 'static directory not found'",
-    "echo 'Creating staticfiles directory:'",
-    "mkdir -p staticfiles",
-    "echo 'Copying static files directly to staticfiles:'",
-    "cp -r static/* staticfiles/ || echo 'static copy failed'",
+    "echo 'Creating public directory for Railway static serving:'",
+    "mkdir -p public",
+    "echo 'Copying static files to public directory:'",
+    "cp -r static/* public/ || echo 'static copy failed'",
+    "echo '=== Checking public directory ==='",
+    "ls -la public/",
     "echo '=== Checking files before build ==='",
     "echo 'Checking if dalal_project directory exists:'",
     "ls -la dalal_project/",
@@ -19,20 +21,10 @@ cmds = [
     "ls -la dalal_project/settings.py",
     "echo 'Checking if properties directory exists:'",
     "ls -la properties/",
-    "echo 'Checking if static directory exists:'",
-    "ls -la static/",
-    "echo 'Checking if staticfiles directory exists:'",
-    "ls -la staticfiles/",
-    "echo 'Checking if settings.py contains properties:'",
-    "grep -c 'properties' dalal_project/settings.py || echo '0'",
-    "echo 'Checking if settings.py contains INSTALLED_APPS:'",
-    "grep -c 'INSTALLED_APPS' dalal_project/settings.py || echo '0'",
     "echo '=== Running Django commands ==='",
     "python manage.py makemigrations --noinput",
     "python manage.py migrate --noinput",
-    "python manage.py collectstatic --noinput --clear",
-    "echo '=== Checking staticfiles after collectstatic ==='",
-    "ls -la staticfiles/"
+    "python manage.py collectstatic --noinput --clear"
 ]
 
 [phases.start]
