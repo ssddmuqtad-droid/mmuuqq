@@ -42,36 +42,16 @@ def simple_home(request):
     return JsonResponse({'status': 'ok', 'message': 'Home works', 'time': str(timezone.now())})
 
 urlpatterns = [
-    # Simple test endpoint
-    path('simple-test/', lambda request: JsonResponse({'status': 'ok', 'message': 'Simple test works'}), name='simple-test'),
-    # Simple home view as main path
-    path('', simple_home, name='home'),
     # Health check endpoint (move to top for Railway healthcheck)
     path('health/', health_check, name='health-check'),
-    # Direct path to properties.home view
-    path('properties-home/', lambda request: __import__('properties.views').home(request), name='properties-home'),
-    # Direct test of properties.home view
-    path('direct-home/', lambda request: __import__('properties.views').home(request), name='direct-home'),
-    # Test if properties app is loaded
-    path('check-apps/', lambda request: JsonResponse({'apps': [app.name for app in __import__('django.conf').settings.INSTALLED_APPS], 'properties': 'properties' in [app.name for app in __import__('django.conf').settings.INSTALLED_APPS]}), name='check-apps'),
-    # Check database connection
-    path('check-db/', lambda request: JsonResponse({'db': str(__import__('django.conf').settings.DATABASES['default']['ENGINE'])}), name='check-db'),
-    # Direct home test
-    path('home-test/', lambda request: __import__('properties.views').home(request), name='home-test'),
-    # Direct path to home view
-    path('home-direct/', lambda request: __import__('properties.views').home(request), name='home-direct'),
-    # Check if properties models can be imported
-    path('check-models/', lambda request: JsonResponse({'models': 'Property' in dir(__import__('properties.models'))}), name='check-models'),
-    # Include properties URLs
-    path('properties/', include('properties.urls')),
+    # Include properties URLs as main path
+    path('', include('properties.urls')),
+    # Admin panel
     path('admin/', admin.site.urls),
+    # API endpoints
     path('api/', include('properties.api_urls')),
     # Social Authentication
     path('social/', include('social_django.urls', namespace='social')),
-    # Test endpoint
-    path('test/', lambda request: JsonResponse({'status': 'ok', 'app': 'dalal', 'time': str(timezone.now())}), name='test'),
-    # Simple test page
-    path('simple/', TemplateView.as_view(template_name='properties/home.html'), name='simple'),
     # API Documentation
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
