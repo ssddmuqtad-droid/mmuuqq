@@ -266,9 +266,9 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# WhiteNoise configuration for production - serve directly from static directory
+# WhiteNoise configuration for production - serve from staticfiles (collected by collectstatic)
 WHITENOISE_MANIFEST_STRICT = False
-WHITENOISE_ROOT = BASE_DIR / 'static'
+WHITENOISE_ROOT = BASE_DIR / 'staticfiles'
 WHITENOISE_USE_FINDERS = True
 WHITENOISE_INDEX_FILE = True
 
