@@ -20,4 +20,9 @@ else
     echo "ERROR: Properties app not found"
 fi
 
+# Run collectstatic to gather static files
+echo "Running collectstatic..."
+python manage.py collectstatic --noinput --clear
+echo "Collectstatic completed"
+
 exec python run_server.py
