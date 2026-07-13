@@ -6,7 +6,7 @@ import sys
 
 # Force disable WebSockets to use Gunicorn instead of Daphne
 os.environ['USE_WEBSOCKETS'] = 'false'
-# Force rebuild - 2026-07-13-05-30 - Fix healthcheck 404
+# Force rebuild - 2026-07-13-12-42
 
 # Set up Django settings
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dalal_project.settings')
@@ -34,26 +34,25 @@ def run(cmd, allow_fail=False):
 def main():
     port = os.getenv('PORT', '8080')
     print(f"=== Dalal Platform Startup (port {port}) ===", flush=True)
-    print(f"=== NEW CODE VERSION - 2026-07-13-11-30 ===", flush=True)
+    print(f"=== NEW CODE VERSION - 2026-07-13-12-42 ===", flush=True)
     print(f"DEBUG={os.getenv('DEBUG', 'False')}", flush=True)
     print(f"DJANGO_SETTINGS_MODULE={os.getenv('DJANGO_SETTINGS_MODULE')}", flush=True)
     print(f"PYTHONPATH={os.getenv('PYTHONPATH')}", flush=True)
-    print(f"Force rebuild - 2026-07-13-07-11 - Fix healthcheck 404", flush=True)
     
     # Check which settings file is being used
     import django.conf
     print(f"Django settings module: {django.conf.settings.SETTINGS_MODULE}", flush=True)
     
     # Check if settings.py file contains properties app
-    settings_file = os.path.join(project_root, 'dalal_project', 'settings_production.py')
+    settings_file = os.path.join(project_root, 'dalal_project', 'settings.py')
     if os.path.exists(settings_file):
         with open(settings_file, 'r') as f:
             settings_content = f.read()
-            print(f"Settings_production.py exists: True", flush=True)
-            print(f"Settings_production.py contains 'properties': {'properties' in settings_content}", flush=True)
-            print(f"Settings_production.py contains 'INSTALLED_APPS': {'INSTALLED_APPS' in settings_content}", flush=True)
+            print(f"Settings.py exists: True", flush=True)
+            print(f"Settings.py contains 'properties': {'properties' in settings_content}", flush=True)
+            print(f"Settings.py contains 'INSTALLED_APPS': {'INSTALLED_APPS' in settings_content}", flush=True)
     else:
-        print(f"Settings_production.py exists: False", flush=True)
+        print(f"Settings.py exists: False", flush=True)
 
     # Check if properties app is in INSTALLED_APPS
     try:

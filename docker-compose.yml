@@ -4,7 +4,7 @@ services:
   # Django Backend
   backend:
     build:
-      context: ./acakar
+      context: .
       dockerfile: Dockerfile
     ports:
       - "8000:8080"
@@ -14,27 +14,9 @@ services:
       - DATABASE_URL=
       - ALLOWED_HOSTS=localhost,127.0.0.1
     volumes:
-      - ./acakar:/app
-      - ./acakar/logs:/app/logs
+      - .:/app
+      - ./logs:/app/logs
     command: python manage.py runserver 0.0.0.0:8080
-    networks:
-      - dalal-network
-
-  # Next.js Frontend
-  frontend:
-    build:
-      context: ./luxury-frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - NODE_ENV=development
-    volumes:
-      - ./luxury-frontend/src:/app/src
-      - ./luxury-frontend/public:/app/public
-    depends_on:
-      - backend
     networks:
       - dalal-network
 
