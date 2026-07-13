@@ -2,7 +2,20 @@
 
 import django.db.models.deletion
 from django.conf import settings
-from django.db import migrations, models
+from django.db import migrations, models, connection
+
+
+def create_model_if_not_exists(apps, schema_editor):
+    # Check if table already exists
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='properties_auctionparticipant'")
+        if cursor.fetchone():
+            # Table already exists, skip creation
+            return
+    
+    # Table doesn't exist, create it
+    AuctionParticipant = apps.get_model('properties', 'AuctionParticipant')
+    schema_editor.create_model(AuctionParticipant)
 
 
 class Migration(migrations.Migration):
@@ -13,29 +26,85 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.CreateModel(
-            name='AuctionParticipant',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('phone', models.CharField(max_length=20, verbose_name='رقم الهاتف')),
-                ('email', models.EmailField(max_length=254, verbose_name='البريد الإلكتروني')),
-                ('identity_verified', models.BooleanField(default=False, verbose_name='تم توثيق الهوية')),
-                ('deposit_paid', models.BooleanField(default=False, verbose_name='تم دفع التأمين')),
-                ('deposit_amount', models.DecimalField(decimal_places=0, default=0, max_digits=15, verbose_name='مبلغ التأمين المدفوع')),
-                ('payment_status', models.CharField(choices=[('pending', 'قيد الانتظار'), ('paid', 'مدفوع'), ('refunded', 'مسترد'), ('failed', 'فشل')], default='pending', max_length=20, verbose_name='حالة الدفع')),
-                ('payment_reference', models.CharField(blank=True, max_length=100, verbose_name='رقم مرجع الدفع')),
-                ('approval_status', models.CharField(choices=[('pending', 'قيد المراجعة'), ('approved', 'موافق عليه'), ('rejected', 'مرفوض')], default='pending', max_length=20, verbose_name='حالة الموافقة')),
-                ('approved_at', models.DateTimeField(blank=True, null=True, verbose_name='تاريخ الموافقة')),
-                ('rejection_reason', models.TextField(blank=True, verbose_name='سبب الرفض')),
-                ('joined_at', models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الانضمام')),
-                ('auction', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='participants', to='properties.auction')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='auction_participations', to=settings.AUTH_USER_MODEL)),
-                ('approved_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='approved_participants', to=settings.AUTH_USER_MODEL, verbose_name='تمت الموافقة بواسطة')),
-            ],
-            options={
-                'verbose_name': 'مشارك في المزاد',
-                'verbose_name_plural': 'المشاركون في المزادات',
-                'unique_together': {('auction', 'user')},
-            },
+        migrations.RunPython(create_model_if_not_exists, migrations.RunPython.noop),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='id',
+            field=models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID'),
+            preserve_default=False,
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='phone',
+            field=models.CharField(max_length=20, verbose_name='رقم الهاتف'),
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='email',
+            field=models.EmailField(max_length=254, verbose_name='البريد الإلكتروني'),
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='identity_verified',
+            field=models.BooleanField(default=False, verbose_name='تم توثيق الهوية'),
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='deposit_paid',
+            field=models.BooleanField(default=False, verbose_name='تم دفع التأمين'),
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='deposit_amount',
+            field=models.DecimalField(decimal_places=0, default=0, max_digits=15, verbose_name='مبلغ التأمين المدفوع'),
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='payment_status',
+            field=models.CharField(choices=[('pending', 'قيد الانتظار'), ('paid', 'مدفوع'), ('refunded', 'مسترد'), ('failed', 'فشل')], default='pending', max_length=20, verbose_name='حالة الدفع'),
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='payment_reference',
+            field=models.CharField(blank=True, max_length=100, verbose_name='رقم مرجع الدفع'),
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='approval_status',
+            field=models.CharField(choices=[('pending', 'قيد المراجعة'), ('approved', 'موافق عليه'), ('rejected', 'مرفوض')], default='pending', max_length=20, verbose_name='حالة الموافقة'),
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='approved_at',
+            field=models.DateTimeField(blank=True, null=True, verbose_name='تاريخ الموافقة'),
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='rejection_reason',
+            field=models.TextField(blank=True, verbose_name='سبب الرفض'),
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='joined_at',
+            field=models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الانضمام'),
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='auction',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='participants', to='properties.auction'),
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='user',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='auction_participations', to=settings.AUTH_USER_MODEL),
+        ),
+        migrations.AddField(
+            model_name='auctionparticipant',
+            name='approved_by',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='approved_participants', to=settings.AUTH_USER_MODEL, verbose_name='تمت الموافقة بواسطة'),
+        ),
+        migrations.AlterUniqueTogether(
+            name='auctionparticipant',
+            unique_together={('auction', 'user')},
         ),
     ]
