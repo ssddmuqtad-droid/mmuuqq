@@ -54,14 +54,15 @@ ALLOWED_HOSTS = _parse_csv_env('ALLOWED_HOSTS')
 if not ALLOWED_HOSTS:
     ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
+# Explicitly add Railway healthcheck domain
 ALLOWED_HOSTS = _unique(ALLOWED_HOSTS + [
     '*',
     '.railway.app',
+    'healthcheck.railway.app',
+    '.up.railway.app',
     'mup.up.railway.app',
     'muq.up.railway.app',
     'muqq.up.railway.app',
-    'healthcheck.railway.app',
-    '.up.railway.app',
 ])
 
 if custom_domain:
