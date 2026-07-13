@@ -89,7 +89,7 @@ def main():
     run([sys.executable, 'manage.py', 'makemigrations', '--noinput'])
     
     print("Running migrate...", flush=True)
-    run([sys.executable, 'manage.py', 'migrate', '--noinput'])
+    run([sys.executable, 'manage.py', 'migrate', '--noinput'], allow_fail=True)
     
     # Check if properties migrations were applied
     try:
