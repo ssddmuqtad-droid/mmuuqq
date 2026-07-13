@@ -49,10 +49,8 @@ def simple_home(request):
 urlpatterns = [
     # Health check endpoint (move to top for Railway healthcheck)
     path('health/', health_check, name='health-check'),
-    # Redirect main path to dashboard
-    path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home'),
-    # Include properties URLs for property pages
-    path('properties/', include('properties.urls')),
+    # Include properties URLs as main path (includes dashboard/)
+    path('', include('properties.urls')),
     # Admin panel
     path('admin/', admin.site.urls),
     # API endpoints
