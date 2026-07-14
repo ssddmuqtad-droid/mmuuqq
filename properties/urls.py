@@ -243,6 +243,7 @@ urlpatterns = [
     # New category views
     path('category/inside-iraq/', views.properties_inside_iraq_view, name='category_inside_iraq'),
     path('category/hotels/', views.hotels_category_view, name='category_hotels'),
+    path('category/hotels-outside/', views.hotels_outside_category_view, name='category_hotels_outside'),
     path('category/resorts/', views.resorts_category_view, name='category_resorts'),
     path('category/outside-iraq/', views.outside_iraq_category_view, name='category_outside_iraq'),
     

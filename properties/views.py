@@ -8051,18 +8051,27 @@ def properties_inside_iraq_view(request):
 
 
 def hotels_category_view(request):
-    """View for hotels category"""
+    """View for hotels category inside Iraq"""
     from properties.models import PropertyHotel
+    from properties.constants import IRAQ_GOVERNORATES
     
     # Get filters
     star_rating = request.GET.get('star_rating', '')
+    governorate = request.GET.get('governorate', '')
+    district = request.GET.get('district', '')
     price_min = request.GET.get('price_min', '')
     price_max = request.GET.get('price_max', '')
     
-    hotels = PropertyHotel.objects.all()
+    hotels = PropertyHotel.objects.filter(country_code='IQ')
     
     if star_rating:
         hotels = hotels.filter(star_rating=int(star_rating))
+    
+    if governorate:
+        hotels = hotels.filter(governorate=governorate)
+    
+    if district:
+        hotels = hotels.filter(district__icontains=district)
     
     if price_min:
         hotels = [h for h in hotels if h.price_per_night and h.price_per_night >= int(price_min)]
@@ -8072,8 +8081,54 @@ def hotels_category_view(request):
     return render(request, 'properties/categories/hotels.html', {
         'hotels': hotels,
         'star_rating': star_rating,
+        'governorate': governorate,
+        'district': district,
         'price_min': price_min,
         'price_max': price_max,
+        'governorates': IRAQ_GOVERNORATES,
+        'category_title': 'فنادق',
+        'category_icon': '🏨',
+    })
+
+
+def hotels_outside_category_view(request):
+    """View for hotels category outside Iraq"""
+    from properties.models import PropertyHotel, Country
+    
+    # Get filters
+    star_rating = request.GET.get('star_rating', '')
+    country_id = request.GET.get('country', '')
+    district = request.GET.get('district', '')
+    price_min = request.GET.get('price_min', '')
+    price_max = request.GET.get('price_max', '')
+    
+    hotels = PropertyHotel.objects.exclude(country_code='IQ')
+    
+    if star_rating:
+        hotels = hotels.filter(star_rating=int(star_rating))
+    
+    if country_id:
+        hotels = hotels.filter(country_id=int(country_id))
+    
+    if district:
+        hotels = hotels.filter(district__icontains=district)
+    
+    if price_min:
+        hotels = [h for h in hotels if h.price_per_night and h.price_per_night >= int(price_min)]
+    if price_max:
+        hotels = [h for h in hotels if h.price_per_night and h.price_per_night <= int(price_max)]
+    
+    # Get all countries
+    countries = Country.objects.all().order_by('name_ar')
+    
+    return render(request, 'properties/categories/hotels_outside.html', {
+        'hotels': hotels,
+        'star_rating': star_rating,
+        'country_id': country_id,
+        'district': district,
+        'price_min': price_min,
+        'price_max': price_max,
+        'countries': countries,
         'category_title': 'فنادق',
         'category_icon': '🏨',
     })

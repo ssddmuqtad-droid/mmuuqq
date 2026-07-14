@@ -307,17 +307,17 @@
 {% block content %}
 <div class="category-header">
   <div class="category-icon">{{ category_icon }}</div>
-  <h1 class="category-title">{{ category_title }} داخل العراق</h1>
-  <p class="category-subtitle">تصفح الفنادق داخل العراق مع خيارات فلترة متقدمة</p>
+  <h1 class="category-title">{{ category_title }} خارج العراق</h1>
+  <p class="category-subtitle">تصفح الفنادق خارج العراق مع خيارات فلترة متقدمة</p>
 </div>
 
 <!-- Quick Search Section -->
 <div class="hero-quick-search">
-  <form class="quick-search-box container" method="get" action="{% url 'category_hotels' %}">
+  <form class="quick-search-box container" method="get" action="{% url 'category_hotels_outside' %}">
     <div class="search-header">
       <div class="search-icon">🔍</div>
       <h3>ابحث عن فندقك</h3>
-      <p>اكتشف الفنادق المميزة في العراق</p>
+      <p>اكتشف الفنادق المميزة خارج العراق</p>
     </div>
     <div class="search-inputs">
       <div class="form-group">
@@ -336,13 +336,15 @@
       </div>
       <div class="form-group">
         <label>
-          <span class="label-icon">🏛️</span>
-          المحافظة
+          <span class="label-icon">🌍</span>
+          الدولة
         </label>
-        <select name="governorate" class="form-control">
-          <option value="">كل المحافظات</option>
-          {% for code, name in governorates %}
-          <option value="{{ code }}" {% if request.GET.governorate == code %}selected{% endif %}>{{ name }}</option>
+        <select name="country" class="form-control">
+          <option value="">كل الدول</option>
+          {% for country in countries %}
+          <option value="{{ country.id }}" {% if request.GET.country == country.id|stringformat:"s" %}selected{% endif %}>
+            {{ country.flag_emoji }} {{ country.name_ar }}
+          </option>
           {% endfor %}
         </select>
       </div>
@@ -388,6 +390,18 @@
           <option value="3" {% if star_rating == '3' %}selected{% endif %}>3 نجوم</option>
           <option value="2" {% if star_rating == '2' %}selected{% endif %}>2 نجوم</option>
           <option value="1" {% if star_rating == '1' %}selected{% endif %}>نجمة واحدة</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>الدولة</label>
+        <select name="country" class="form-control">
+          <option value="" {% if not country_id %}selected{% endif %}>الكل</option>
+          {% for country in countries %}
+          <option value="{{ country.id }}" {% if country_id == country.id|stringformat:"s" %}selected{% endif %}>
+            {{ country.flag_emoji }} {{ country.name_ar }}
+          </option>
+          {% endfor %}
         </select>
       </div>
 
