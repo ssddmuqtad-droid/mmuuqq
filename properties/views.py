@@ -8013,6 +8013,8 @@ def properties_inside_iraq_view(request):
         properties = [p for p in properties if p.status == 'ready']
     elif listing_type == 'rent':
         properties = [p for p in properties if p.status == 'rent']
+    elif listing_type == 'collective_rent':
+        properties = [p for p in properties if p.status == 'collective_rent']
     
     if governorate:
         properties = [p for p in properties if p.governorate == governorate]
@@ -8059,6 +8061,7 @@ def hotels_category_view(request):
     star_rating = request.GET.get('star_rating', '')
     governorate = request.GET.get('governorate', '')
     district = request.GET.get('district', '')
+    rent_type = request.GET.get('rent_type', '')
     price_min = request.GET.get('price_min', '')
     price_max = request.GET.get('price_max', '')
     
@@ -8073,6 +8076,9 @@ def hotels_category_view(request):
     if district:
         hotels = hotels.filter(district__icontains=district)
     
+    if rent_type == 'collective':
+        hotels = hotels.filter(supports_collective_rent=True)
+    
     if price_min:
         hotels = [h for h in hotels if h.price_per_night and h.price_per_night >= int(price_min)]
     if price_max:
@@ -8083,6 +8089,7 @@ def hotels_category_view(request):
         'star_rating': star_rating,
         'governorate': governorate,
         'district': district,
+        'rent_type': rent_type,
         'price_min': price_min,
         'price_max': price_max,
         'governorates': IRAQ_GOVERNORATES,
@@ -8099,6 +8106,7 @@ def hotels_outside_category_view(request):
     star_rating = request.GET.get('star_rating', '')
     country_id = request.GET.get('country', '')
     district = request.GET.get('district', '')
+    rent_type = request.GET.get('rent_type', '')
     price_min = request.GET.get('price_min', '')
     price_max = request.GET.get('price_max', '')
     
@@ -8113,6 +8121,9 @@ def hotels_outside_category_view(request):
     if district:
         hotels = hotels.filter(district__icontains=district)
     
+    if rent_type == 'collective':
+        hotels = hotels.filter(supports_collective_rent=True)
+    
     if price_min:
         hotels = [h for h in hotels if h.price_per_night and h.price_per_night >= int(price_min)]
     if price_max:
@@ -8126,6 +8137,7 @@ def hotels_outside_category_view(request):
         'star_rating': star_rating,
         'country_id': country_id,
         'district': district,
+        'rent_type': rent_type,
         'price_min': price_min,
         'price_max': price_max,
         'countries': countries,
@@ -8171,6 +8183,7 @@ def outside_iraq_category_view(request):
     country_id = request.GET.get('country', '')
     city_id = request.GET.get('city', '')
     property_type = request.GET.get('property_type', 'all')
+    status = request.GET.get('status', '')
     price_min = request.GET.get('price_min', '')
     price_max = request.GET.get('price_max', '')
     
@@ -8185,6 +8198,13 @@ def outside_iraq_category_view(request):
     
     if property_type != 'all':
         properties = [p for p in properties if p.type == property_type]
+    
+    if status == 'sale':
+        properties = [p for p in properties if p.status == 'ready']
+    elif status == 'rent':
+        properties = [p for p in properties if p.status == 'rent']
+    elif status == 'collective_rent':
+        properties = [p for p in properties if p.status == 'collective_rent']
     
     if price_min:
         properties = [p for p in properties if p.price >= int(price_min)]

@@ -241,6 +241,7 @@
           <option value="">كل الحالات</option>
           <option value="sale" {% if request.GET.status == 'sale' %}selected{% endif %}>بيع</option>
           <option value="rent" {% if request.GET.status == 'rent' %}selected{% endif %}>إيجار</option>
+          <option value="collective_rent" {% if request.GET.status == 'collective_rent' %}selected{% endif %}>إيجار سكن جماعي</option>
           <option value="investment" {% if request.GET.status == 'investment' %}selected{% endif %}>استثمار</option>
         </select>
       </div>

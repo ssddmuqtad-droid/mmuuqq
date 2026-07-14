@@ -100,6 +100,7 @@ TRANSACTION_TYPES = [
     ('rent_monthly', 'إيجار شهري'),
     ('rent_yearly', 'إيجار سنوي'),
     ('rent_daily', 'إيجار يومي'),
+    ('collective_rent', 'إيجار سكن جماعي'),
     ('investment_rent', 'شراء للإيجار'),
     ('investment_develop', 'تطوير وبيع'),
     ('investment_partnership', 'شراكة استثمارية'),
@@ -109,6 +110,7 @@ TRANSACTION_TYPES = [
 STATUS_CHOICES = [
     ('sale', 'بيع'),
     ('rent', 'إيجار'),
+    ('collective_rent', 'إيجار سكن جماعي'),
     ('investment', 'استثمار'),
 ]
 
