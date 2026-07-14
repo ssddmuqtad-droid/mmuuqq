@@ -94,12 +94,13 @@ if DEBUG:
         'http://127.0.0.1:3000',
         'http://127.0.0.1:62950',
         'http://localhost:62950',
-        'http://127.0.0.1:65407',
-        'http://localhost:65407',
+        RAILWAY_PUBLIC_DOMAIN and f'https://{RAILWAY_PUBLIC_DOMAIN}',
         'https://mup.up.railway.app',
         'https://muq.up.railway.app',
         'https://muqq.up.railway.app',
     ]
+    # Filter out None values
+    CSRF_TRUSTED_ORIGINS = [origin for origin in CSRF_TRUSTED_ORIGINS if origin]
     CSRF_COOKIE_SECURE = False
     SESSION_COOKIE_SECURE = False
 else:
