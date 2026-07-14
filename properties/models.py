@@ -1555,6 +1555,7 @@ class Property(models.Model):
     publication_days = models.PositiveIntegerField(null=True, blank=True, verbose_name='مدة النشر (أيام)')
     publication_start_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ بدء النشر')
     publication_end_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ انتهاء النشر')
+    is_subscription_based = models.BooleanField(default=False, verbose_name='مبني على الاشتراك')
     rejection_reason = models.TextField(blank=True, verbose_name='سبب الرفض')
 
     # image field removed - column does not exist in database
@@ -1642,6 +1643,19 @@ class Property(models.Model):
         is_new = self.pk is None
         if not self.title:
             self.title = f'{self.get_type_display()} - {self.district}'
+        
+        # Auto-set subscription-based if broker has active subscription
+        if is_new and self.broker:
+            if self.broker.is_subscription_active():
+                self.is_subscription_based = True
+                # Set publication dates based on subscription
+                if self.broker.subscription_end_date:
+                    from django.utils import timezone
+                    self.publication_start_date = timezone.now()
+                    self.publication_end_date = timezone.now().replace(
+                        hour=23, minute=59, second=59
+                    ) if not self.publication_end_date else self.publication_end_date
+        
         super().save(*args, **kwargs)
         if is_new or not self.slug:
             base = slugify(f'{self.title}-{self.district}-{self.pk}', allow_unicode=True)
@@ -4612,6 +4626,9 @@ class Broker(models.Model):
     is_suspended = models.BooleanField(
         default=False, verbose_name='مجمد'
     )
+    suspension_reason = models.CharField(
+        max_length=200, blank=True, verbose_name='سبب التجميد'
+    )
     id_card_image = models.ImageField(
         upload_to='broker_ids/', null=True, blank=True, verbose_name='صورة الهوية'
     )
@@ -4754,9 +4771,13 @@ class Broker(models.Model):
         if self.subscription_end_date < today and not self.is_suspended:
             # Subscription expired, suspend account
             self.is_suspended = True
+            self.suspension_reason = 'انتهاء الاشتراك'
             self.can_add_properties = False
             self.can_edit_properties = False
             self.save()
+            
+            # Hide all subscription-based properties
+            self.hide_subscription_properties()
             
             # Create notification for user
             try:
@@ -4767,11 +4788,26 @@ class Broker(models.Model):
                     title='انتهاء الاشتراك',
                     message=(
                         f'انتهى اشتراكك في {self.subscription_end_date}. '
-                        'تم تعطيل حسابك مؤقتاً. يرجى تجديد الاشتراك للاستمرار.'
+                        'تم تعطيل حسابك مؤقتاً وإخفاء جميع منشوراتك. '
+                        'يرجى تجديد الاشتراك للاستمرار.'
                     ),
                 )
             except Exception:
                 pass
+    
+    def hide_subscription_properties(self):
+        """Hide all subscription-based properties when subscription expires."""
+        from django.utils import timezone
+        now = timezone.now()
+        
+        # Update all subscription-based properties to expired status
+        self.properties.filter(
+            is_subscription_based=True,
+            status='published'
+        ).update(
+            status='expired',
+            publication_end_date=now
+        )
 
     def can_publish_property(self):
         """Check if broker can publish property."""
