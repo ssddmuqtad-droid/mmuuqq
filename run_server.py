@@ -86,12 +86,17 @@ def main():
         
         print("\nFacebook OAuth:", flush=True)
         if facebook_key:
-            print("✓ App ID Loaded", flush=True)
+            print(f"✓ App ID Loaded (Length: {len(facebook_key)} chars)", flush=True)
+            # Check if App ID looks valid (numeric)
+            if facebook_key.isdigit():
+                print("✓ App ID format valid (numeric)", flush=True)
+            else:
+                print(f"✗ App ID format invalid - must be numeric, got: {facebook_key[:10]}...", flush=True)
         else:
             print("✗ App ID Missing - SOCIAL_AUTH_FACEBOOK_KEY not set", flush=True)
         
         if facebook_secret:
-            print("✓ App Secret Loaded", flush=True)
+            print(f"✓ App Secret Loaded (Length: {len(facebook_secret)} chars)", flush=True)
         else:
             print("✗ App Secret Missing - SOCIAL_AUTH_FACEBOOK_SECRET not set", flush=True)
         
