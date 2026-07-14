@@ -2373,14 +2373,14 @@ def properties_outside_iraq_view(request):
     hotels_list = []
     
     # Get all countries for the filter dropdown
-    countries = Country.objects.filter(is_active=True).order_by('order', 'name_ar')
+    countries = Country.objects.all().order_by('order', 'name_ar')
     cities = []
     areas = []
     
     if country_id:
-        cities = City.objects.filter(country_id=country_id, is_active=True).order_by('name_ar')
+        cities = City.objects.filter(country_id=country_id).order_by('name_ar')
     if city_id:
-        areas = Area.objects.filter(city_id=city_id, is_active=True).order_by('name_ar')
+        areas = Area.objects.filter(city_id=city_id).order_by('name_ar')
     
     # Get properties outside Iraq
     if category in ['all', 'properties']:
@@ -2464,7 +2464,7 @@ def properties_outside_iraq_view(request):
     
     # Get resorts outside Iraq
     if category in ['all', 'resorts']:
-        resorts = Resort.objects.filter(is_active=True)
+        resorts = Resort.objects.filter(status='active')
         resorts = [r for r in resorts if r.country and r.country.code != 'IQ']
         
         # Filter by country
@@ -2482,7 +2482,7 @@ def properties_outside_iraq_view(request):
     
     # Get hotels outside Iraq
     if category in ['all', 'hotels']:
-        hotels = Hotel.objects.filter(is_active=True)
+        hotels = Hotel.objects.all()
         hotels = [h for h in hotels if h.country and h.country.code != 'IQ']
         
         # Filter by country
