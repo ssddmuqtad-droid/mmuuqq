@@ -87,6 +87,7 @@ logger.info(f"CUSTOM_DOMAIN={custom_domain}")
 
 # CSRF_TRUSTED_ORIGINS
 if DEBUG:
+    railway_domain = os.getenv('RAILWAY_PUBLIC_DOMAIN', '')
     CSRF_TRUSTED_ORIGINS = [
         'http://localhost:8000',
         'http://127.0.0.1:8000',
@@ -94,7 +95,7 @@ if DEBUG:
         'http://127.0.0.1:3000',
         'http://127.0.0.1:62950',
         'http://localhost:62950',
-        RAILWAY_PUBLIC_DOMAIN and f'https://{RAILWAY_PUBLIC_DOMAIN}',
+        railway_domain and f'https://{railway_domain}',
         'https://mup.up.railway.app',
         'https://muq.up.railway.app',
         'https://muqq.up.railway.app',
