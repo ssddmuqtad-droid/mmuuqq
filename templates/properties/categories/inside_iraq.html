@@ -4,6 +4,125 @@
 
 {% block extra_css %}
 <style>
+.hero-quick-search {
+  position: relative;
+  z-index: 10;
+  margin-top: -30px;
+  padding: 0 20px;
+}
+
+.quick-search-box {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-lg);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.search-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.search-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+
+.search-header h3 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.search-header p {
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.search-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.search-inputs .form-group {
+  margin-bottom: 0;
+}
+
+.search-inputs .form-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.label-icon {
+  font-size: 1.1rem;
+}
+
+.search-inputs .form-control {
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.search-inputs .form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.search-inputs .form-control::placeholder {
+  color: var(--text-light);
+}
+
+.search-btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+}
+
+.search-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+}
+
+.search-btn:active {
+  transform: translateY(0);
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+}
+
 .category-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 60px 20px;
@@ -102,6 +221,86 @@
   <div class="category-icon">{{ category_icon }}</div>
   <h1 class="category-title">{{ category_title }}</h1>
   <p class="category-subtitle">تصفح العقارات داخل العراق مع خيارات فلترة متقدمة</p>
+</div>
+
+<!-- Quick Search Section -->
+<div class="hero-quick-search">
+  <form class="quick-search-box container" method="get" action="{% url 'category_inside_iraq' %}">
+    <div class="search-header">
+      <div class="search-icon">🔍</div>
+      <h3>ابحث عن عقارك</h3>
+      <p>اكتشف العقارات المميزة في العراق</p>
+    </div>
+    <div class="search-inputs">
+      <div class="form-group">
+        <label>
+          <span class="label-icon">💰</span>
+          الحالة
+        </label>
+        <select name="status" class="form-control">
+          <option value="">كل الحالات</option>
+          <option value="sale" {% if request.GET.status == 'sale' %}selected{% endif %}>بيع</option>
+          <option value="rent" {% if request.GET.status == 'rent' %}selected{% endif %}>إيجار</option>
+          <option value="investment" {% if request.GET.status == 'investment' %}selected{% endif %}>استثمار</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🏠</span>
+          التصنيف
+        </label>
+        <select name="category" class="form-control">
+          <option value="">كل التصنيفات</option>
+          <option value="residential" {% if request.GET.category == 'residential' %}selected{% endif %}>سكني</option>
+          <option value="commercial" {% if request.GET.category == 'commercial' %}selected{% endif %}>تجاري</option>
+          <option value="investment" {% if request.GET.category == 'investment' %}selected{% endif %}>استثماري</option>
+          <option value="tourism" {% if request.GET.category == 'tourism' %}selected{% endif %}>سياحي</option>
+          <option value="land" {% if request.GET.category == 'land' %}selected{% endif %}>أراضي</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🏛️</span>
+          المحافظة
+        </label>
+        <select name="governorate" class="form-control">
+          <option value="">كل المحافظات</option>
+          {% for code, name in governorates %}
+          <option value="{{ code }}" {% if request.GET.governorate == code %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>
+          <span class="label-icon">📍</span>
+          المنطقة
+        </label>
+        <input type="text" name="district" class="form-control" placeholder="اكتب اسم المنطقة..." value="{{ request.GET.district|default:'' }}">
+      </div>
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🏢</span>
+          نوع العقار
+        </label>
+        <select name="type" class="form-control">
+          <option value="">كل الأنواع</option>
+          <option value="apartment" {% if request.GET.type == 'apartment' %}selected{% endif %}>شقة</option>
+          <option value="house" {% if request.GET.type == 'house' %}selected{% endif %}>منزل</option>
+          <option value="villa" {% if request.GET.type == 'villa' %}selected{% endif %}>فيلا</option>
+          <option value="land" {% if request.GET.type == 'land' %}selected{% endif %}>أرض</option>
+          <option value="building" {% if request.GET.type == 'building' %}selected{% endif %}>بناية</option>
+          <option value="store" {% if request.GET.type == 'store' %}selected{% endif %}>محل تجاري</option>
+          <option value="office" {% if request.GET.type == 'office' %}selected{% endif %}>مكتب</option>
+          <option value="warehouse" {% if request.GET.type == 'warehouse' %}selected{% endif %}>مخزن</option>
+          <option value="farm" {% if request.GET.type == 'farm' %}selected{% endif %}>مزرعة</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary btn-lg search-btn">
+      <span class="btn-icon">🔍</span>
+      <span>بحث</span>
+    </button>
+  </form>
 </div>
 
 <div class="container">
