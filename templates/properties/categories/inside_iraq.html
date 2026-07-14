@@ -295,6 +295,20 @@
           <option value="farm" {% if request.GET.type == 'farm' %}selected{% endif %}>مزرعة</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>
+          <span class="label-icon">💵</span>
+          السعر من
+        </label>
+        <input type="number" name="price_min" class="form-control" placeholder="السعر الأدنى" value="{{ request.GET.price_min|default:'' }}">
+      </div>
+      <div class="form-group">
+        <label>
+          <span class="label-icon">💰</span>
+          السعر إلى
+        </label>
+        <input type="number" name="price_max" class="form-control" placeholder="السعر الأعلى" value="{{ request.GET.price_max|default:'' }}">
+      </div>
     </div>
     <button type="submit" class="btn btn-primary btn-lg search-btn">
       <span class="btn-icon">🔍</span>
