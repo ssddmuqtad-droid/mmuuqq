@@ -1,8 +1,22 @@
 import json
+import os
 
 from .constants import GOVERNORATE_CITIES, IRAQ_GOVERNORATES
 from .models import SiteSettings
 from .permissions import can_access_dashboard, can_access_admin_panel, can_manage_brokers, get_broker
+
+
+def oauth_context(request):
+    """Context processor to check OAuth configuration status."""
+    google_configured = bool(os.getenv('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', '').strip() and 
+                            os.getenv('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET', '').strip())
+    facebook_configured = bool(os.getenv('SOCIAL_AUTH_FACEBOOK_KEY', '').strip() and 
+                               os.getenv('SOCIAL_AUTH_FACEBOOK_SECRET', '').strip())
+    
+    return {
+        'google_oauth_configured': google_configured,
+        'facebook_oauth_configured': facebook_configured,
+    }
 
 
 def site_context(request):

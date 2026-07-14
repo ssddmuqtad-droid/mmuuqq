@@ -172,6 +172,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'properties.context_processors.site_context',
+                'properties.context_processors.oauth_context',
             ],
         },
     },
@@ -281,6 +282,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = '/'
 
 # --- Security ---
 SECURE_BROWSER_XSS_FILTER = True
