@@ -1714,13 +1714,37 @@ def subscription_plan_create_api(request):
         from .models import SubscriptionPlan
         data = json.loads(request.body)
         
+        # Validate required fields
+        name = data.get('name', '').strip()
+        period = data.get('period', '').strip()
+        ads_limit = data.get('ads_limit')
+        price = data.get('price', 0)
+        price_per_property = data.get('price_per_property', 50.00)
+        color = data.get('color', '#FF6B35').strip()
+        
+        if not name:
+            return JsonResponse({'success': False, 'error': 'اسم الخطة مطلوب'}, status=400)
+        if not period:
+            return JsonResponse({'success': False, 'error': 'فترة الاشتراك مطلوبة'}, status=400)
+        if ads_limit is None or ads_limit < 0:
+            return JsonResponse({'success': False, 'error': 'حد الإعلانات يجب أن يكون رقماً موجباً'}, status=400)
+        
+        try:
+            ads_limit = int(ads_limit)
+            price = float(price)
+            price_per_property = float(price_per_property)
+            if price < 0 or price_per_property < 0:
+                return JsonResponse({'success': False, 'error': 'السعر يجب أن يكون رقماً موجباً'}, status=400)
+        except (ValueError, TypeError):
+            return JsonResponse({'success': False, 'error': 'قيم غير صحيحة'}, status=400)
+        
         plan = SubscriptionPlan.objects.create(
-            name=data.get('name'),
-            period=data.get('period'),
-            ads_limit=data.get('ads_limit'),
-            price=data.get('price', 0),
-            price_per_property=data.get('price_per_property', 50.00),
-            color=data.get('color', '#0d9488'),
+            name=name,
+            period=period,
+            ads_limit=ads_limit,
+            price=price,
+            price_per_property=price_per_property,
+            color=color,
             is_active=data.get('is_active', True)
         )
         
@@ -1743,13 +1767,48 @@ def subscription_plan_update_api(request, plan_id):
         plan = SubscriptionPlan.objects.get(id=plan_id)
         data = json.loads(request.body)
         
-        plan.name = data.get('name', plan.name)
-        plan.period = data.get('period', plan.period)
-        plan.ads_limit = data.get('ads_limit', plan.ads_limit)
-        plan.price = data.get('price', plan.price)
-        plan.price_per_property = data.get('price_per_property', plan.price_per_property)
-        plan.color = data.get('color', plan.color)
-        plan.is_active = data.get('is_active', plan.is_active)
+        # Validate and update fields
+        name = data.get('name', '').strip()
+        period = data.get('period', '').strip()
+        ads_limit = data.get('ads_limit')
+        price = data.get('price')
+        price_per_property = data.get('price_per_property')
+        color = data.get('color', '').strip()
+        is_active = data.get('is_active')
+        
+        if name:
+            plan.name = name
+        if period:
+            plan.period = period
+        if ads_limit is not None:
+            try:
+                ads_limit = int(ads_limit)
+                if ads_limit < 0:
+                    return JsonResponse({'success': False, 'error': 'حد الإعلانات يجب أن يكون رقماً موجباً'}, status=400)
+                plan.ads_limit = ads_limit
+            except (ValueError, TypeError):
+                return JsonResponse({'success': False, 'error': 'قيمة غير صحيحة لحد الإعلانات'}, status=400)
+        if price is not None:
+            try:
+                price = float(price)
+                if price < 0:
+                    return JsonResponse({'success': False, 'error': 'السعر يجب أن يكون رقماً موجباً'}, status=400)
+                plan.price = price
+            except (ValueError, TypeError):
+                return JsonResponse({'success': False, 'error': 'قيمة غير صحيحة للسعر'}, status=400)
+        if price_per_property is not None:
+            try:
+                price_per_property = float(price_per_property)
+                if price_per_property < 0:
+                    return JsonResponse({'success': False, 'error': 'سعر العقار يجب أن يكون رقماً موجباً'}, status=400)
+                plan.price_per_property = price_per_property
+            except (ValueError, TypeError):
+                return JsonResponse({'success': False, 'error': 'قيمة غير صحيحة لسعر العقار'}, status=400)
+        if color:
+            plan.color = color
+        if is_active is not None:
+            plan.is_active = bool(is_active)
+        
         plan.save()
         
         return JsonResponse({'success': True})
@@ -1757,7 +1816,7 @@ def subscription_plan_update_api(request, plan_id):
         return JsonResponse({'success': False, 'error': 'الخطة غير موجودة'}, status=404)
     except Exception as e:
         logger.error(f"Error updating plan: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse({'success': False, 'error': 'حدث خطأ أثناء تحديث الخطة'}, status=500)
 
 
 @login_required
@@ -1828,7 +1887,7 @@ def subscription_request_reject_api(request, request_id):
 def subscription_request_create_api(request):
     """API endpoint for users to create subscription requests."""
     try:
-        from .models import SubscriptionRequest, Broker
+        from .models import SubscriptionRequest, Broker, SubscriptionPlan
         data = json.loads(request.body)
         
         # Check if user has a broker profile
@@ -1837,18 +1896,64 @@ def subscription_request_create_api(request):
         except Broker.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'ليس لديك ملف دلال'}, status=400)
         
+        # Validate input data
+        plan_id = data.get('plan_id')
+        custom_plan_name = data.get('custom_plan_name', '').strip()
+        custom_price = data.get('custom_price')
+        custom_duration = data.get('custom_duration', '').strip()
+        custom_properties_limit = data.get('custom_properties_limit')
+        message = data.get('message', '').strip()
+        
+        # Validate required fields
+        if not plan_id and not custom_plan_name:
+            return JsonResponse({'success': False, 'error': 'يجب اختيار خطة أو تحديد خطة مخصصة'}, status=400)
+        
+        # Get requested plan if provided
+        requested_plan = None
+        if plan_id:
+            try:
+                requested_plan = SubscriptionPlan.objects.get(id=plan_id, is_active=True)
+            except SubscriptionPlan.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'الخطة المختارة غير موجودة'}, status=400)
+        
+        # Validate custom plan data
+        if custom_plan_name:
+            if not custom_price or not custom_duration or not custom_properties_limit:
+                return JsonResponse({'success': False, 'error': 'الخطة المخصصة يجب أن تحتوي على السعر والمدة وعدد العقارات'}, status=400)
+            
+            try:
+                custom_price = float(custom_price)
+                custom_properties_limit = int(custom_properties_limit)
+                if custom_price < 0 or custom_properties_limit < 0:
+                    return JsonResponse({'success': False, 'error': 'السعر وعدد العقارات يجب أن يكونا أرقاماً موجبة'}, status=400)
+            except (ValueError, TypeError):
+                return JsonResponse({'success': False, 'error': 'قيم غير صحيحة للسعر أو عدد العقارات'}, status=400)
+        
+        # Check if there's already a pending request
+        existing_request = SubscriptionRequest.objects.filter(
+            broker=broker,
+            status=SubscriptionRequest.STATUS_PENDING
+        ).first()
+        
+        if existing_request:
+            return JsonResponse({'success': False, 'error': 'لديك طلب قيد الانتظار بالفعل'}, status=400)
+        
         # Create request
         sub_request = SubscriptionRequest.objects.create(
-            user=request.user,
-            request_type=data.get('request_type', 'upgrade'),
-            current_plan=broker.subscription_plan,
-            notes=data.get('notes', '')
+            broker=broker,
+            requested_plan=requested_plan,
+            custom_plan_name=custom_plan_name,
+            custom_price=custom_price,
+            custom_duration=custom_duration,
+            custom_properties_limit=custom_properties_limit,
+            message=message,
+            status=SubscriptionRequest.STATUS_PENDING
         )
         
         return JsonResponse({'success': True, 'request_id': sub_request.id})
     except Exception as e:
         logger.error(f"Error creating subscription request: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse({'success': False, 'error': 'حدث خطأ أثناء إنشاء الطلب'}, status=500)
 
 
 @login_required
