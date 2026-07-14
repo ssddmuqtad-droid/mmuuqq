@@ -10,13 +10,13 @@ class HealthCheckMiddleware:
             from django.http import JsonResponse
             from django.utils import timezone
             import os
-            
+
             # Bypass ALLOWED_HOSTS check by modifying the request
             # This must happen before CommonMiddleware processes it
             request.META['HTTP_HOST'] = 'localhost'
             request.META['SERVER_NAME'] = 'localhost'
             request.META['SERVER_PORT'] = '8000'
-            
+
             # Simple health check without database verification
             return JsonResponse({
                 'status': 'healthy',
@@ -24,12 +24,33 @@ class HealthCheckMiddleware:
                 'version': os.getenv('RAILWAY_GIT_COMMIT_SHA', 'unknown'),
                 'timestamp': timezone.now().isoformat(),
             }, status=200)
-        
+
         # Log all requests for debugging
         import logging
         logger = logging.getLogger('django.request')
         logger.info(f"HealthCheckMiddleware: Processing {request.path} - Host: {request.get_host()}")
-        
+
+        return self.get_response(request)
+
+
+class BaseURLMiddleware:
+    """Dynamically override BASE_URL based on the request host."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Override BASE_URL dynamically based on the request host
+        from django.conf import settings
+        host = request.get_host()
+        if host and host != 'localhost' and host != '127.0.0.1':
+            # Override BASE_URL for this request
+            scheme = 'https' if request.is_secure() else 'http'
+            settings.BASE_URL = f'{scheme}://{host}'
+            # Also update OAuth redirect URIs
+            settings.SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = f'{settings.BASE_URL}/social/complete/google-oauth2/'
+            settings.SOCIAL_AUTH_FACEBOOK_OAUTH2_REDIRECT_URI = f'{settings.BASE_URL}/social/complete/facebook/'
+
         return self.get_response(request)
 
 

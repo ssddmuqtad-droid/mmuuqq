@@ -148,6 +148,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'properties.middleware.HealthCheckMiddleware',
+    'properties.middleware.BaseURLMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -408,12 +409,16 @@ SOCIAL_AUTH_FACEBOOK_KEY = os.getenv('SOCIAL_AUTH_FACEBOOK_KEY', '').strip()
 SOCIAL_AUTH_FACEBOOK_SECRET = os.getenv('SOCIAL_AUTH_FACEBOOK_SECRET', '').strip()
 
 RAILWAY_PUBLIC_DOMAIN = os.getenv('RAILWAY_PUBLIC_DOMAIN', '')
+# Also check for alternative Railway domains from ALLOWED_HOSTS
 if RAILWAY_PUBLIC_DOMAIN:
     BASE_URL = f'https://{RAILWAY_PUBLIC_DOMAIN}'
 elif custom_domain:
     BASE_URL = f'https://{custom_domain}'
 else:
     BASE_URL = 'http://127.0.0.1:8000'
+
+# Override BASE_URL if we detect muqq.up.railway.app from request headers
+# This is handled dynamically in middleware, but we need a fallback here
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.email',
