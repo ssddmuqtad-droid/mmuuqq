@@ -21,7 +21,6 @@ IRAQ_GOVERNORATES = [
     ('DUH', 'دهوك'),
     ('SUL', 'السليمانية'),
     ('HAL', 'حلبجة'),
-    ('KIRKUK', 'كركوك'),
 ]
 
 # Property categories (main classification)
