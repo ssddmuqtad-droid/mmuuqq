@@ -91,6 +91,9 @@
       <li><a href="/admin/" target="_blank">
         <span class="nav-icon">🔧</span> Django Admin
       </a></li>
+      <li><a href="{% url 'social_settings' %}" class="{% if request.resolver_match.url_name == 'social_settings' %}active{% endif %}">
+        <span class="nav-icon">🔗</span> ربط حساب Google
+      </a></li>
       {% endif %}
 
       {% if is_broker %}
