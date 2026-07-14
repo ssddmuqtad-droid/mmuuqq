@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, api, broker_views, dallal_views
+from . import views, api, broker_views, dallal_views, otp_views
 try:
     from . import api_views_enterprise as api_enterprise
 except ImportError:
@@ -56,6 +56,11 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('password-reset/', views.password_reset_request, name='password_reset'),
     path('password-change/', views.password_change, name='password_change'),
+    # OTP Verification
+    path('otp/send/', otp_views.send_otp_view, name='send_otp'),
+    path('otp/verify/', otp_views.verify_otp_view, name='verify_otp'),
+    path('otp/verification/', otp_views.otp_verification_page, name='otp_verification'),
+    path('otp/resend/', otp_views.resend_otp_view, name='resend_otp'),
     # Admin Panel
     path('admin-panel/', views.admin_panel, name='admin_panel'),
     path('admin-panel/contact/', views.admin_contact_view, name='admin_contact'),

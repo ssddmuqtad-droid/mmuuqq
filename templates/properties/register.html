@@ -51,7 +51,23 @@
           <span class="label-icon">📱</span>
           رقم الهاتف *
         </label>
-        <input type="tel" name="phone" id="phone" class="form-control" required autocomplete="tel" placeholder="07XXXXXXXXX">
+        <div class="phone-input-group">
+          <input type="tel" name="phone" id="phone" class="form-control" required autocomplete="tel" placeholder="07XXXXXXXXX">
+          <button type="button" class="btn btn-outline" id="send-otp-btn">
+            <span class="btn-icon">📲</span>
+            إرسال رمز
+          </button>
+        </div>
+        <small class="form-text" id="otp-status"></small>
+      </div>
+      
+      <div class="form-group" id="otp-group" style="display: none;">
+        <label for="otp-code">
+          <span class="label-icon">🔢</span>
+          رمز التحقق
+        </label>
+        <input type="text" name="otp_code" id="otp-code" class="form-control" maxlength="6" pattern="[0-9]{6}" placeholder="أدخل الرمز المكون من 6 أرقام">
+        <small class="form-text">الرمز صالح لمدة 10 دقائق</small>
       </div>
       
       <div class="form-group">
@@ -168,15 +184,6 @@
           <span>المتابعة باستخدام Google</span>
         </button>
       </form>
-      <form action="{% url 'social:begin' 'facebook' %}" method="post">
-        {% csrf_token %}
-        <button type="submit" class="social-btn facebook-btn">
-          <svg class="social-icon" viewBox="0 0 24 24">
-            <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-          </svg>
-          <span>المتابعة باستخدام Facebook</span>
-        </button>
-      </form>
     </div>
     
     <div class="auth-footer">
@@ -190,6 +197,131 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const sendOtpBtn = document.getElementById('send-otp-btn');
+  const phoneInput = document.getElementById('phone');
+  const otpGroup = document.getElementById('otp-group');
+  const otpCode = document.getElementById('otp-code');
+  const otpStatus = document.getElementById('otp-status');
+  const registerForm = document.querySelector('.auth-form');
+  
+  let isOtpVerified = false;
+  
+  // إرسال OTP
+  sendOtpBtn.addEventListener('click', function() {
+    const phone = phoneInput.value.trim();
+    
+    if (!phone) {
+      otpStatus.textContent = 'يرجى إدخال رقم الهاتف';
+      otpStatus.className = 'form-text error';
+      return;
+    }
+    
+    if (!phone.startsWith('07') || phone.length !== 11) {
+      otpStatus.textContent = 'رقم الهاتف يجب أن يبدأ بـ 07 ويكون 11 رقم';
+      otpStatus.className = 'form-text error';
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('phone', phone);
+    formData.append('purpose', 'registration');
+    
+    sendOtpBtn.disabled = true;
+    sendOtpBtn.innerHTML = '<span class="btn-icon">⏳</span> جاري الإرسال...';
+    
+    fetch('{% url "send_otp" %}', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]').value
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        otpStatus.textContent = 'تم إرسال رمز التحقق بنجاح. الرمز صالح لمدة 10 دقائق';
+        otpStatus.className = 'form-text success';
+        otpGroup.style.display = 'block';
+        otpCode.focus();
+        sendOtpBtn.innerHTML = '<span class="btn-icon">📲</span> إعادة الإرسال';
+      } else {
+        otpStatus.textContent = data.error || 'حدث خطأ أثناء إرسال رمز التحقق';
+        otpStatus.className = 'form-text error';
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      otpStatus.textContent = 'حدث خطأ أثناء إرسال رمز التحقق';
+      otpStatus.className = 'form-text error';
+    })
+    .finally(() => {
+      sendOtpBtn.disabled = false;
+    });
+  });
+  
+  // التحقق من OTP عند الإدخال
+  otpCode.addEventListener('blur', function() {
+    const code = this.value.trim();
+    const phone = phoneInput.value.trim();
+    
+    if (code.length === 6 && phone) {
+      const formData = new FormData();
+      formData.append('phone', phone);
+      formData.append('code', code);
+      formData.append('purpose', 'registration');
+      
+      fetch('{% url "verify_otp" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]').value
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          otpStatus.textContent = 'تم التحقق من الرمز بنجاح';
+          otpStatus.className = 'form-text success';
+          isOtpVerified = true;
+          otpCode.style.borderColor = 'var(--success)';
+        } else {
+          otpStatus.textContent = data.error || 'رمز التحقق غير صحيح';
+          otpStatus.className = 'form-text error';
+          isOtpVerified = false;
+          otpCode.style.borderColor = 'var(--danger)';
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        otpStatus.textContent = 'حدث خطأ أثناء التحقق';
+        otpStatus.className = 'form-text error';
+      });
+    }
+  });
+  
+  // السماح فقط بالأرقام في حقل OTP
+  otpCode.addEventListener('input', function(e) {
+    this.value = this.value.replace(/[^0-9]/g, '');
+  });
+  
+  // التحقق من OTP قبل إرسال النموذج
+  registerForm.addEventListener('submit', function(e) {
+    const phone = phoneInput.value.trim();
+    const code = otpCode.value.trim();
+    
+    if (phone && !isOtpVerified) {
+      e.preventDefault();
+      otpStatus.textContent = 'يرجى التحقق من رقم الهاتف أولاً';
+      otpStatus.className = 'form-text error';
+      otpCode.focus();
+      return false;
+    }
+  });
+});
+</script>
 
 <style>
 .auth-page {
@@ -481,6 +613,38 @@
   background: var(--bg-alt);
   color: var(--text);
   text-decoration: none;
+}
+
+.phone-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.phone-input-group .form-control {
+  flex: 1;
+}
+
+.phone-input-group .btn {
+  white-space: nowrap;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+}
+
+#otp-status {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 6px;
+}
+
+#otp-status.success {
+  color: var(--success);
+}
+
+#otp-status.error {
+  color: var(--danger);
+}
+
+.social-btn {
   font-weight: 600;
   font-size: 0.95rem;
   transition: all 0.3s ease;
