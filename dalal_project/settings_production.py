@@ -153,18 +153,18 @@ logger.info(f"Properties in INSTALLED_APPS: {'properties' in INSTALLED_APPS}")
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'properties.middleware.HealthCheckMiddleware',
-    'properties.middleware.BaseURLMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'properties.middleware.HealthCheckMiddleware',
+    'properties.middleware.BaseURLMiddleware',
     'properties.middleware.MaintenanceModeMiddleware',
     'properties.middleware.SubscriptionCheckMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'dalal_project.urls'
@@ -297,11 +297,14 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
 USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Always use secure cookies for HTTPS (Railway deployment)
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 if not DEBUG:
     SECURE_SSL_REDIRECT = False
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 0
     SECURE_HSTS_INCLUDE_SUBDOMAINS = False
     SECURE_HSTS_PRELOAD = False
@@ -460,6 +463,7 @@ SOCIAL_AUTH_FORCE_RANDOM_USERNAME = False
 SOCIAL_AUTH_USERNAME_IS_FULL_EMAIL = True
 SOCIAL_AUTH_SLUGIFY_USERNAMES = 'lower'
 SOCIAL_AUTH_SANITIZE_USERNAMES = True
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
 
 # CORS Settings
 CORS_ALLOW_ALL_ORIGINS = DEBUG
