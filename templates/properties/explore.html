@@ -317,6 +317,15 @@
 
   <!-- Property Cards Container -->
   <div class="explore-container" id="exploreContainer">
+    <div class="explore-nav">
+      <a href="?category=all" class="explore-nav-link {% if category == 'all' %}active{% endif %}">الكل</a>
+      <a href="?category=properties" class="explore-nav-link {% if category == 'properties' %}active{% endif %}">عقارات</a>
+      <a href="?category=resorts" class="explore-nav-link {% if category == 'resorts' %}active{% endif %}">منتجعات</a>
+      <a href="?category=hotels" class="explore-nav-link {% if category == 'hotels' %}active{% endif %}">فنادق</a>
+    </div>
+  </div>
+
+  <div class="explore-content">
     {% if category == 'all' or category == 'properties' %}
     <h3 class="section-title">عقارات</h3>
     {% for property in properties %}
@@ -458,6 +467,7 @@
     </div>
     {% endfor %}
     {% endif %}
+  </div>
   </div>
 
   <!-- Swipe Indicator -->
@@ -621,11 +631,43 @@
 }
 
 .explore-container {
-  height: 100vh;
-  overflow-y: scroll;
-  scroll-snap-type: y mandatory;
-  scrollbar-width: none;
-  padding-top: 200px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  height: var(--nav-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  gap: 1rem;
+}
+
+.explore-nav {
+  display: flex;
+  list-style: none;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.explore-nav-link {
+  color: var(--text);
+  font-weight: 500;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.explore-nav-link:hover,
+.explore-nav-link.active {
+  background: #eff6ff;
+  color: var(--primary);
+}
+
+.explore-content {
+  padding: 1rem;
 }
 
 .explore-container::-webkit-scrollbar {
@@ -633,10 +675,11 @@
 }
 
 .property-card {
-  height: 100vh;
   scroll-snap-align: start;
   position: relative;
   background: #000;
+  height: auto;
+  min-height: 400px;
 }
 
 .media-container {
