@@ -114,6 +114,38 @@ STATUS_CHOICES = [
     ('investment', 'استثمار'),
 ]
 
+# Resort types
+RESORT_TYPES = [
+    ('beach', 'شاطئي'),
+    ('mountain', 'جبلي'),
+    ('desert', 'صحراوي'),
+    ('lake', 'بحيرة'),
+    ('spa', 'سبا'),
+    ('family', 'عائلي'),
+    ('luxury', 'فاخر'),
+    ('adventure', 'مغامرة'),
+    ('eco', 'بيئي'),
+    ('cultural', 'ثقافي'),
+]
+
+# Travel company types
+TRAVEL_COMPANY_TYPES = [
+    ('tourism', 'سياحة'),
+    ('hajj_umrah', 'حج وعمرة'),
+    ('business', 'أعمال'),
+    ('adventure', 'مغامرة'),
+    ('medical', 'سياحة علاجية'),
+    ('educational', 'سياحة تعليمية'),
+]
+
+# Travel types
+TRAVEL_TYPES = [
+    ('land', 'بري'),
+    ('air', 'جوي'),
+    ('sea', 'بحري'),
+    ('mixed', 'مختلط'),
+]
+
 # Subscription plans
 SUBSCRIPTION_PERIODS = [
     ('daily', 'يومي'),

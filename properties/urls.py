@@ -247,6 +247,18 @@ urlpatterns = [
     path('category/resorts/', views.resorts_category_view, name='category_resorts'),
     path('category/outside-iraq/', views.outside_iraq_category_view, name='category_outside_iraq'),
     
+    # Travel companies
+    path('travel-companies/', views.travel_companies_view, name='travel_companies'),
+    path('travel-companies/<int:pk>/', views.travel_company_detail, name='travel_company_detail'),
+    
+    # Resorts inside Iraq
+    path('resorts-inside-iraq/', views.resorts_inside_iraq_view, name='resorts_inside_iraq'),
+    path('resorts-inside-iraq/<int:pk>/', views.resort_inside_detail, name='resort_inside_detail'),
+    
+    # Resorts outside Iraq
+    path('resorts-outside-iraq/', views.resorts_outside_iraq_view, name='resorts_outside_iraq'),
+    path('resorts-outside-iraq/<int:pk>/', views.resort_outside_detail, name='resort_outside_detail'),
+    
     # Dynamic property addition
     path('add/dynamic/', views.dynamic_add_property, name='dynamic_add_property'),
     

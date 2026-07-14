@@ -19,6 +19,9 @@ from .constants import (
     TRANSACTION_TYPES,
     STATUS_CHOICES,
     SUBSCRIPTION_PERIODS,
+    RESORT_TYPES,
+    TRAVEL_COMPANY_TYPES,
+    TRAVEL_TYPES,
 )
 
 
@@ -10234,3 +10237,313 @@ class ServiceProviderQuote(models.Model):
         super().save(*args, **kwargs)
         self.page.quotes_count = self.page.quotes.count()
         self.page.save()
+
+
+# Travel and Resort Models
+
+def travel_company_image_path(instance, filename):
+    ext = filename.rsplit('.', 1)[-1].lower()[:10]
+    name = uuid.uuid4().hex[:10]
+    return os.path.join('travel_companies/', f'{instance.id}_{name}.{ext}')
+
+
+def travel_company_video_path(instance, filename):
+    ext = filename.rsplit('.', 1)[-1].lower()[:10]
+    name = uuid.uuid4().hex[:10]
+    return os.path.join('travel_companies/videos/', f'{instance.id}_{name}.{ext}')
+
+
+def resort_image_path(instance, filename):
+    ext = filename.rsplit('.', 1)[-1].lower()[:10]
+    name = uuid.uuid4().hex[:10]
+    return os.path.join('resorts/', f'{instance.id}_{name}.{ext}')
+
+
+def resort_video_path(instance, filename):
+    ext = filename.rsplit('.', 1)[-1].lower()[:10]
+    name = uuid.uuid4().hex[:10]
+    return os.path.join('resorts/videos/', f'{instance.id}_{name}.{ext}')
+
+
+class TravelCompany(models.Model):
+    """Travel companies with images and videos"""
+    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='travel_companies', verbose_name='المستخدم')
+    
+    # Basic Info
+    name = models.CharField(max_length=200, verbose_name='اسم الشركة')
+    name_en = models.CharField(max_length=200, blank=True, verbose_name='اسم الشركة بالإنجليزية')
+    description = models.TextField(verbose_name='وصف الشركة')
+    description_en = models.TextField(blank=True, verbose_name='وصف الشركة بالإنجليزية')
+    
+    # Company Type
+    company_type = models.CharField(max_length=50, choices=TRAVEL_COMPANY_TYPES, verbose_name='نوع الشركة')
+    
+    # Travel Types Supported
+    travel_types = models.JSONField(default=list, verbose_name='أنواع السفر المدعومة')
+    
+    # Contact Info
+    phone = models.CharField(max_length=20, verbose_name='رقم الهاتف')
+    email = models.EmailField(verbose_name='البريد الإلكتروني')
+    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
+    
+    # Location
+    address = models.CharField(max_length=300, verbose_name='العنوان')
+    governorate = models.CharField(max_length=50, choices=IRAQ_GOVERNORATES, verbose_name='المحافظة')
+    city = models.CharField(max_length=100, verbose_name='المدينة')
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط العرض')
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط الطول')
+    
+    # Media
+    logo = models.ImageField(upload_to=travel_company_image_path, blank=True, verbose_name='شعار الشركة')
+    cover_image = models.ImageField(upload_to=travel_company_image_path, blank=True, verbose_name='صورة الغلاف')
+    
+    # Rating and Reviews
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.0, verbose_name='التقييم')
+    reviews_count = models.IntegerField(default=0, verbose_name='عدد التقييمات')
+    
+    # Status
+    is_verified = models.BooleanField(default=False, verbose_name='موثق')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'شركة سفر'
+        verbose_name_plural = 'شركات السفر'
+        ordering = ['-is_featured', '-rating', '-created_at']
+    
+    def __str__(self):
+        return self.name
+    
+    def get_absolute_url(self):
+        return reverse('travel_company_detail', kwargs={'pk': self.pk})
+
+
+class TravelCompanyImage(models.Model):
+    """Travel company images"""
+    
+    company = models.ForeignKey(TravelCompany, on_delete=models.CASCADE, related_name='images', verbose_name='الشركة')
+    image = models.ImageField(upload_to=travel_company_image_path, verbose_name='الصورة')
+    caption = models.CharField(max_length=200, blank=True, verbose_name='التعليق')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    
+    class Meta:
+        verbose_name = 'صورة شركة سفر'
+        verbose_name_plural = 'صور شركات السفر'
+        ordering = ['order']
+    
+    def __str__(self):
+        return f'{self.company.name} - صورة {self.order}'
+
+
+class TravelCompanyVideo(models.Model):
+    """Travel company videos"""
+    
+    company = models.ForeignKey(TravelCompany, on_delete=models.CASCADE, related_name='videos', verbose_name='الشركة')
+    video = models.FileField(upload_to=travel_company_video_path, verbose_name='الفيديو')
+    thumbnail = models.ImageField(upload_to=travel_company_image_path, blank=True, verbose_name='صورة مصغرة')
+    caption = models.CharField(max_length=200, blank=True, verbose_name='التعليق')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    
+    class Meta:
+        verbose_name = 'فيديو شركة سفر'
+        verbose_name_plural = 'فيديوهات شركات السفر'
+        ordering = ['order']
+    
+    def __str__(self):
+        return f'{self.company.name} - فيديو {self.order}'
+
+
+class ResortInsideIraq(models.Model):
+    """Resorts inside Iraq"""
+    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='resorts_inside_iraq', verbose_name='المستخدم')
+    
+    # Basic Info
+    name = models.CharField(max_length=200, verbose_name='اسم المنتجع')
+    name_en = models.CharField(max_length=200, blank=True, verbose_name='الاسم بالإنجليزية')
+    description = models.TextField(verbose_name='وصف المنتجع')
+    description_en = models.TextField(blank=True, verbose_name='الوصف بالإنجليزية')
+    
+    # Resort Type
+    resort_type = models.CharField(max_length=50, choices=RESORT_TYPES, verbose_name='نوع المنتجع')
+    
+    # Location
+    governorate = models.CharField(max_length=50, choices=IRAQ_GOVERNORATES, verbose_name='المحافظة')
+    district = models.CharField(max_length=100, verbose_name='المنطقة')
+    address = models.CharField(max_length=300, verbose_name='العنوان')
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط العرض')
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط الطول')
+    
+    # Contact Info
+    phone = models.CharField(max_length=20, verbose_name='رقم الهاتف')
+    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
+    email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    
+    # Pricing
+    price_per_night = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='السعر لليلة')
+    currency = models.CharField(max_length=10, default='IQD', verbose_name='العملة')
+    
+    # Capacity
+    total_rooms = models.IntegerField(default=0, verbose_name='إجمالي الغرف')
+    total_chalets = models.IntegerField(default=0, verbose_name='إجمالي الشاليهات')
+    max_capacity = models.IntegerField(default=0, verbose_name='السعة القصوى')
+    
+    # Features
+    has_pool = models.BooleanField(default=False, verbose_name='مسبح')
+    has_restaurant = models.BooleanField(default=False, verbose_name='مطعم')
+    has_cafe = models.BooleanField(default=False, verbose_name='مقهى')
+    has_spa = models.BooleanField(default=False, verbose_name='سبا')
+    has_gym = models.BooleanField(default=False, verbose_name='نادي رياضي')
+    has_playground = models.BooleanField(default=False, verbose_name='ملعب أطفال')
+    has_wifi = models.BooleanField(default=False, verbose_name='واي فاي')
+    has_parking = models.BooleanField(default=False, verbose_name='موقف سيارات')
+    has_conference_hall = models.BooleanField(default=False, verbose_name='قاعة مؤتمرات')
+    
+    # Media
+    cover_image = models.ImageField(upload_to=resort_image_path, blank=True, verbose_name='صورة الغلاف')
+    
+    # Rating
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.0, verbose_name='التقييم')
+    reviews_count = models.IntegerField(default=0, verbose_name='عدد التقييمات')
+    
+    # Status
+    is_verified = models.BooleanField(default=False, verbose_name='موثق')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'منتجع داخل العراق'
+        verbose_name_plural = 'المنتجعات داخل العراق'
+        ordering = ['-is_featured', '-rating', '-created_at']
+    
+    def __str__(self):
+        return self.name
+    
+    def get_absolute_url(self):
+        return reverse('resort_inside_detail', kwargs={'pk': self.pk})
+
+
+class ResortOutsideIraq(models.Model):
+    """Resorts outside Iraq"""
+    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='resorts_outside_iraq', verbose_name='المستخدم')
+    country = models.ForeignKey('Country', on_delete=models.SET_NULL, null=True, verbose_name='الدولة')
+    
+    # Basic Info
+    name = models.CharField(max_length=200, verbose_name='اسم المنتجع')
+    name_en = models.CharField(max_length=200, blank=True, verbose_name='الاسم بالإنجليزية')
+    description = models.TextField(verbose_name='وصف المنتجع')
+    description_en = models.TextField(blank=True, verbose_name='الوصف بالإنجليزية')
+    
+    # Resort Type
+    resort_type = models.CharField(max_length=50, choices=RESORT_TYPES, verbose_name='نوع المنتجع')
+    
+    # Location
+    city = models.CharField(max_length=100, verbose_name='المدينة')
+    district = models.CharField(max_length=100, blank=True, verbose_name='المنطقة')
+    address = models.CharField(max_length=300, verbose_name='العنوان')
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط العرض')
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط الطول')
+    
+    # Contact Info
+    phone = models.CharField(max_length=20, verbose_name='رقم الهاتف')
+    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
+    email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    
+    # Pricing
+    price_per_night = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='السعر لليلة')
+    currency = models.CharField(max_length=10, default='USD', verbose_name='العملة')
+    
+    # Capacity
+    total_rooms = models.IntegerField(default=0, verbose_name='إجمالي الغرف')
+    total_chalets = models.IntegerField(default=0, verbose_name='إجمالي الشاليهات')
+    max_capacity = models.IntegerField(default=0, verbose_name='السعة القصوى')
+    
+    # Features
+    has_pool = models.BooleanField(default=False, verbose_name='مسبح')
+    has_restaurant = models.BooleanField(default=False, verbose_name='مطعم')
+    has_cafe = models.BooleanField(default=False, verbose_name='مقهى')
+    has_spa = models.BooleanField(default=False, verbose_name='سبا')
+    has_gym = models.BooleanField(default=False, verbose_name='نادي رياضي')
+    has_playground = models.BooleanField(default=False, verbose_name='ملعب أطفال')
+    has_wifi = models.BooleanField(default=False, verbose_name='واي فاي')
+    has_parking = models.BooleanField(default=False, verbose_name='موقف سيارات')
+    has_conference_hall = models.BooleanField(default=False, verbose_name='قاعة مؤتمرات')
+    
+    # Media
+    cover_image = models.ImageField(upload_to=resort_image_path, blank=True, verbose_name='صورة الغلاف')
+    
+    # Rating
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.0, verbose_name='التقييم')
+    reviews_count = models.IntegerField(default=0, verbose_name='عدد التقييمات')
+    
+    # Status
+    is_verified = models.BooleanField(default=False, verbose_name='موثق')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'منتجع خارج العراق'
+        verbose_name_plural = 'المنتجعات خارج العراق'
+        ordering = ['-is_featured', '-rating', '-created_at']
+    
+    def __str__(self):
+        return f'{self.name} - {self.country.name_ar if self.country else ""}'
+    
+    def get_absolute_url(self):
+        return reverse('resort_outside_detail', kwargs={'pk': self.pk})
+
+
+class ResortImage(models.Model):
+    """Resort images (for both inside and outside Iraq)"""
+    
+    resort_inside = models.ForeignKey(ResortInsideIraq, on_delete=models.CASCADE, null=True, blank=True, related_name='images', verbose_name='المنتجع داخل العراق')
+    resort_outside = models.ForeignKey(ResortOutsideIraq, on_delete=models.CASCADE, null=True, blank=True, related_name='images', verbose_name='المنتجع خارج العراق')
+    image = models.ImageField(upload_to=resort_image_path, verbose_name='الصورة')
+    caption = models.CharField(max_length=200, blank=True, verbose_name='التعليق')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    
+    class Meta:
+        verbose_name = 'صورة منتجع'
+        verbose_name_plural = 'صور المنتجعات'
+        ordering = ['order']
+    
+    def __str__(self):
+        resort = self.resort_inside or self.resort_outside
+        return f'{resort.name if resort else "Unknown"} - صورة {self.order}'
+
+
+class ResortVideo(models.Model):
+    """Resort videos (for both inside and outside Iraq)"""
+    
+    resort_inside = models.ForeignKey(ResortInsideIraq, on_delete=models.CASCADE, null=True, blank=True, related_name='videos', verbose_name='المنتجع داخل العراق')
+    resort_outside = models.ForeignKey(ResortOutsideIraq, on_delete=models.CASCADE, null=True, blank=True, related_name='videos', verbose_name='المنتجع خارج العراق')
+    video = models.FileField(upload_to=resort_video_path, verbose_name='الفيديو')
+    thumbnail = models.ImageField(upload_to=resort_image_path, blank=True, verbose_name='صورة مصغرة')
+    caption = models.CharField(max_length=200, blank=True, verbose_name='التعليق')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    
+    class Meta:
+        verbose_name = 'فيديو منتجع'
+        verbose_name_plural = 'فيديوهات المنتجعات'
+        ordering = ['order']
+    
+    def __str__(self):
+        resort = self.resort_inside or self.resort_outside
+        return f'{resort.name if resort else "Unknown"} - فيديو {self.order}'

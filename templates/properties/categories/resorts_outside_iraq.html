@@ -1,0 +1,435 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}{{ category_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.hero-quick-search {
+  position: relative;
+  z-index: 10;
+  margin-top: -30px;
+  padding: 0 20px;
+}
+
+.quick-search-box {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-lg);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.search-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.search-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+
+.search-header h3 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.search-header p {
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.search-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.search-inputs .form-group {
+  margin-bottom: 0;
+}
+
+.search-inputs .form-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.label-icon {
+  font-size: 1.1rem;
+}
+
+.search-inputs .form-control {
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.search-inputs .form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.search-btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.search-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.resorts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+  padding: 40px 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.resort-card {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.resort-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary);
+}
+
+.resort-cover {
+  position: relative;
+  height: 220px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  overflow: hidden;
+}
+
+.resort-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.resort-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.resort-badge.verified {
+  background: var(--success);
+}
+
+.resort-badge.featured {
+  background: var(--warning);
+  color: #000;
+}
+
+.resort-content {
+  padding: 20px;
+}
+
+.resort-name {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.resort-type {
+  font-size: 0.9rem;
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.resort-description {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 16px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.resort-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.feature-badge {
+  background: var(--bg-alt);
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.resort-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.resort-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.rating-stars {
+  color: #FFD700;
+  font-size: 1rem;
+}
+
+.rating-value {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.rating-count {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.resort-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.resort-price {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.resort-location {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.view-btn {
+  background: var(--gradient-primary);
+  color: white;
+  padding: 8px 20px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.view-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.no-results {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-light);
+}
+
+.no-results-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+}
+
+.no-results h3 {
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-quick-search">
+  <form class="quick-search-box container" method="get" action="{% url 'resorts_outside_iraq' %}">
+    <div class="search-header">
+      <div class="search-icon">🏝️</div>
+      <h3>ابحث عن منتجعك</h3>
+      <p>اكتشف المنتجعات المميزة خارج العراق</p>
+    </div>
+    <div class="search-inputs">
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🏖️</span>
+          نوع المنتجع
+        </label>
+        <select name="resort_type" class="form-control">
+          <option value="">الكل</option>
+          {% for type, label in resort_types %}
+          <option value="{{ type }}" {% if resort_type == type %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>
+          <span class="label-icon">🌍</span>
+          الدولة
+        </label>
+        <select name="country" class="form-control">
+          <option value="">الكل</option>
+          {% for country in countries %}
+          <option value="{{ country.id }}" {% if country_id == country.id|stringformat:"s" %}selected{% endif %}>{{ country.name_ar }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>
+          <span class="label-icon">💰</span>
+          الحد الأدنى للسعر
+        </label>
+        <input type="number" name="price_min" class="form-control" placeholder="الحد الأدنى" value="{{ price_min }}">
+      </div>
+      <div class="form-group">
+        <label>
+          <span class="label-icon">💰</span>
+          الحد الأقصى للسعر
+        </label>
+        <input type="number" name="price_max" class="form-control" placeholder="الحد الأقصى" value="{{ price_max }}">
+      </div>
+    </div>
+    <button type="submit" class="search-btn">بحث</button>
+  </form>
+</div>
+
+{% if resorts %}
+<div class="resorts-grid">
+  {% for resort in resorts %}
+  <a href="{% url 'resort_outside_detail' resort.pk %}" class="resort-card">
+    <div class="resort-cover">
+      {% if resort.cover_image %}
+      <img src="{{ resort.cover_image.url }}" alt="{{ resort.name }}">
+      {% else %}
+      <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem;">🏝️</div>
+      {% endif %}
+      {% if resort.is_verified %}
+      <span class="resort-badge verified">✓ موثق</span>
+      {% endif %}
+      {% if resort.is_featured %}
+      <span class="resort-badge featured">⭐ مميز</span>
+      {% endif %}
+    </div>
+    <div class="resort-content">
+      <h3 class="resort-name">{{ resort.name }}</h3>
+      <p class="resort-type">{{ resort.get_resort_type_display }}</p>
+      <p class="resort-description">{{ resort.description }}</p>
+      
+      <div class="resort-features">
+        {% if resort.has_pool %}
+        <span class="feature-badge">🏊 مسبح</span>
+        {% endif %}
+        {% if resort.has_restaurant %}
+        <span class="feature-badge">🍽️ مطعم</span>
+        {% endif %}
+        {% if resort.has_wifi %}
+        <span class="feature-badge">📶 واي فاي</span>
+        {% endif %}
+        {% if resort.has_parking %}
+        <span class="feature-badge">🅿️ موقف سيارات</span>
+        {% endif %}
+      </div>
+      
+      <div class="resort-meta">
+        <div class="meta-item">
+          <span>📞</span>
+          <span>{{ resort.phone }}</span>
+        </div>
+        {% if resort.whatsapp %}
+        <div class="meta-item">
+          <span>💬</span>
+          <span>{{ resort.whatsapp }}</span>
+        </div>
+        {% endif %}
+        <div class="meta-item">
+          <span>🛏️</span>
+          <span>{{ resort.total_rooms }} غرفة</span>
+        </div>
+      </div>
+      
+      <div class="resort-rating">
+        <span class="rating-stars">⭐</span>
+        <span class="rating-value">{{ resort.rating }}</span>
+        <span class="rating-count">({{ resort.reviews_count }} تقييم)</span>
+      </div>
+      
+      <div class="resort-footer">
+        <div>
+          {% if resort.price_per_night %}
+          <span class="resort-price">{{ resort.price_per_night }} {{ resort.currency }} / ليلة</span>
+          {% endif %}
+        </div>
+        <span class="view-btn">عرض التفاصيل</span>
+      </div>
+      
+      <div class="resort-location">🌍 {{ resort.country.name_ar if resort.country }} - {{ resort.city }}</div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="no-results">
+  <div class="no-results-icon">🔍</div>
+  <h3>لا توجد منتجعات</h3>
+  <p>لم يتم العثور على منتجعات تطابق بحثك</p>
+</div>
+{% endif %}
+{% endblock %}

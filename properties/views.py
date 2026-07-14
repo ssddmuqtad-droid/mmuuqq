@@ -11796,3 +11796,152 @@ def resort_my_bookings(request):
     }
     
     return render(request, 'properties/resort_my_bookings.html', context)
+
+
+# Travel Company Views
+
+def travel_companies_view(request):
+    """View for all travel companies"""
+    from properties.models import TravelCompany
+    from properties.constants import TRAVEL_COMPANY_TYPES, TRAVEL_TYPES
+    
+    # Get filters
+    company_type = request.GET.get('company_type', '')
+    travel_type = request.GET.get('travel_type', '')
+    governorate = request.GET.get('governorate', '')
+    
+    companies = TravelCompany.objects.filter(is_active=True)
+    
+    if company_type:
+        companies = companies.filter(company_type=company_type)
+    
+    if travel_type:
+        companies = companies.filter(travel_types__contains=travel_type)
+    
+    if governorate:
+        companies = companies.filter(governorate=governorate)
+    
+    return render(request, 'properties/travel_companies.html', {
+        'companies': companies,
+        'company_type': company_type,
+        'travel_type': travel_type,
+        'governorate': governorate,
+        'company_types': TRAVEL_COMPANY_TYPES,
+        'travel_types': TRAVEL_TYPES,
+        'governorates': IRAQ_GOVERNORATES,
+        'category_title': 'شركات السفر',
+        'category_icon': '✈️',
+    })
+
+
+def travel_company_detail(request, pk):
+    """View for travel company detail"""
+    from properties.models import TravelCompany
+    
+    company = get_object_or_404(TravelCompany, pk=pk, is_active=True)
+    
+    return render(request, 'properties/travel_company_detail.html', {
+        'company': company,
+    })
+
+
+# Resort Inside Iraq Views
+
+def resorts_inside_iraq_view(request):
+    """View for resorts inside Iraq"""
+    from properties.models import ResortInsideIraq
+    from properties.constants import RESORT_TYPES
+    
+    # Get filters
+    resort_type = request.GET.get('resort_type', '')
+    governorate = request.GET.get('governorate', '')
+    price_min = request.GET.get('price_min', '')
+    price_max = request.GET.get('price_max', '')
+    
+    resorts = ResortInsideIraq.objects.filter(is_active=True)
+    
+    if resort_type:
+        resorts = resorts.filter(resort_type=resort_type)
+    
+    if governorate:
+        resorts = resorts.filter(governorate=governorate)
+    
+    if price_min:
+        resorts = [r for r in resorts if r.price_per_night and r.price_per_night >= int(price_min)]
+    if price_max:
+        resorts = [r for r in resorts if r.price_per_night and r.price_per_night <= int(price_max)]
+    
+    return render(request, 'properties/categories/resorts_inside_iraq.html', {
+        'resorts': resorts,
+        'resort_type': resort_type,
+        'governorate': governorate,
+        'price_min': price_min,
+        'price_max': price_max,
+        'resort_types': RESORT_TYPES,
+        'governorates': IRAQ_GOVERNORATES,
+        'category_title': 'منتجعات داخل العراق',
+        'category_icon': '🏝️',
+    })
+
+
+def resort_inside_detail(request, pk):
+    """View for resort inside Iraq detail"""
+    from properties.models import ResortInsideIraq
+    
+    resort = get_object_or_404(ResortInsideIraq, pk=pk, is_active=True)
+    
+    return render(request, 'properties/resort_inside_detail.html', {
+        'resort': resort,
+    })
+
+
+# Resort Outside Iraq Views
+
+def resorts_outside_iraq_view(request):
+    """View for resorts outside Iraq"""
+    from properties.models import ResortOutsideIraq, Country
+    from properties.constants import RESORT_TYPES
+    
+    # Get filters
+    resort_type = request.GET.get('resort_type', '')
+    country_id = request.GET.get('country', '')
+    price_min = request.GET.get('price_min', '')
+    price_max = request.GET.get('price_max', '')
+    
+    resorts = ResortOutsideIraq.objects.filter(is_active=True)
+    
+    if resort_type:
+        resorts = resorts.filter(resort_type=resort_type)
+    
+    if country_id:
+        resorts = resorts.filter(country_id=int(country_id))
+    
+    if price_min:
+        resorts = [r for r in resorts if r.price_per_night and r.price_per_night >= int(price_min)]
+    if price_max:
+        resorts = [r for r in resorts if r.price_per_night and r.price_per_night <= int(price_max)]
+    
+    countries = Country.objects.all().order_by('name_ar')
+    
+    return render(request, 'properties/categories/resorts_outside_iraq.html', {
+        'resorts': resorts,
+        'resort_type': resort_type,
+        'country_id': country_id,
+        'price_min': price_min,
+        'price_max': price_max,
+        'resort_types': RESORT_TYPES,
+        'countries': countries,
+        'category_title': 'منتجعات خارج العراق',
+        'category_icon': '🏝️',
+    })
+
+
+def resort_outside_detail(request, pk):
+    """View for resort outside Iraq detail"""
+    from properties.models import ResortOutsideIraq
+    
+    resort = get_object_or_404(ResortOutsideIraq, pk=pk, is_active=True)
+    
+    return render(request, 'properties/resort_outside_detail.html', {
+        'resort': resort,
+    })
