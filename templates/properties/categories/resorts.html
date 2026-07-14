@@ -81,6 +81,40 @@
   box-shadow: 0 5px 20px rgba(79, 172, 254, 0.4);
 }
 
+.quick-links {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 25px;
+}
+
+.quick-link-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 12px 25px;
+  border-radius: 25px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quick-link-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.quick-link-btn.active {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border-color: transparent;
+}
+
 .resorts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -207,6 +241,22 @@
 </div>
 
 <div class="container">
+  <!-- Quick Links -->
+  <div class="quick-links">
+    <a href="{% url 'resorts_inside_iraq' %}" class="quick-link-btn">
+      <span>🏝️🇮🇶</span>
+      <span>منتجعات داخل العراق</span>
+    </a>
+    <a href="{% url 'resorts_outside_iraq' %}" class="quick-link-btn">
+      <span>🏝️🌍</span>
+      <span>منتجعات خارج العراق</span>
+    </a>
+    <a href="{% url 'travel_companies' %}" class="quick-link-btn">
+      <span>✈️</span>
+      <span>شركات السفر</span>
+    </a>
+  </div>
+
   <!-- Filter Section -->
   <div class="filter-section">
     <form method="get" class="filter-grid">
