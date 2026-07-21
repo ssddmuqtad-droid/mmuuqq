@@ -49,6 +49,9 @@
             <a href="{% url 'create_auction_advertisement' auction.id %}" class="btn btn-sm btn-outline-light">
               📢 إعلانات المزاد
             </a>
+            <a href="{% url 'delete_auction' auction.id %}" class="btn btn-sm btn-danger" onclick="return confirm('هل أنت متأكد من حذف هذا المزاد؟')">
+              🗑️ حذف
+            </a>
           </div>
           {% endif %}
         </div>

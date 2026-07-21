@@ -5,7 +5,7 @@ from django.core.validators import MinValueValidator
 from django.contrib.auth.models import User
 
 from .constants import COMMON_NASIRIYAH_DISTRICTS, IRAQ_GOVERNORATES
-from .models import Property, Message, SiteSettings, PropertyImage, PropertyVideo, PropertyNote, VirtualTour360, Auction, Bid, BuildingRequest, LandInfo, BuildingDetails, Budget, Blueprint, Quote, ProjectTracking, DeliveryMilestone, ContractorRating, ContractorBid, FinancialTransaction, Expense, Payment, Report, Profit, SubscriptionPlan, UserSettings, BlockedUser, SavedSearch, OfficePresence, PresenceNotification, BrokerSubscription, BrokerNotificationSettings, AutoBid, AuctionRating, AuctionLiveStream, AuctionAdvertisement, Hotel, Resort, PaymentMethod, PropertyPayment, PropertyNotification, SubscriptionRequest, BrokerChannel, ChannelRating, ChannelReview, ChannelReviewReply, ChannelMilestone, OutsideProperty, PropertyHotel, PropertyResort, PropertyDocument, PropertyMediaStats, WhatsAppMessage, TelegramMessage, AppointmentBooking, PropertyInquiry, LiveStream, LiveStreamComment, UserProfile, ServiceProvider, ServiceAdvertisement, HotelPage, HotelPost, HotelRoom, HotelOffer, HotelBooking, ServiceProviderCategory, ServiceProviderPage, ServiceProviderWork, ServiceProviderService, ServiceProviderGallery, ServiceProviderVideo, ServiceProvider360, ServiceProviderFollower, ServiceProviderRating, ServiceProviderContact, ServiceProviderQuote
+from .models import Property, Message, SiteSettings, PropertyImage, PropertyVideo, PropertyNote, VirtualTour360, Auction, Bid, BuildingRequest, LandInfo, BuildingDetails, Budget, Blueprint, Quote, ProjectTracking, DeliveryMilestone, ContractorRating, ContractorBid, FinancialTransaction, Expense, Payment, Report, Profit, SubscriptionPlan, UserSettings, BlockedUser, SavedSearch, OfficePresence, PresenceNotification, BrokerSubscription, BrokerNotificationSettings, AutoBid, AuctionRating, AuctionLiveStream, AuctionAdvertisement, Hotel, Resort, PaymentMethod, PropertyPayment, PropertyNotification, SubscriptionRequest, BrokerChannel, ChannelRating, ChannelReview, ChannelReviewReply, ChannelMilestone, OutsideProperty, PropertyHotel, PropertyResort, PropertyDocument, PropertyMediaStats, WhatsAppMessage, TelegramMessage, AppointmentBooking, PropertyInquiry, LiveStream, LiveStreamComment, UserProfile, ServiceProvider, ServiceAdvertisement, HotelPage, HotelPost, HotelRoom, HotelOffer, HotelBooking, ServiceProviderCategory, ServiceProviderPage, ServiceProviderWork, ServiceProviderService, ServiceProviderGallery, ServiceProviderVideo, ServiceProvider360, ServiceProviderFollower, ServiceProviderRating, ServiceProviderContact, ServiceProviderQuote, FreelanceJob, FreelanceJobImage, FreelanceJobVideo
 
 
 def _fc(placeholder=''):
@@ -34,7 +34,17 @@ class PropertySearchForm(forms.Form):
     floors = forms.IntegerField(required=False, label='الطوابق', validators=[MinValueValidator(0)])
     year_built = forms.IntegerField(required=False, label='سنة البناء', validators=[MinValueValidator(0)])
     property_condition = forms.ChoiceField(required=False, label='حالة العقار', choices=[('', 'كل الحالات'), ('new', 'جديد'), ('used', 'مستعمل'), ('under_construction', 'قيد البناء')])
-    category = forms.ChoiceField(required=False, label='القسم', choices=[('', 'كل الأقسام'), ('property_iraq', 'عقار داخل العراق'), ('property_outside', 'عقار خارج العراق'), ('hotel', 'فندق'), ('resort', 'منتجع')])
+    category = forms.ChoiceField(required=False, label='القسم', choices=[
+        ('', 'كل الأقسام'),
+        ('property_iraq', 'عقار داخل العراق'),
+        ('property_outside', 'عقار خارج العراق'),
+        ('hotel', 'فندق'),
+        ('resort', 'منتجع'),
+        ('service', 'خدمات'),
+        ('building_request', 'طلبات البناء'),
+        ('auction', 'مزادات'),
+        ('job', 'فرص العمل')
+    ])
     featured_only = forms.BooleanField(required=False, label='المميزة فقط')
     verified_only = forms.BooleanField(required=False, label='الموثقة فقط')
     new_only = forms.BooleanField(required=False, label='الجديدة فقط')
@@ -75,7 +85,7 @@ class PropertyForm(forms.ModelForm):
             # Additional Price Details
             'price_per_meter', 'down_payment', 'installments', 'annual_maintenance_fee',
             # Location - Iraq
-            'governorate', 'city', 'district', 'subdistrict', 'nahiyah', 'street', 'landmark', 'location',
+            'governorate', 'city', 'district', 'subdistrict', 'nahiyah', 'region', 'street', 'landmark', 'location',
             # Location - Outside Iraq
             'country', 'city_outside', 'area_outside', 'postal_code', 'taxes', 'registration_fees', 'foreign_ownership_laws',
             # GPS
@@ -122,7 +132,7 @@ class PropertyForm(forms.ModelForm):
             # Description
             'description', 'phone',
             # Publication
-            'publication_type', 'publication_days', 'is_featured', 'is_promoted',
+            'publication_type', 'publication_days', 'duration_days', 'is_featured', 'is_promoted',
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 5, 'class': 'form-control'}),
@@ -135,6 +145,7 @@ class PropertyForm(forms.ModelForm):
             'status': forms.Select(attrs={'class': 'form-control'}),
             'publication_type': forms.Select(attrs={'class': 'form-control'}),
             'publication_days': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'duration_days': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 365}),
             'latitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
             'longitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
         }
@@ -512,7 +523,7 @@ class AuctionForm(forms.ModelForm):
         model = Auction
         fields = ['property', 'auction_type', 'title', 'description', 'starting_price', 'minimum_increment',
                   'reserve_price', 'start_date', 'end_date', 'auto_extend_minutes', 'deposit_amount',
-                  'access_type', 'access_code', 'is_closed', 'is_featured', 'terms']
+                  'access_type', 'access_code', 'is_closed', 'is_featured', 'terms', 'duration_days']
         widgets = {
             'title': forms.TextInput(attrs={'placeholder': 'عنوان المزاد', 'class': 'form-control'}),
             'description': forms.Textarea(attrs={'rows': 4, 'placeholder': 'وصف المزاد...', 'class': 'form-control'}),
@@ -526,6 +537,7 @@ class AuctionForm(forms.ModelForm):
             'access_type': forms.Select(attrs={'class': 'form-control'}),
             'access_code': forms.TextInput(attrs={'placeholder': 'كود الدخول (اختياري)', 'class': 'form-control'}),
             'terms': forms.Textarea(attrs={'rows': 6, 'placeholder': 'شروط المزاد...', 'class': 'form-control'}),
+            'duration_days': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 365}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -556,7 +568,7 @@ class BuildingRequestForm(forms.ModelForm):
         fields = ['full_name', 'phone', 'email', 'governorate', 'city', 'district', 'address', 
                   'project_type', 'estimated_area', 'estimated_budget', 'expected_start_date', 
                   'expected_completion_date', 'priority', 'description', 'requirements', 
-                  'is_public', 'is_featured']
+                  'is_public', 'is_featured', 'duration_days']
         widgets = {
             'full_name': forms.TextInput(attrs={'placeholder': 'الاسم الكامل', 'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'placeholder': 'رقم الهاتف', 'class': 'form-control'}),
@@ -575,6 +587,7 @@ class BuildingRequestForm(forms.ModelForm):
             'requirements': forms.Textarea(attrs={'rows': 3, 'placeholder': 'المتطلبات الخاصة', 'class': 'form-control'}),
             'is_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'duration_days': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 365}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -1684,6 +1697,11 @@ class ChannelSearchForm(forms.Form):
 class PropertyInsideIraqForm(forms.ModelForm):
     """نموذج عقارات داخل العراق"""
     
+    # Media fields for handling uploads (handled separately in view)
+    cover_image = forms.ImageField(required=False, label='صورة الغلاف')
+    personal_image = forms.ImageField(required=False, label='صورة شخصية')
+    property_video = forms.FileField(required=False, label='فيديو العقار')
+    
     class Meta:
         model = Property
         fields = [
@@ -1697,7 +1715,7 @@ class PropertyInsideIraqForm(forms.ModelForm):
             # Additional Price Details
             'price_per_meter', 'down_payment', 'installments', 'annual_maintenance_fee',
             # Location - Iraq
-            'governorate', 'city', 'district', 'subdistrict', 'nahiyah', 'street', 'landmark', 'location',
+            'governorate', 'city', 'district', 'subdistrict', 'nahiyah', 'region', 'street', 'landmark', 'location',
             # GPS
             'latitude', 'longitude', 'nearest_landmark',
             # Area and Building
@@ -1760,9 +1778,39 @@ class PropertyInsideIraqForm(forms.ModelForm):
             if 'class' not in field.widget.attrs:
                 field.widget.attrs['class'] = 'form-control'
 
+    def clean(self):
+        cleaned = super().clean()
+        governorate = (cleaned.get('governorate') or '').strip()
+        city = (cleaned.get('city') or '').strip()
+        district = (cleaned.get('district') or '').strip()
+        location = (cleaned.get('location') or '').strip()
+        area_sqm = cleaned.get('area')
+
+        if not governorate:
+            self.add_error('governorate', 'المحافظة مطلوبة')
+        if not city:
+            self.add_error('city', 'المدينة مطلوبة')
+        if not district:
+            self.add_error('district', 'الحي مطلوب')
+        if not location:
+            # Compose a usable address from available parts
+            parts = [p for p in [governorate, city, cleaned.get('region'), district, cleaned.get('street')] if p]
+            if parts:
+                cleaned['location'] = '، '.join(parts)
+            else:
+                self.add_error('location', 'العنوان التفصيلي مطلوب')
+        if area_sqm is None or area_sqm <= 0:
+            self.add_error('area', 'المساحة يجب أن تكون أكبر من صفر')
+        return cleaned
+
 
 class PropertyOutsideIraqForm(forms.ModelForm):
     """نموذج عقارات خارج العراق"""
+    
+    # Media fields for handling uploads (handled separately in view)
+    cover_image = forms.ImageField(required=False, label='صورة الغلاف')
+    personal_image = forms.ImageField(required=False, label='صورة شخصية')
+    property_video = forms.FileField(required=False, label='فيديو العقار')
     
     class Meta:
         model = Property
@@ -1829,6 +1877,11 @@ class PropertyOutsideIraqForm(forms.ModelForm):
 class PropertyHotelForm(forms.ModelForm):
     """نموذج فنادق"""
     
+    # Media fields for handling uploads (handled separately in view)
+    cover_image = forms.ImageField(required=False, label='صورة الغلاف')
+    personal_image = forms.ImageField(required=False, label='صورة شخصية')
+    property_video = forms.FileField(required=False, label='فيديو العقار')
+    
     class Meta:
         model = PropertyHotel
         fields = [
@@ -1855,6 +1908,11 @@ class PropertyHotelForm(forms.ModelForm):
 
 class PropertyResortForm(forms.ModelForm):
     """نموذج منتجعات"""
+    
+    # Media fields for handling uploads (handled separately in view)
+    cover_image = forms.ImageField(required=False, label='صورة الغلاف')
+    personal_image = forms.ImageField(required=False, label='صورة شخصية')
+    property_video = forms.FileField(required=False, label='فيديو العقار')
     
     class Meta:
         model = PropertyResort
@@ -2204,6 +2262,100 @@ class ServiceProviderQuoteForm(forms.ModelForm):
         ]
         widgets = {
             'project_description': forms.Textarea(attrs={'rows': 4}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class FreelanceJobForm(forms.ModelForm):
+    """Form for creating freelance job postings for employers"""
+    
+    class Meta:
+        model = FreelanceJob
+        fields = [
+            'job_title', 'job_description', 'employer_type', 'industry_type',
+            'required_experience', 'required_specialization', 'required_skills', 'required_education',
+            'salary', 'payment_method', 'start_date', 'work_type',
+            'governorate', 'city', 'address',
+            'work_days', 'work_hours',
+            'tools_equipment_provided', 'certificates_required',
+            'employer_name', 'employer_description', 'website',
+            'phone', 'whatsapp', 'email',
+            'duration_days',
+            'is_featured', 'is_urgent',
+        ]
+        widgets = {
+            'job_title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'المسمى الوظيفي (مثل: كهربائي، سباك، مبرمج...)'}),
+            'job_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'وصف الوظيفة والمهام'}),
+            'employer_type': forms.Select(attrs={'class': 'form-control'}),
+            'industry_type': forms.Select(attrs={'class': 'form-control'}),
+            'required_experience': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'required_specialization': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'التخصص المطلوب'}),
+            'required_skills': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'المهارات المطلوبة'}),
+            'required_education': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'المؤهل المطلوب'}),
+            'salary': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'الراتب المقدم'}),
+            'payment_method': forms.Select(attrs={'class': 'form-control'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'work_type': forms.Select(attrs={'class': 'form-control'}),
+            'governorate': forms.Select(attrs={'class': 'form-control'}),
+            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'المدينة'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'العنوان التفصيلي'}),
+            'work_days': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'أيام العمل'}),
+            'work_hours': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ساعات العمل'}),
+            'tools_equipment_provided': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'الأدوات والمعدات المتوفرة'}),
+            'certificates_required': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'الشهادات المطلوبة'}),
+            'employer_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم صاحب العمل/الشركة'}),
+            'employer_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'نبذة عن صاحب العمل'}),
+            'website': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'رقم الهاتف'}),
+            'whatsapp': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'واتساب'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'البريد الإلكتروني'}),
+            'duration_days': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 365, 'placeholder': 'عدد الأيام'}),
+            'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_urgent': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add governorate choices
+        self.fields['governorate'].choices = [('', 'اختر المحافظة')] + list(IRAQ_GOVERNORATES)
+        
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class FreelanceJobImageForm(forms.ModelForm):
+    """Form for uploading freelance job images"""
+    
+    class Meta:
+        model = FreelanceJobImage
+        fields = ['image', 'caption', 'order']
+        widgets = {
+            'caption': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'التعليق'}),
+            'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+
+
+class FreelanceJobVideoForm(forms.ModelForm):
+    """Form for uploading freelance job videos"""
+    
+    class Meta:
+        model = FreelanceJobVideo
+        fields = ['video', 'thumbnail', 'caption', 'order']
+        widgets = {
+            'caption': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'التعليق'}),
+            'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
         }
     
     def __init__(self, *args, **kwargs):

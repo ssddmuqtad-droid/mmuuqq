@@ -1087,7 +1087,8 @@ class BrokerPlanSubscription(models.Model):
     
     def renew(self, days):
         """تجديد الاشتراك"""
-        from django.utils import timezone, timedelta
+        from django.utils import timezone
+        from datetime import timedelta
         
         if self.actual_end_date:
             new_end = max(timezone.now(), self.actual_end_date) + timedelta(days=days)
@@ -1114,7 +1115,8 @@ class SubscriptionRenewalRequest(models.Model):
     broker = models.ForeignKey('Broker', on_delete=models.CASCADE, related_name='renewal_requests', verbose_name='الدلال')
     current_subscription = models.ForeignKey(BrokerPlanSubscription, on_delete=models.SET_NULL, null=True, blank=True, related_name='renewal_requests', verbose_name='الاشتراك الحالي')
     
-    plan = models.ForeignKey(AdvancedSubscriptionPlan, on_delete=models.PROTECT, verbose_name='الخطة المطلوبة')
+    plan = models.ForeignKey(AdvancedSubscriptionPlan, on_delete=models.PROTECT, null=True, blank=True, verbose_name='الخطة المطلوبة')
+    subscription_type = models.CharField(max_length=20, blank=True, verbose_name='نوع الاشتراك')
     days_requested = models.IntegerField(verbose_name='الأيام المطلوبة')
     property_count = models.IntegerField(default=1, verbose_name='عدد العقارات الإجمالي')
     regular_count = models.IntegerField(default=0, verbose_name='عدد العقارات العادية')
@@ -1152,7 +1154,8 @@ class SubscriptionRenewalRequest(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f'{self.broker.display_name} - {self.plan.name}'
+        plan_name = self.plan.name if self.plan else (self.subscription_type or 'تجديد')
+        return f'{self.broker.display_name} - {plan_name}'
 
 
 class BuildingRequestSubscription(models.Model):
@@ -1180,11 +1183,35 @@ class BuildingRequestSubscription(models.Model):
     
     class Meta:
         verbose_name = 'اشتراك طلبات بناء'
-        verbose_name_plural = 'اشتراكات طلبات البناء'
+        verbose_name_plural = 'اشتراكات طلبات الباء'
+
+
+class Backup(models.Model):
+    """النسخ الاحتياطية للنظام"""
+    
+    BACKUP_TYPE_CHOICES = [
+        ('full', 'نسخة كاملة'),
+        ('database', 'قاعدة البيانات'),
+        ('files', 'الملفات'),
+    ]
+    
+    name = models.CharField(max_length=255, verbose_name='اسم النسخة')
+    backup_type = models.CharField(max_length=20, choices=BACKUP_TYPE_CHOICES, verbose_name='نوع النسخة')
+    file_path = models.CharField(max_length=500, verbose_name='مسار الملف')
+    size = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='الحجم (MB)')
+    description = models.TextField(blank=True, verbose_name='الوصف')
+    
+    created_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='تم الإنشاء بواسطة')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    
+    class Meta:
+        verbose_name = 'نسخة احتياطية'
+        verbose_name_plural = 'النسخ الاحتياطية'
         ordering = ['-created_at']
     
     def __str__(self):
-        return f'{self.broker.display_name} - طلبات بناء'
+        return f'{self.name} - {self.get_backup_type_display()}'
 
 
 class AuctionSubscription(models.Model):
@@ -1464,7 +1491,7 @@ class Property(models.Model):
     district = models.CharField(max_length=100, verbose_name='الحي', help_text='اسم الحي')
     subdistrict = models.CharField(max_length=100, blank=True, null=True, verbose_name='القضاء')
     nahiyah = models.CharField(max_length=100, blank=True, null=True, verbose_name='الناحية')
-    area = models.CharField(max_length=100, blank=True, null=True, verbose_name='المنطقة')
+    region = models.CharField(max_length=100, blank=True, null=True, verbose_name='المنطقة')
     street = models.CharField(max_length=100, blank=True, verbose_name='الشارع', help_text='اسم الشارع')
     landmark = models.CharField(max_length=200, blank=True, null=True, verbose_name='أقرب نقطة دالة')
     location = models.CharField(max_length=200, verbose_name='العنوان التفصيلي', help_text='العنوان الكامل')
@@ -1555,7 +1582,8 @@ class Property(models.Model):
         default='normal',
         verbose_name='نوع النشر'
     )
-    publication_days = models.PositiveIntegerField(null=True, blank=True, verbose_name='مدة النشر (أيام)')
+    publication_days = models.PositiveIntegerField(null=True, blank=True, verbose_name='مدة النشر (أيام) - قديم')
+    duration_days = models.PositiveIntegerField(default=30, verbose_name='مدة النشر بالأيام')
     publication_start_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ بدء النشر')
     publication_end_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ انتهاء النشر')
     is_subscription_based = models.BooleanField(default=False, verbose_name='مبني على الاشتراك')
@@ -1634,6 +1662,18 @@ class Property(models.Model):
     @property
     def full_location(self):
         parts = []
+        if self.country:
+            parts.append(str(self.country))
+        if self.governorate:
+            parts.append(self.governorate)
+        if self.city:
+            parts.append(self.city)
+        if self.subdistrict:
+            parts.append(self.subdistrict)
+        if self.nahiyah:
+            parts.append(self.nahiyah)
+        if self.region:
+            parts.append(self.region)
         if self.district:
             parts.append(self.district)
         if self.street:
@@ -2988,6 +3028,27 @@ class Auction(models.Model):
     rejection_reason = models.TextField(blank=True, verbose_name='سبب الرفض')
     approved_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_auctions', verbose_name='تمت الموافقة بواسطة')
     approved_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الموافقة')
+    
+    # GPS Coordinates
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط العرض')
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط الطول')
+    
+    # Additional Contact
+    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    facebook = models.URLField(blank=True, verbose_name='فيسبوك')
+    instagram = models.URLField(blank=True, verbose_name='انستغرام')
+    twitter = models.URLField(blank=True, verbose_name='تويتر')
+    
+    # Media
+    cover_image = models.ImageField(upload_to='auctions/covers/', null=True, blank=True, verbose_name='صورة الغلاف')
+    
+    # Statistics
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    participants_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاركين')
+    
+    # Duration
+    duration_days = models.PositiveIntegerField(default=30, verbose_name='مدة النشر بالأيام')
+    
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
 
@@ -3568,6 +3629,9 @@ class Hotel(models.Model):
     is_active = models.BooleanField(default=True, verbose_name='نشط')
     is_featured = models.BooleanField(default=False, verbose_name='مميز')
     
+    # Duration
+    duration_days = models.PositiveIntegerField(default=30, verbose_name='مدة النشر بالأيام')
+    
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
     
@@ -3664,6 +3728,30 @@ class BuildingRequest(models.Model):
     # معلومات إضافية
     assigned_broker = models.ForeignKey('Broker', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_building_requests', verbose_name='الدلال المكلف')
     notes = models.TextField(blank=True, verbose_name='ملاحظات الإدارة')
+    
+    # GPS Coordinates
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط العرض')
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط الطول')
+    
+    # Additional Contact
+    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    facebook = models.URLField(blank=True, verbose_name='فيسبوك')
+    instagram = models.URLField(blank=True, verbose_name='انستغرام')
+    twitter = models.URLField(blank=True, verbose_name='تويتر')
+    
+    # Media
+    cover_image = models.ImageField(upload_to='building_requests/covers/', null=True, blank=True, verbose_name='صورة الغلاف')
+    
+    # Statistics
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    inquiries_count = models.PositiveIntegerField(default=0, verbose_name='عدد الاستفسارات')
+    
+    # Featured
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    featured_until = models.DateTimeField(null=True, blank=True, verbose_name='نهاية التمييز')
+    
+    # Duration
+    duration_days = models.PositiveIntegerField(default=30, verbose_name='مدة النشر بالأيام')
     
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
@@ -4134,6 +4222,17 @@ class ServiceProvider(models.Model):
     years_experience = models.IntegerField(default=0, verbose_name='سنوات الخبرة')
     team_size = models.IntegerField(default=1, verbose_name='حجم الفريق')
     working_hours = models.CharField(max_length=100, blank=True, verbose_name='ساعات العمل')
+    working_days = models.CharField(max_length=100, blank=True, verbose_name='أيام العمل')
+    
+    # GPS Coordinates
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط العرض')
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name='خط الطول')
+    
+    # Social Media
+    facebook = models.URLField(blank=True, verbose_name='فيسبوك')
+    instagram = models.URLField(blank=True, verbose_name='انستغرام')
+    twitter = models.URLField(blank=True, verbose_name='تويتر')
+    youtube = models.URLField(blank=True, verbose_name='يوتيوب')
     
     # الأسعار
     min_price = models.DecimalField(max_digits=15, decimal_places=0, null=True, blank=True, verbose_name='أقل سعر')
@@ -6488,6 +6587,8 @@ class DallalSubscription(models.Model):
     SUBSCRIPTION_TYPE_CHOICES = [
         ('basic', 'دلال عادي'),
         ('premium', 'دلال مميز'),
+        ('travel_company', 'شركة سفر'),
+        ('job_posting', 'نشر وظيفة'),
     ]
     
     broker = models.ForeignKey(
@@ -6496,7 +6597,7 @@ class DallalSubscription(models.Model):
         verbose_name='الدلال'
     )
     subscription_type = models.CharField(
-        max_length=10, choices=SUBSCRIPTION_TYPE_CHOICES,
+        max_length=20, choices=SUBSCRIPTION_TYPE_CHOICES,
         verbose_name='نوع الاشتراك'
     )
     start_date = models.DateField(
@@ -6815,6 +6916,9 @@ class Resort(models.Model):
     is_verified = models.BooleanField(default=False, verbose_name='موثق')
     is_featured = models.BooleanField(default=False, verbose_name='مميز')
     featured_until = models.DateTimeField(null=True, blank=True, verbose_name='تمييز حتى')
+    
+    # Duration
+    duration_days = models.PositiveIntegerField(default=30, verbose_name='مدة النشر بالأيام')
     
     # Statistics
     views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
@@ -7890,7 +7994,10 @@ class PropertyNotification(models.Model):
     ]
     
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='property_notifications', verbose_name='المستخدم')
-    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='notifications', verbose_name='العقار')
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='notifications',
+        null=True, blank=True, verbose_name='العقار'
+    )
     notification_type = models.CharField(max_length=50, choices=TYPE_CHOICES, verbose_name='نوع الإشعار')
     title = models.CharField(max_length=200, verbose_name='العنوان')
     message = models.TextField(verbose_name='الرسالة')
@@ -8020,59 +8127,117 @@ class SubscriptionRequest(models.Model):
     def approve(self, admin_user, final_price=None):
         """موافقة على الطلب وتفعيل الاشتراك"""
         from django.utils import timezone
-        
-        self.status = self.STATUS_APPROVED
+        from django.db import transaction
+        from datetime import timedelta
+        from .constants import SUBSCRIPTION_PERIODS
+
+        if not self.broker:
+            raise ValueError("لا يمكن الموافقة على طلب بدون دلال")
+
+        if self.status == self.STATUS_APPROVED:
+            return  # already approved — idempotent
+
+        period_map = {
+            'daily': 'daily', 'يوم': 'daily', 'يومي': 'daily',
+            'month': 'monthly', 'monthly': 'monthly', 'شهر': 'monthly', 'شهري': 'monthly',
+            '3_months': 'monthly', '3 أشهر': 'monthly', '3اشهر': 'monthly',
+            '6_months': 'monthly', '6 أشهر': 'monthly', '6اشهر': 'monthly',
+            'year': 'yearly', 'yearly': 'yearly', 'سنة': 'yearly', 'سنوي': 'yearly',
+            '5_years': '5_years', '5 سنوات': '5_years',
+        }
+        duration_days_map = {
+            'daily': 1,
+            'monthly': 30,
+            'yearly': 365,
+            '5_years': 1825,
+        }
+        valid_periods = {p[0] for p in SUBSCRIPTION_PERIODS}
+
+        def resolve_period(raw):
+            key = (raw or 'monthly').strip()
+            mapped = period_map.get(key, period_map.get(key.lower(), 'monthly'))
+            return mapped if mapped in valid_periods else 'monthly'
+
+        def resolve_days(raw, plan_period=None):
+            text = (raw or '').strip()
+            if '5' in text and ('سنة' in text or 'year' in text.lower()):
+                return 1825
+            if '6' in text:
+                return 180
+            if '3' in text:
+                return 90
+            if 'سنة' in text or 'year' in text.lower():
+                return 365
+            if 'يوم' in text or 'daily' in text.lower():
+                return 1
+            if plan_period:
+                return duration_days_map.get(plan_period, 30)
+            return 30
+
+        with transaction.atomic():
+            self.status = self.STATUS_APPROVED
+            self.approved_by = admin_user
+            self.approved_at = timezone.now()
+            if final_price is not None:
+                self.admin_price = final_price
+            self.save()
+
+            if self.requested_plan:
+                self.broker.subscription_plan = self.requested_plan
+                plan_period = self.requested_plan.period
+                duration_days = resolve_days(self.custom_duration, plan_period)
+            else:
+                plan_period = resolve_period(self.custom_duration)
+                duration_days = resolve_days(self.custom_duration, plan_period)
+                custom_plan = SubscriptionPlan.objects.create(
+                    name=self.custom_plan_name or 'خطة مخصصة',
+                    period=plan_period,
+                    ads_limit=self.custom_properties_limit or 100,
+                    price=self.admin_price or self.custom_price or 0,
+                    price_per_property=50.00,
+                    color='#FF6B35',
+                )
+                self.broker.subscription_plan = custom_plan
+
+            self.broker.subscription_start_date = timezone.now().date()
+            self.broker.subscription_end_date = (timezone.now() + timedelta(days=duration_days)).date()
+            self.broker.save()
+
+            # Notification must never block approval
+            try:
+                if self.broker.user_id:
+                    plan_name = self.broker.subscription_plan.name if self.broker.subscription_plan else 'خطة مخصصة'
+                    PropertyNotification.objects.create(
+                        user=self.broker.user,
+                        property=None,
+                        notification_type=PropertyNotification.TYPE_PROPERTY_APPROVED,
+                        title='تم قبول طلب الاشتراك',
+                        message=f'تم قبول طلب اشتراكك. خطة الاشتراك: {plan_name}',
+                    )
+            except Exception:
+                pass
+
+    def reject(self, admin_user, notes=''):
+        """رفض طلب الاشتراك"""
+        from django.utils import timezone
+
+        self.status = self.STATUS_REJECTED
         self.approved_by = admin_user
         self.approved_at = timezone.now()
-        
-        if final_price:
-            self.admin_price = final_price
-        
-        self.save()
-        
-        # Activate broker subscription
-        if self.requested_plan:
-            self.broker.subscription_plan = self.requested_plan
-        else:
-            # Create custom plan
-            custom_plan = SubscriptionPlan.objects.create(
-                name=self.custom_plan_name or 'خطة مخصصة',
-                period=self.custom_duration or 'month',
-                ads_limit=self.custom_properties_limit or 100,
-                price=self.admin_price or self.custom_price or 0,
-                price_per_property=50.00,
-                color='#FF6B35'
-            )
-            self.broker.subscription_plan = custom_plan
-        
-        from datetime import timedelta
-        self.broker.subscription_start_date = timezone.now().date()
-        
-        # Calculate end date based on duration
-        duration_days = 30  # Default
-        if self.custom_duration:
-            if 'شهر' in self.custom_duration:
-                duration_days = 30
-            elif 'سنة' in self.custom_duration:
-                duration_days = 365
-            elif '3 أشهر' in self.custom_duration:
-                duration_days = 90
-            elif '6 أشهر' in self.custom_duration:
-                duration_days = 180
-            elif '5 سنوات' in self.custom_duration:
-                duration_days = 1825
-        
-        self.broker.subscription_end_date = (timezone.now() + timedelta(days=duration_days)).date()
-        self.broker.save()
-        
-        # Send notification
-        PropertyNotification.objects.create(
-            user=self.broker.user,
-            property=None,
-            notification_type=PropertyNotification.TYPE_PROPERTY_APPROVED,
-            title='تم قبول طلب الاشتراك',
-            message=f'تم قبول طلب اشتراكك. خطة الاشتراك: {self.broker.subscription_plan.name}'
-        )
+        self.rejection_reason = notes or ''
+        self.save(update_fields=['status', 'approved_by', 'approved_at', 'rejection_reason', 'updated_at'])
+
+        try:
+            if self.broker and self.broker.user_id:
+                PropertyNotification.objects.create(
+                    user=self.broker.user,
+                    property=None,
+                    notification_type=PropertyNotification.TYPE_PROPERTY_REJECTED,
+                    title='تم رفض طلب الاشتراك',
+                    message=notes or 'تم رفض طلب اشتراكك. يرجى التواصل مع الإدارة.',
+                )
+        except Exception:
+            pass
 
 
 
@@ -10282,11 +10447,30 @@ class TravelCompany(models.Model):
     # Travel Types Supported
     travel_types = models.JSONField(default=list, verbose_name='أنواع السفر المدعومة')
     
+    # Travel Scope (Inside/Outside Iraq)
+    travel_scope = models.CharField(max_length=20, choices=[('inside_iraq', 'داخل العراق'), ('outside_iraq', 'خارج العراق'), ('both', 'كلاهما')], default='inside_iraq', verbose_name='نطاق السفر')
+    
+    # Departure Time
+    departure_time = models.TimeField(null=True, blank=True, verbose_name='وقت الانطلاق')
+    
+    # Price
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='السعر')
+    
     # Contact Info
     phone = models.CharField(max_length=20, verbose_name='رقم الهاتف')
     email = models.EmailField(verbose_name='البريد الإلكتروني')
     website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
     whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
+    
+    # Social Media
+    facebook = models.URLField(blank=True, verbose_name='فيسبوك')
+    instagram = models.URLField(blank=True, verbose_name='انستغرام')
+    twitter = models.URLField(blank=True, verbose_name='تويتر')
+    youtube = models.URLField(blank=True, verbose_name='يوتيوب')
+    
+    # Working Hours
+    working_hours = models.CharField(max_length=100, blank=True, verbose_name='ساعات العمل')
+    working_days = models.CharField(max_length=100, blank=True, verbose_name='أيام العمل')
     
     # Location
     address = models.CharField(max_length=300, verbose_name='العنوان')
@@ -10303,10 +10487,17 @@ class TravelCompany(models.Model):
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.0, verbose_name='التقييم')
     reviews_count = models.IntegerField(default=0, verbose_name='عدد التقييمات')
     
+    # Statistics
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    bookings_count = models.PositiveIntegerField(default=0, verbose_name='عدد الحجوزات')
+    
     # Status
     is_verified = models.BooleanField(default=False, verbose_name='موثق')
     is_active = models.BooleanField(default=True, verbose_name='نشط')
     is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    
+    # Duration
+    duration_days = models.PositiveIntegerField(default=30, verbose_name='مدة النشر بالأيام')
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
@@ -10547,3 +10738,349 @@ class ResortVideo(models.Model):
     def __str__(self):
         resort = self.resort_inside or self.resort_outside
         return f'{resort.name if resort else "Unknown"} - فيديو {self.order}'
+
+
+# Job Posting Constants
+JOB_TYPE_CHOICES = [
+    ('full_time', 'دوام كامل'),
+    ('part_time', 'دوام جزئي'),
+    ('freelance', 'عمل حر'),
+    ('remote', 'عن بعد'),
+    ('internship', 'تدريب'),
+    ('contract', 'عقد مؤقت'),
+]
+
+SALARY_CHOICES = [
+    ('any', 'أي راتب'),
+    ('under_500k', 'أقل من 500 ألف'),
+    ('500k_1m', '500 ألف - مليون'),
+    ('1m_2m', 'مليون - مليوني دينار'),
+    ('over_2m', 'أكثر من مليوني دينار'),
+    ('negotiable', 'قابل للتفاوض'),
+]
+
+EDUCATION_CHOICES = [
+    ('none', 'بدون شهادة'),
+    ('high_school', 'إعدادية'),
+    ('diploma', 'دبلوم'),
+    ('bachelor', 'بكالوريوس'),
+    ('master', 'ماجستير'),
+    ('phd', 'دكتوراه'),
+]
+
+EXPERIENCE_CHOICES = [
+    ('none', 'بدون خبرة'),
+    ('1_year', 'سنة'),
+    ('2_years', 'سنتان'),
+    ('3_years', '3 سنوات'),
+    ('5_years', '5 سنوات'),
+    ('10_plus', 'أكثر من 10 سنوات'),
+]
+
+LOCATION_TYPE_CHOICES = [
+    ('inside_iraq', 'داخل العراق'),
+    ('outside_iraq', 'خارج العراق'),
+]
+
+
+def job_image_path(instance, filename):
+    """Generate path for job images"""
+    return f'jobs/{instance.pk}/{filename}'
+
+
+def job_video_path(instance, filename):
+    """Generate path for job videos"""
+    return f'jobs/{instance.pk}/videos/{filename}'
+
+
+class JobPosting(models.Model):
+    """Job postings for employment opportunities"""
+    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='job_postings', verbose_name='المستخدم')
+    
+    # Company Info
+    company_name = models.CharField(max_length=200, verbose_name='اسم الشركة')
+    company_logo = models.ImageField(upload_to=job_image_path, blank=True, verbose_name='شعار الشركة')
+    company_website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    
+    # Job Details
+    job_title = models.CharField(max_length=200, verbose_name='اسم الوظيفة')
+    job_type = models.CharField(max_length=20, choices=JOB_TYPE_CHOICES, verbose_name='نوع العمل')
+    field = models.CharField(max_length=100, verbose_name='المجال/الحقل')
+    
+    # Location
+    location_type = models.CharField(max_length=20, choices=LOCATION_TYPE_CHOICES, default='inside_iraq', verbose_name='نوع الموقع')
+    governorate = models.CharField(max_length=100, blank=True, verbose_name='المحافظة')
+    city = models.CharField(max_length=100, blank=True, verbose_name='المدينة')
+    country = models.ForeignKey('Country', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='الدولة')
+    address = models.CharField(max_length=300, blank=True, verbose_name='العنوان')
+    
+    # Salary
+    salary_range = models.CharField(max_length=20, choices=SALARY_CHOICES, verbose_name='الراتب')
+    salary_min = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='الحد الأدنى للراتب')
+    salary_max = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='الحد الأقصى للراتب')
+    
+    # Requirements
+    education = models.CharField(max_length=20, choices=EDUCATION_CHOICES, verbose_name='المؤهل المطلوب')
+    experience = models.CharField(max_length=20, choices=EXPERIENCE_CHOICES, verbose_name='الخبرة المطلوبة')
+    skills = models.TextField(blank=True, verbose_name='المهارات المطلوبة')
+    
+    # Description
+    description = models.TextField(verbose_name='وصف الوظيفة')
+    responsibilities = models.TextField(blank=True, verbose_name='المسؤوليات')
+    benefits = models.TextField(blank=True, verbose_name='المزايا')
+    
+    # Contact Info
+    contact_email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    contact_phone = models.CharField(max_length=20, blank=True, verbose_name='رقم الهاتف')
+    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
+    
+    # Media
+    cover_image = models.ImageField(upload_to=job_image_path, blank=True, verbose_name='صورة الغلاف')
+    
+    # Status
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    is_urgent = models.BooleanField(default=False, verbose_name='عاجل')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ النشر')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    expires_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الانتهاء')
+    
+    # Statistics
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    applications_count = models.PositiveIntegerField(default=0, verbose_name='عدد المتقدمين')
+    
+    class Meta:
+        verbose_name = 'فرصة عمل'
+        verbose_name_plural = 'فرص العمل'
+        ordering = ['-is_featured', '-is_urgent', '-created_at']
+    
+    def __str__(self):
+        return f'{self.job_title} - {self.company_name}'
+    
+    def get_absolute_url(self):
+        return reverse('job_detail', kwargs={'pk': self.pk})
+
+
+class JobImage(models.Model):
+    """Job images"""
+    
+    job = models.ForeignKey(JobPosting, on_delete=models.CASCADE, related_name='images', verbose_name='فرصة العمل')
+    image = models.ImageField(upload_to=job_image_path, verbose_name='الصورة')
+    caption = models.CharField(max_length=200, blank=True, verbose_name='التعليق')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    
+    class Meta:
+        verbose_name = 'صورة فرصة عمل'
+        verbose_name_plural = 'صور فرص العمل'
+        ordering = ['order']
+    
+    def __str__(self):
+        return f'{self.job.job_title} - صورة {self.order}'
+
+
+class JobVideo(models.Model):
+    """Job videos"""
+    
+    job = models.ForeignKey(JobPosting, on_delete=models.CASCADE, related_name='videos', verbose_name='فرصة العمل')
+    video = models.FileField(upload_to=job_video_path, verbose_name='الفيديو')
+    thumbnail = models.ImageField(upload_to=job_image_path, blank=True, verbose_name='صورة مصغرة')
+    caption = models.CharField(max_length=200, blank=True, verbose_name='التعليق')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    
+    class Meta:
+        verbose_name = 'فيديو فرصة عمل'
+        verbose_name_plural = 'فيديوهات فرص العمل'
+        ordering = ['order']
+    
+    def __str__(self):
+        return f'{self.job.job_title} - فيديو {self.order}'
+
+
+def freelance_job_image_path(instance, filename):
+    """Path for freelance job images"""
+    return f'freelance_jobs/{instance.employer.user.id}/{filename}'
+
+
+def freelance_job_video_path(instance, filename):
+    """Path for freelance job videos"""
+    return f'freelance_jobs/{instance.employer.user.id}/videos/{filename}'
+
+
+class FreelanceJob(models.Model):
+    """Freelance job postings for employers seeking workers"""
+    
+    WORK_TYPE_CHOICES = [
+        ('full_time', 'دوام كامل'),
+        ('part_time', 'دوام جزئي'),
+        ('freelance', 'عمل حر'),
+        ('temporary', 'مؤقت'),
+    ]
+    
+    PAYMENT_METHOD_CHOICES = [
+        ('hourly', 'بالساعة'),
+        ('daily', 'يومي'),
+        ('weekly', 'أسبوعي'),
+        ('monthly', 'شهري'),
+        ('agreement', 'حسب الاتفاق'),
+    ]
+    
+    EMPLOYER_TYPE_CHOICES = [
+        ('freelancer', 'عامل حر'),
+        ('company', 'شركة'),
+        ('institution', 'مؤسسة'),
+        ('factory', 'مصنع'),
+        ('store', 'متجر'),
+        ('hotel', 'فندق'),
+        ('restaurant', 'مطعم أو مقهى'),
+        ('hospital', 'مستشفى أو مركز طبي'),
+        ('school', 'مدرسة أو معهد'),
+        ('government', 'جهة حكومية'),
+        ('organization', 'منظمة أو جمعية'),
+        ('construction', 'مقاولات وإنشاءات'),
+    ]
+    
+    INDUSTRY_TYPE_CHOICES = [
+        ('real_estate', 'عقارات'),
+        ('industry', 'صناعة'),
+        ('trade', 'تجارة'),
+        ('transport', 'نقل ولوجستيات'),
+        ('it', 'تقنية ومعلومات'),
+        ('health', 'صحة'),
+        ('education', 'تعليم'),
+        ('restaurants', 'مطاعم وكافيهات'),
+        ('hotels', 'فنادق وسياحة'),
+        ('cars', 'سيارات'),
+        ('agriculture', 'زراعة'),
+        ('banking', 'مصارف وتمويل'),
+        ('marketing', 'تسويق وإعلان'),
+        ('maintenance', 'صيانة وخدمات'),
+        ('general_services', 'خدمات عامة'),
+        ('other', 'أخرى'),
+    ]
+    
+    # Basic Information
+    job_title = models.CharField(max_length=200, verbose_name='المسمى الوظيفي')
+    job_description = models.TextField(verbose_name='وصف الوظيفة')
+    
+    # Employer Type
+    employer_type = models.CharField(max_length=20, choices=EMPLOYER_TYPE_CHOICES, default='company', verbose_name='نوع صاحب العمل')
+    industry_type = models.CharField(max_length=20, choices=INDUSTRY_TYPE_CHOICES, default='other', verbose_name='نوع النشاط')
+    
+    # Required Qualifications
+    required_experience = models.PositiveIntegerField(verbose_name='سنوات الخبرة المطلوبة')
+    required_specialization = models.CharField(max_length=200, verbose_name='التخصص المطلوب')
+    required_skills = models.TextField(verbose_name='المهارات المطلوبة')
+    required_education = models.CharField(max_length=200, blank=True, verbose_name='المؤهل المطلوب')
+    
+    # Salary/Payment
+    salary = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True, verbose_name='الراتب المقدم')
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='agreement', verbose_name='طريقة الدفع')
+    
+    # Work Schedule
+    start_date = models.DateField(verbose_name='تاريخ البدء')
+    work_type = models.CharField(max_length=20, choices=WORK_TYPE_CHOICES, default='full_time', verbose_name='نوع العمل')
+    
+    # Location
+    governorate = models.CharField(max_length=100, verbose_name='المحافظة')
+    city = models.CharField(max_length=100, verbose_name='المدينة')
+    address = models.TextField(blank=True, verbose_name='العنوان التفصيلي')
+    
+    # Work Details
+    work_days = models.CharField(max_length=200, verbose_name='أيام العمل')
+    work_hours = models.CharField(max_length=200, verbose_name='ساعات العمل')
+    
+    # Additional Requirements
+    tools_equipment_provided = models.TextField(blank=True, verbose_name='الأدوات والمعدات المتوفرة')
+    certificates_required = models.TextField(blank=True, verbose_name='الشهادات المطلوبة')
+    
+    # Employer Information
+    employer_name = models.CharField(max_length=200, verbose_name='اسم صاحب العمل/الشركة')
+    employer_description = models.TextField(blank=True, verbose_name='نبذة عن صاحب العمل')
+    website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
+    
+    # Contact Information
+    phone = models.CharField(max_length=20, verbose_name='رقم الهاتف')
+    whatsapp = models.CharField(max_length=20, blank=True, verbose_name='واتساب')
+    email = models.EmailField(blank=True, verbose_name='البريد الإلكتروني')
+    
+    # Relations
+    employer = models.ForeignKey('Broker', on_delete=models.CASCADE, related_name='freelance_jobs', verbose_name='صاحب العمل')
+    
+    # Status
+    status = models.CharField(max_length=20, choices=[
+        ('draft', 'مسودة'),
+        ('published', 'منشور'),
+        ('expired', 'منتهي'),
+        ('closed', 'مغلق'),
+    ], default='draft', verbose_name='الحالة')
+    
+    # Featured
+    is_featured = models.BooleanField(default=False, verbose_name='مميز')
+    is_urgent = models.BooleanField(default=False, verbose_name='عاجل')
+    
+    # Duration
+    duration_days = models.PositiveIntegerField(default=30, verbose_name='مدة النشر بالأيام')
+    
+    # Dates
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    expiry_date = models.DateField(null=True, blank=True, verbose_name='تاريخ الانتهاء')
+    
+    # Statistics
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    applications_count = models.PositiveIntegerField(default=0, verbose_name='عدد المتقدمين')
+    
+    class Meta:
+        verbose_name = 'فرصة عمل حرة'
+        verbose_name_plural = 'فرص العمل الحرة'
+        ordering = ['-is_featured', '-is_urgent', '-created_at']
+    
+    def __str__(self):
+        return f'{self.job_title} - {self.employer_name}'
+    
+    def get_absolute_url(self):
+        return reverse('freelance_job_detail', kwargs={'pk': self.pk})
+    
+    def is_expired(self):
+        """Check if the job has expired"""
+        if not self.expiry_date:
+            return False
+        return timezone.now().date() > self.expiry_date
+
+
+class FreelanceJobImage(models.Model):
+    """Freelance job images"""
+    
+    job = models.ForeignKey(FreelanceJob, on_delete=models.CASCADE, related_name='images', verbose_name='فرصة العمل')
+    image = models.ImageField(upload_to=freelance_job_image_path, verbose_name='الصورة')
+    caption = models.CharField(max_length=200, blank=True, verbose_name='التعليق')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    
+    class Meta:
+        verbose_name = 'صورة فرصة عمل حرة'
+        verbose_name_plural = 'صور فرص العمل الحرة'
+        ordering = ['order']
+    
+    def __str__(self):
+        return f'{self.job.job_title} - صورة {self.order}'
+
+
+class FreelanceJobVideo(models.Model):
+    """Freelance job videos"""
+    
+    job = models.ForeignKey(FreelanceJob, on_delete=models.CASCADE, related_name='videos', verbose_name='فرصة العمل')
+    video = models.FileField(upload_to=freelance_job_video_path, verbose_name='الفيديو')
+    thumbnail = models.ImageField(upload_to=freelance_job_image_path, blank=True, verbose_name='صورة مصغرة')
+    caption = models.CharField(max_length=200, blank=True, verbose_name='التعليق')
+    order = models.IntegerField(default=0, verbose_name='الترتيب')
+    
+    class Meta:
+        verbose_name = 'فيديو فرصة عمل حرة'
+        verbose_name_plural = 'فيديوهات فرص العمل الحرة'
+        ordering = ['order']
+    
+    def __str__(self):
+        return f'{self.job.job_title} - فيديو {self.order}'

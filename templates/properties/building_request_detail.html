@@ -13,6 +13,12 @@
         <span class="request-type">{{ building_request.get_request_type_display }}</span>
         <span class="request-status status-{{ building_request.status }}">{{ building_request.get_status_display }}</span>
       </div>
+      {% if request.user == building_request.user or request.user.is_superuser %}
+      <div style="margin-top: 20px;">
+        <a href="{% url 'edit_building_request' building_request.id %}" class="btn btn-outline">تعديل</a>
+        <a href="{% url 'delete_building_request' building_request.id %}" class="btn btn-danger" onclick="return confirm('هل أنت متأكد من حذف هذا الطلب؟')">حذف</a>
+      </div>
+      {% endif %}
     </div>
 
     <div class="request-sections">

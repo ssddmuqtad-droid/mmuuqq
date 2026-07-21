@@ -1,0 +1,288 @@
+{% extends 'properties/dashboard_base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>{{ title }}</h1>
+    <div class="dashboard-quick-links">
+      <a href="{% url 'travel_companies' %}" class="btn btn-outline">← قائمة شركات السفر</a>
+    </div>
+  </div>
+
+  <div class="form-card" style="margin-top: 1.5rem;">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">اسم الشركة بالعربية</label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <div class="text-danger">{{ form.name.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">اسم الشركة بالإنجليزية</label>
+            {{ form.name_en }}
+            {% if form.name_en.errors %}
+            <div class="text-danger">{{ form.name_en.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">نوع الشركة</label>
+            {{ form.company_type }}
+            {% if form.company_type.errors %}
+            <div class="text-danger">{{ form.company_type.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">نطاق السفر</label>
+            {{ form.travel_scope }}
+            {% if form.travel_scope.errors %}
+            <div class="text-danger">{{ form.travel_scope.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">وقت الانطلاق</label>
+            {{ form.departure_time }}
+            {% if form.departure_time.errors %}
+            <div class="text-danger">{{ form.departure_time.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">السعر</label>
+            {{ form.price }}
+            {% if form.price.errors %}
+            <div class="text-danger">{{ form.price.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">أنواع السفر المدعومة</label>
+        {{ form.travel_types }}
+        <small class="text-muted">أدخل بصيغة JSON: ["domestic", "international", "hajj", "umrah"]</small>
+        {% if form.travel_types.errors %}
+        <div class="text-danger">{{ form.travel_types.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">وصف الشركة بالعربية</label>
+        {{ form.description }}
+        {% if form.description.errors %}
+        <div class="text-danger">{{ form.description.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">وصف الشركة بالإنجليزية</label>
+        {{ form.description_en }}
+        {% if form.description_en.errors %}
+        <div class="text-danger">{{ form.description_en.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">رقم الهاتف</label>
+            {{ form.phone }}
+            {% if form.phone.errors %}
+            <div class="text-danger">{{ form.phone.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">رقم الواتساب</label>
+            {{ form.whatsapp }}
+            {% if form.whatsapp.errors %}
+            <div class="text-danger">{{ form.whatsapp.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">البريد الإلكتروني</label>
+            {{ form.email }}
+            {% if form.email.errors %}
+            <div class="text-danger">{{ form.email.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">الموقع الإلكتروني</label>
+            {{ form.website }}
+            {% if form.website.errors %}
+            <div class="text-danger">{{ form.website.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">العنوان</label>
+        {{ form.address }}
+        {% if form.address.errors %}
+        <div class="text-danger">{{ form.address.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">المحافظة</label>
+            {{ form.governorate }}
+            {% if form.governorate.errors %}
+            <div class="text-danger">{{ form.governorate.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">المدينة</label>
+            {{ form.city }}
+            {% if form.city.errors %}
+            <div class="text-danger">{{ form.city.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">خط العرض</label>
+            {{ form.latitude }}
+            {% if form.latitude.errors %}
+            <div class="text-danger">{{ form.latitude.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">خط الطول</label>
+            {{ form.longitude }}
+            {% if form.longitude.errors %}
+            <div class="text-danger">{{ form.longitude.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">شعار الشركة</label>
+            {{ form.logo }}
+            {% if form.logo.errors %}
+            <div class="text-danger">{{ form.logo.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">صورة الغلاف</label>
+            {{ form.cover_image }}
+            {% if form.cover_image.errors %}
+            <div class="text-danger">{{ form.cover_image.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">التقييم (0-5)</label>
+            {{ form.rating }}
+            {% if form.rating.errors %}
+            <div class="text-danger">{{ form.rating.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">عدد التقييمات</label>
+            {{ form.reviews_count }}
+            {% if form.reviews_count.errors %}
+            <div class="text-danger">{{ form.reviews_count.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">موثقة</label>
+            {{ form.is_verified }}
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">مميزة</label>
+            {{ form.is_featured }}
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">نشطة</label>
+            {{ form.is_active }}
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">مدة النشر (أيام)</label>
+            {{ form.duration_days }}
+            <small class="form-text text-muted">مدة ظهور الشركة (افتراضي: 30 يوم)</small>
+            {% if form.duration_days.errors %}
+            <div class="text-danger">{{ form.duration_days.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {% if company %}
+      <div class="alert alert-info" style="margin-top: 1rem;">
+        <strong>معلومات إضافية:</strong><br>
+        تاريخ الإنشاء: {{ company.created_at|date:"Y-m-d H:i" }}<br>
+        آخر تحديث: {{ company.updated_at|date:"Y-m-d H:i" }}<br>
+        عدد الصور: {{ company.images.count }}<br>
+        عدد الفيديوهات: {{ company.videos.count }}
+      </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">حفظ</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

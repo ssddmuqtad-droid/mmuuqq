@@ -21,7 +21,7 @@ from rest_framework.response import Response
 
 from .decorators import broker_required, rate_limit
 from .forms import MessageForm, PropertyForm, PropertySearchForm, SiteSettingsForm, PropertyNoteForm, VirtualTour360Form, AuctionForm, BidForm, BuildingRequestForm, LandInfoForm, BuildingDetailsForm, BudgetForm, QuoteForm, ContractorBidForm, ContractorRatingForm, ReportForm, FinancialTransactionForm, ExpenseForm, ProfitForm, SubscriptionPlanForm, UserProfileForm, UserBasicInfoForm, UserSecurityForm, UserNotificationForm, UserPrivacyForm, UserPreferencesForm, BlockUserForm, SavedSearchForm, AutoBidForm, AuctionRatingForm, AuctionLiveStreamForm, AuctionAdvertisementForm, HotelSearchForm, ResortSearchForm, PropertyPublicationForm, PropertyPaymentForm, ServiceProviderForm, ServiceAdvertisementForm
-from .models import Message, Property, PropertyImage, SiteSettings, PropertyNote, Notification, VirtualTour360, Auction, Bid, BuildingRequest, LandInfo, BuildingDetails, Budget, Blueprint, Quote, ProjectTracking, DeliveryMilestone, ContractorRating, ContractorBid, FinancialTransaction, Expense, Payment, OfficeWallet, WalletTransaction, Broker, Report, ReportAction, PropertyLike, PropertySave, PropertyComment, VirtualTourPoint, VirtualTourConnection, Profit, SubscriptionPlan, ActivityLog, UserSettings, BlockedUser, SavedSearch, AutoBid, AuctionNotification, AuctionRating, AuctionStats, AuctionLiveStream, AuctionAdvertisement, Hotel, Resort, BrokerChannel, ChannelFollow, ChannelSave, PaymentMethod, PropertyPayment, PropertyNotification, ChannelPost, ChannelVideo, AdvancedSubscriptionPlan, BrokerPlanSubscription, SubscriptionRenewalRequest, ServiceProvider, ServiceAdvertisement, AuctionInvitation
+from .models import Message, Property, PropertyImage, SiteSettings, PropertyNote, Notification, VirtualTour360, Auction, Bid, BuildingRequest, LandInfo, BuildingDetails, Budget, Blueprint, Quote, ProjectTracking, DeliveryMilestone, ContractorRating, ContractorBid, FinancialTransaction, Expense, Payment, OfficeWallet, WalletTransaction, Broker, Report, ReportAction, PropertyLike, PropertySave, PropertyComment, VirtualTourPoint, VirtualTourConnection, Profit, SubscriptionPlan, ActivityLog, UserSettings, BlockedUser, SavedSearch, AutoBid, AuctionNotification, AuctionRating, AuctionStats, AuctionLiveStream, AuctionAdvertisement, Hotel, Resort, BrokerChannel, ChannelFollow, ChannelSave, PaymentMethod, PropertyPayment, PropertyNotification, ChannelPost, ChannelVideo, AdvancedSubscriptionPlan, BrokerPlanSubscription, SubscriptionRenewalRequest, ServiceProvider, ServiceAdvertisement, AuctionInvitation, JobPosting
 from .permissions import (
     can_access_dashboard,
     can_add_property,
@@ -37,7 +37,7 @@ from .permissions import (
     get_managed_brokers,
     is_platform_admin,
 )
-from .utils import filter_properties, get_public_properties, save_gallery_images, save_gallery_videos, sort_properties
+from .utils import filter_properties, get_public_properties, save_gallery_images, save_gallery_videos, sort_properties, PUBLIC_STATUSES
 
 logger = logging.getLogger('properties')
 
@@ -69,6 +69,8 @@ def home(request):
         logger.error(f"Error checking migrations: {e}")
     
     try:
+        from .utils import expire_featured_and_publications
+        expire_featured_and_publications()
         properties = get_public_properties()
         form = PropertySearchForm(request.GET)
         properties = filter_properties(properties, request.GET)
@@ -117,7 +119,7 @@ def home(request):
 
 def property_detail(request, slug):
     property_obj = get_object_or_404(Property, slug=slug)
-    if property_obj.status not in ['ready', 'under-construction', 'rent'] and not can_access_dashboard(request.user):
+    if property_obj.status not in PUBLIC_STATUSES and not can_access_dashboard(request.user):
         messages.warning(request, 'هذا العقار غير متاح حالياً.')
         return redirect('home')
 
@@ -133,13 +135,15 @@ def property_detail(request, slug):
     
     # Get virtual tours
     try:
-        virtual_tours = property_obj.virtual_tours.all()
+        virtual_tours = property_obj.virtual_tours.filter(is_active=True)
     except Exception:
         virtual_tours = []
 
-    related = get_public_properties().filter(
-        Q(district=property_obj.district) | Q(type=property_obj.type)
-    ).exclude(pk=property_obj.pk).prefetch_related('gallery_images')[:4]
+    public_props = get_public_properties()
+    related = [
+        p for p in public_props
+        if p.pk != property_obj.pk and (p.district == property_obj.district or p.type == property_obj.type)
+    ][:4]
 
     message_form = MessageForm()
     return render(request, 'properties/property_detail.html', {
@@ -245,7 +249,7 @@ def main_broker_panel(request):
     # Statistics
     total_sub_brokers = sub_brokers.count()
     total_properties = sub_broker_properties.count()
-    active_properties = sub_broker_properties.filter(status='ready').count()
+    active_properties = sub_broker_properties.filter(status__in=PUBLIC_STATUSES).count()
     
     # Recent activity
     recent_properties = sub_broker_properties.order_by('-created_at')[:10]
@@ -270,7 +274,7 @@ def broker_profile(request, username):
     # Get only this broker's properties
     properties = Property.objects.filter(
         Q(broker=broker) | Q(owner=broker.user),
-        status__in=['ready', 'under-construction', 'rent']
+        status__in=PUBLIC_STATUSES
     ).select_related().prefetch_related('gallery_images')
     
     # Apply search filters
@@ -318,7 +322,7 @@ def broker_standalone_page(request, slug):
     # Get only this broker's properties
     properties = Property.objects.filter(
         Q(broker=broker) | Q(owner=broker.user),
-        status__in=['ready', 'under-construction', 'rent']
+        status__in=PUBLIC_STATUSES
     ).select_related().prefetch_related('gallery_images')
     
     # Apply search filters
@@ -862,11 +866,13 @@ def dashboard(request):
     # Get subscription info for timer
     subscription_info = None
     try:
-        from .models import BrokerPlanSubscription
+        from .models import BrokerPlanSubscription, DallalSubscription
+        # Check new subscription system first
         subscription = BrokerPlanSubscription.objects.filter(
             broker=broker,
             status='active'
-        ).first()
+        ).select_related('plan').first()
+        
         if subscription:
             subscription_info = {
                 'seconds_remaining': subscription.get_seconds_remaining(),
@@ -875,6 +881,21 @@ def dashboard(request):
                 'max_properties': subscription.plan.max_properties,
                 'plan_name': subscription.plan.name
             }
+        else:
+            # Fallback to DallalSubscription
+            dallal_sub = DallalSubscription.objects.filter(
+                broker=broker,
+                is_active=True
+            ).first()
+            if dallal_sub:
+                days_remaining = dallal_sub.get_days_remaining()
+                subscription_info = {
+                    'seconds_remaining': days_remaining * 86400 if days_remaining else 0,
+                    'end_date': dallal_sub.end_date,
+                    'properties_used': dallal_sub.properties_used,
+                    'max_properties': dallal_sub.get_properties_remaining() + dallal_sub.properties_used,
+                    'plan_name': dallal_sub.get_subscription_type_display()
+                }
     except Exception:
         subscription_info = None
     
@@ -925,21 +946,21 @@ def dashboard(request):
                 'pending_tickets': 0,
                 'resolved_tickets': 0,
             }
-            try:
-                from .models import ChatMessage
-                platform_stats['total_messages'] = ChatMessage.objects.count()
-            except Exception:
-                pass
             
-            # Try to get backup stats
+            # Get backups
             try:
                 from .models import Backup
                 backups = Backup.objects.all().order_by('-created_at')[:10]
                 platform_stats['total_backups'] = Backup.objects.count()
-                if backups.exists():
-                    latest = backups.first()
-                    platform_stats['last_backup_size'] = latest.size
-                    platform_stats['last_backup_date'] = latest.created_at.strftime('%Y-%m-%d')
+                if backups:
+                    platform_stats['last_backup_size'] = backups.first().size
+                    platform_stats['last_backup_date'] = backups.first().created_at.strftime('%Y-%m-%d %H:%M')
+            except Exception:
+                backups = []
+            
+            try:
+                from .models import ChatMessage
+                platform_stats['total_messages'] = ChatMessage.objects.count()
             except Exception:
                 pass
             
@@ -1371,7 +1392,7 @@ def create_channel_post(request):
         return redirect('my_channel')
     
     # Get broker's properties for selection
-    broker_properties = Property.objects.filter(broker=broker, status='ready')
+    broker_properties = Property.objects.filter(broker=broker, status__in=PUBLIC_STATUSES)
     
     return render(request, 'properties/create_channel_post.html', {
         'channel': channel,
@@ -1526,7 +1547,7 @@ def channel_public_view(request, channel_id):
     
     # Apply filters
     if property_type == 'sale':
-        properties = properties.filter(status='ready')
+        properties = properties.filter(status__in=PUBLIC_STATUSES)
     elif property_type == 'rent':
         properties = properties.filter(status='rent')
     elif property_type == 'auction':
@@ -1845,18 +1866,32 @@ def subscription_plan_toggle_status_api(request, plan_id):
 @require_POST
 def subscription_request_approve_api(request, request_id):
     """API endpoint to approve subscription request."""
-    if not request.user.is_superuser:
+    from .permissions import is_platform_admin
+
+    if not (request.user.is_superuser or request.user.is_staff or is_platform_admin(request.user)):
         return JsonResponse({'success': False, 'error': 'ليس لديك صلاحية'}, status=403)
-    
+
     try:
         from .models import SubscriptionRequest
-        sub_request = SubscriptionRequest.objects.get(id=request_id)
+        sub_request = SubscriptionRequest.objects.select_related(
+            'broker', 'broker__user', 'requested_plan'
+        ).get(id=request_id)
+
+        if sub_request.status == SubscriptionRequest.STATUS_APPROVED:
+            return JsonResponse({'success': True, 'message': 'الطلب موافق عليه مسبقاً'})
+
+        if not sub_request.broker:
+            return JsonResponse({'success': False, 'error': 'الطلب غير مرتبط بدلال'}, status=400)
+
         sub_request.approve(request.user)
         return JsonResponse({'success': True})
     except SubscriptionRequest.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'الطلب غير موجود'}, status=404)
+    except ValueError as e:
+        logger.error(f"Error approving request (validation): {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
     except Exception as e:
-        logger.error(f"Error approving request: {e}")
+        logger.exception(f"Error approving request: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
@@ -1865,20 +1900,25 @@ def subscription_request_approve_api(request, request_id):
 @require_POST
 def subscription_request_reject_api(request, request_id):
     """API endpoint to reject subscription request."""
-    if not request.user.is_superuser:
+    from .permissions import is_platform_admin
+
+    if not (request.user.is_superuser or request.user.is_staff or is_platform_admin(request.user)):
         return JsonResponse({'success': False, 'error': 'ليس لديك صلاحية'}, status=403)
-    
+
     try:
         from .models import SubscriptionRequest
         sub_request = SubscriptionRequest.objects.get(id=request_id)
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            data = {}
         notes = data.get('notes', '')
         sub_request.reject(request.user, notes)
         return JsonResponse({'success': True})
     except SubscriptionRequest.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'الطلب غير موجود'}, status=404)
     except Exception as e:
-        logger.error(f"Error rejecting request: {e}")
+        logger.exception(f"Error rejecting request: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
@@ -1891,9 +1931,8 @@ def subscription_request_create_api(request):
         data = json.loads(request.body)
         
         # Check if user has a broker profile
-        try:
-            broker = request.user.broker
-        except Broker.DoesNotExist:
+        broker = get_broker(request.user)
+        if not broker:
             return JsonResponse({'success': False, 'error': 'ليس لديك ملف دلال'}, status=400)
         
         # Validate input data
@@ -2222,6 +2261,8 @@ def settings_backup(request):
         messages.error(request, 'ليس لديك صلاحية تعديل إعدادات الموقع')
         return redirect('dashboard')
     settings = SiteSettings.get_solo()
+    from .models import Backup
+    backups = Backup.objects.select_related('created_by').order_by('-created_at')[:50]
     if request.method == 'POST':
         settings.auto_backup_enabled = request.POST.get('auto_backup_enabled') == 'on'
         settings.backup_frequency = request.POST.get('backup_frequency', 'daily')
@@ -2230,7 +2271,11 @@ def settings_backup(request):
         messages.success(request, 'تم تحديث إعدادات النسخ الاحتياطي بنجاح')
         return redirect('settings_backup')
     
-    return render(request, 'properties/settings_backup.html', {'settings': settings, 'section': 'backup'})
+    return render(request, 'properties/settings_backup.html', {
+        'settings': settings,
+        'section': 'backup',
+        'backups': backups,
+    })
 
 
 @login_required
@@ -2315,7 +2360,7 @@ def explore_view(request):
         properties = [p for p in properties if p.type == property_type]
     
     if listing_type == 'sale':
-        properties = [p for p in properties if p.status == 'ready']
+        properties = [p for p in properties if p.status in PUBLIC_STATUSES]
     elif listing_type == 'rent':
         properties = [p for p in properties if p.status == 'rent']
     
@@ -2455,7 +2500,7 @@ def properties_outside_iraq_view(request):
         
         # Apply listing type filter
         if listing_type == 'sale':
-            properties = [p for p in properties if p.status == 'ready']
+            properties = [p for p in properties if p.status in PUBLIC_STATUSES]
         elif listing_type == 'rent':
             properties = [p for p in properties if p.status == 'rent']
         
@@ -2540,7 +2585,7 @@ def properties_outside_iraq_view(request):
 
 
 def unified_search_view(request):
-    """Unified search view for properties, hotels, and resorts."""
+    """Unified search view for properties, hotels, resorts, services, building requests, auctions, and jobs."""
     form = PropertySearchForm(request.GET)
     category = request.GET.get('category', '')
     q = request.GET.get('q', '')
@@ -2549,6 +2594,10 @@ def unified_search_view(request):
     properties = []
     hotels = []
     resorts = []
+    services = []
+    building_requests = []
+    auctions = []
+    jobs = []
     
     # Search in Properties (Iraq and outside Iraq)
     if category in ['', 'property_iraq', 'property_outside']:
@@ -2573,7 +2622,12 @@ def unified_search_view(request):
         # Apply filters
         governorate = request.GET.get('governorate')
         if governorate:
-            property_queryset = [p for p in property_queryset if p.district and governorate in p.district]
+            property_queryset = [
+                p for p in property_queryset
+                if (getattr(p, 'governorate', None) and governorate in p.governorate)
+                or (getattr(p, 'district', None) and governorate in p.district)
+                or (getattr(p, 'region', None) and governorate in (p.region or ''))
+            ]
         
         district = request.GET.get('district')
         if district:
@@ -2709,7 +2763,7 @@ def unified_search_view(request):
         
         governorate = request.GET.get('governorate')
         if governorate:
-            resort_queryset = resort_queryset.filter(governorate=governate)
+            resort_queryset = resort_queryset.filter(governorate=governorate)
         
         city = request.GET.get('city')
         if city:
@@ -2724,6 +2778,117 @@ def unified_search_view(request):
             resort_queryset = resort_queryset.filter(is_featured=True)
         
         resorts = list(resort_queryset)
+    
+    # Search in Services
+    if category in ['', 'service']:
+        service_queryset = ServiceAdvertisement.objects.filter(status='active')
+        
+        if q:
+            service_queryset = service_queryset.filter(
+                Q(title__icontains=q) |
+                Q(description__icontains=q) |
+                Q(location__icontains=q)
+            )
+        
+        governorate = request.GET.get('governorate')
+        if governorate:
+            service_queryset = service_queryset.filter(governorate=governorate)
+        
+        service_type = request.GET.get('service_type')
+        if service_type:
+            service_queryset = service_queryset.filter(service_type=service_type)
+        
+        price_min = request.GET.get('price_min')
+        if price_min:
+            service_queryset = service_queryset.filter(price__gte=price_min)
+        
+        price_max = request.GET.get('price_max')
+        if price_max:
+            service_queryset = service_queryset.filter(price__lte=price_max)
+        
+        services = list(service_queryset)
+    
+    # Search in Building Requests
+    if category in ['', 'building_request']:
+        building_queryset = BuildingRequest.objects.filter(is_public=True)
+        
+        if q:
+            building_queryset = building_queryset.filter(
+                Q(description__icontains=q) |
+                Q(project_type__icontains=q) |
+                Q(city__icontains=q)
+            )
+        
+        governorate = request.GET.get('governorate')
+        if governorate:
+            building_queryset = building_queryset.filter(governorate=governorate)
+        
+        project_type = request.GET.get('project_type')
+        if project_type:
+            building_queryset = building_queryset.filter(project_type__icontains=project_type)
+        
+        budget_min = request.GET.get('price_min')
+        if budget_min:
+            building_queryset = building_queryset.filter(estimated_budget__gte=budget_min)
+        
+        budget_max = request.GET.get('price_max')
+        if budget_max:
+            building_queryset = building_queryset.filter(estimated_budget__lte=budget_max)
+        
+        building_requests = list(building_queryset)
+    
+    # Search in Auctions
+    if category in ['', 'auction']:
+        auction_queryset = Auction.objects.filter(status='active')
+        
+        if q:
+            auction_queryset = auction_queryset.filter(
+                Q(title__icontains=q) |
+                Q(description__icontains=q)
+            )
+        
+        auction_type = request.GET.get('auction_type')
+        if auction_type:
+            auction_queryset = auction_queryset.filter(auction_type=auction_type)
+        
+        price_min = request.GET.get('price_min')
+        if price_min:
+            auction_queryset = auction_queryset.filter(starting_price__gte=price_min)
+        
+        price_max = request.GET.get('price_max')
+        if price_max:
+            auction_queryset = auction_queryset.filter(starting_price__lte=price_max)
+        
+        auctions = list(auction_queryset)
+    
+    # Search in Jobs
+    if category in ['', 'job']:
+        job_queryset = JobPosting.objects.filter(is_active=True)
+        
+        if q:
+            job_queryset = job_queryset.filter(
+                Q(job_title__icontains=q) |
+                Q(description__icontains=q) |
+                Q(address__icontains=q)
+            )
+        
+        governorate = request.GET.get('governorate')
+        if governorate:
+            job_queryset = job_queryset.filter(governorate=governorate)
+        
+        job_type = request.GET.get('job_type')
+        if job_type:
+            job_queryset = job_queryset.filter(job_type=job_type)
+        
+        salary_min = request.GET.get('price_min')
+        if salary_min:
+            job_queryset = job_queryset.filter(salary_min__gte=salary_min)
+        
+        salary_max = request.GET.get('price_max')
+        if salary_max:
+            job_queryset = job_queryset.filter(salary_max__lte=salary_max)
+        
+        jobs = list(job_queryset)
     
     # Combine all results for pagination
     all_results = []
@@ -2760,6 +2925,50 @@ def unified_search_view(request):
             'created_at': r.created_at,
         })
     
+    for s in services:
+        all_results.append({
+            'type': 'service',
+            'object': s,
+            'title': s.title,
+            'price': s.price if hasattr(s, 'price') else 0,
+            'location': s.location if hasattr(s, 'location') and s.location else s.governorate,
+            'image': s.cover_image.url if hasattr(s, 'cover_image') and s.cover_image else None,
+            'created_at': s.created_at if hasattr(s, 'created_at') else None,
+        })
+    
+    for b in building_requests:
+        all_results.append({
+            'type': 'building_request',
+            'object': b,
+            'title': b.project_type if hasattr(b, 'project_type') else 'طلب بناء',
+            'price': b.estimated_budget if hasattr(b, 'estimated_budget') else 0,
+            'location': b.city if hasattr(b, 'city') else b.governorate,
+            'image': None,
+            'created_at': b.created_at if hasattr(b, 'created_at') else None,
+        })
+    
+    for a in auctions:
+        all_results.append({
+            'type': 'auction',
+            'object': a,
+            'title': a.title,
+            'price': a.starting_price,
+            'location': a.property.district if a.property else '',
+            'image': a.property.get_main_image() if a.property else None,
+            'created_at': a.created_at if hasattr(a, 'created_at') else None,
+        })
+    
+    for j in jobs:
+        all_results.append({
+            'type': 'job',
+            'object': j,
+            'title': j.job_title,
+            'price': j.salary_min if hasattr(j, 'salary_min') else 0,
+            'location': j.address if hasattr(j, 'address') else j.governorate,
+            'image': j.cover_image.url if hasattr(j, 'cover_image') and j.cover_image else None,
+            'created_at': j.created_at if hasattr(j, 'created_at') else None,
+        })
+    
     # Sort combined results
     sort = request.GET.get('sort')
     if sort == 'newest':
@@ -2786,6 +2995,10 @@ def unified_search_view(request):
         'properties': properties,
         'hotels': hotels,
         'resorts': resorts,
+        'services': services,
+        'building_requests': building_requests,
+        'auctions': auctions,
+        'jobs': jobs,
         'category': category,
         'q': q,
         'user_likes': user_likes,
@@ -2808,7 +3021,7 @@ def channel_brokers_view(request):
     properties = Property.objects.filter(
         broker__isnull=False,
         broker__is_active=True,
-        status__in=['ready', 'rent']
+        status__in=PUBLIC_STATUSES
     ).select_related('owner', 'broker', 'broker__user').prefetch_related('gallery_images')
     
     # Filter by district
@@ -2821,7 +3034,7 @@ def channel_brokers_view(request):
     
     # Filter by listing type
     if listing_type == 'sale':
-        properties = properties.filter(status='ready')
+        properties = properties.filter(status__in=PUBLIC_STATUSES)
     elif listing_type == 'rent':
         properties = properties.filter(status='rent')
     
@@ -2860,7 +3073,7 @@ def channel_users_view(request):
     # Get user properties (properties without broker)
     properties = Property.objects.filter(
         broker__isnull=True,
-        status__in=['ready', 'rent']
+        status__in=PUBLIC_STATUSES
     ).select_related('owner').prefetch_related('gallery_images')
     
     # Filter by district
@@ -2873,7 +3086,7 @@ def channel_users_view(request):
     
     # Filter by listing type
     if listing_type == 'sale':
-        properties = properties.filter(status='ready')
+        properties = properties.filter(status__in=PUBLIC_STATUSES)
     elif listing_type == 'rent':
         properties = properties.filter(status='rent')
     
@@ -2926,7 +3139,7 @@ def channel_admin_view(request):
     
     # Filter by listing type
     if listing_type == 'sale':
-        properties = properties.filter(status='ready')
+        properties = properties.filter(status__in=PUBLIC_STATUSES)
     elif listing_type == 'rent':
         properties = properties.filter(status='rent')
     
@@ -2964,12 +3177,12 @@ def channels_view(request):
     broker_properties_count = Property.objects.filter(
         broker__isnull=False,
         broker__is_active=True,
-        status__in=['ready', 'rent']
+        status__in=PUBLIC_STATUSES
     ).count()
     
     user_properties_count = Property.objects.filter(
         broker__isnull=True,
-        status__in=['ready', 'rent']
+        status__in=PUBLIC_STATUSES
     ).count()
     
     all_properties_count = Property.objects.count()
@@ -3052,7 +3265,7 @@ def broker_channel_detail(request, channel_id):
     # Get broker properties
     properties = Property.objects.filter(
         broker=channel.broker,
-        status__in=['ready', 'rent']
+        status__in=PUBLIC_STATUSES
     ).select_related('owner', 'broker', 'broker__user').prefetch_related('gallery_images')
     
     # Filter by district
@@ -3065,7 +3278,7 @@ def broker_channel_detail(request, channel_id):
     
     # Filter by listing type
     if listing_type == 'sale':
-        properties = properties.filter(status='ready')
+        properties = properties.filter(status__in=PUBLIC_STATUSES)
     elif listing_type == 'rent':
         properties = properties.filter(status='rent')
     
@@ -3084,20 +3297,20 @@ def broker_channel_detail(request, channel_id):
     # Get featured properties
     featured_properties = Property.objects.filter(
         broker=channel.broker,
-        status__in=['ready', 'rent'],
+        status__in=PUBLIC_STATUSES,
         is_featured=True
     ).select_related('owner', 'broker').prefetch_related('gallery_images')[:6]
     
     # Get most viewed properties
     most_viewed_properties = Property.objects.filter(
         broker=channel.broker,
-        status__in=['ready', 'rent']
+        status__in=PUBLIC_STATUSES
     ).select_related('owner', 'broker').prefetch_related('gallery_images').order_by('-views_count')[:6]
     
     # Get new properties
     new_properties = Property.objects.filter(
         broker=channel.broker,
-        status__in=['ready', 'rent']
+        status__in=PUBLIC_STATUSES
     ).select_related('owner', 'broker').prefetch_related('gallery_images').order_by('-created_at')[:6]
     
     # Get user's likes and saves if authenticated
@@ -3397,6 +3610,27 @@ def add_property(request):
             prop.broker = broker
             if broker.office_id:
                 prop.office = broker.office
+            
+            # Validate duration_days against subscription
+            if prop.duration_days:
+                subscription = SubscriptionService.get_broker_subscription(broker)
+                if subscription:
+                    subscription_duration_days = (subscription.end_date.date() - subscription.start_date.date()).days
+                    if prop.duration_days > subscription_duration_days:
+                        messages.error(request, f'مدة النشر المحددة ({prop.duration_days} يوم) تتجاوز مدة اشتراكك ({subscription_duration_days} يوم)')
+                        return redirect('dashboard')
+            
+            # Calculate publication_end_date based on duration_days
+            if prop.duration_days:
+                prop.publication_end_date = timezone.now() + timedelta(days=prop.duration_days)
+            
+            # Set status to 'ready' automatically if broker has active subscription
+            if broker.is_subscription_active():
+                prop.status = 'ready'
+            else:
+                prop.status = 'draft'
+        else:
+            prop.status = 'draft'
         prop.save()
         
         # Handle 360° image checkboxes
@@ -3682,6 +3916,13 @@ def delete_property(request, property_id):
         if prop.broker:
             from .models import BrokerIndividualStats
             BrokerIndividualStats.track_property_deleted(prop.broker)
+            
+            # Decrement property count in subscription
+            from .services import SubscriptionService
+            try:
+                SubscriptionService.decrement_property_count(prop.broker)
+            except Exception:
+                pass  # Ignore errors if subscription doesn't exist
         
         prop.delete()
         messages.success(request, f'تم حذف العقار: {title}')
@@ -3868,6 +4109,29 @@ def add_auction(request, property_id):
 
 @login_required
 @staff_required
+def edit_auction(request, auction_id):
+    """تعديل مزاد"""
+    auction = get_object_or_404(Auction, pk=auction_id)
+    
+    if request.method == 'POST':
+        auction.title = request.POST.get('title', auction.title)
+        auction.description = request.POST.get('description', auction.description)
+        auction.starting_price = request.POST.get('starting_price', auction.starting_price)
+        auction.minimum_increment = request.POST.get('minimum_increment', auction.minimum_increment)
+        auction.reserve_price = request.POST.get('reserve_price', auction.reserve_price)
+        auction.start_date = request.POST.get('start_date', auction.start_date)
+        auction.end_date = request.POST.get('end_date', auction.end_date)
+        auction.save()
+        messages.success(request, 'تم تحديث المزاد بنجاح')
+        return redirect('auction_detail', auction_id=auction.id)
+    
+    return render(request, 'properties/edit_auction.html', {
+        'auction': auction
+    })
+
+
+@login_required
+@staff_required
 @require_POST
 def delete_auction(request, auction_id):
     try:
@@ -3938,6 +4202,51 @@ def building_request_create(request):
 def building_request_detail(request, request_id):
     building_request = get_object_or_404(BuildingRequest, pk=request_id)
     return render(request, 'properties/building_request_detail.html', {'building_request': building_request})
+
+
+@login_required
+def edit_building_request(request, request_id):
+    """تعديل طلب بناء"""
+    building_request = get_object_or_404(BuildingRequest, pk=request_id)
+    
+    # Check ownership
+    if building_request.user != request.user and not request.user.is_superuser:
+        messages.error(request, 'ليس لديك صلاحية تعديل هذا الطلب')
+        return redirect('building_request_list')
+    
+    if request.method == 'POST':
+        form = BuildingRequestForm(request.POST, instance=building_request)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'تم تحديث الطلب بنجاح')
+            return redirect('building_request_detail', request_id=request_id)
+    else:
+        form = BuildingRequestForm(instance=building_request)
+    
+    return render(request, 'properties/edit_building_request.html', {
+        'form': form,
+        'building_request': building_request
+    })
+
+
+@login_required
+def delete_building_request(request, request_id):
+    """حذف طلب بناء"""
+    building_request = get_object_or_404(BuildingRequest, pk=request_id)
+    
+    # Check ownership
+    if building_request.user != request.user and not request.user.is_superuser:
+        messages.error(request, 'ليس لديك صلاحية حذف هذا الطلب')
+        return redirect('building_request_list')
+    
+    if request.method == 'POST':
+        building_request.delete()
+        messages.success(request, 'تم حذف الطلب بنجاح')
+        return redirect('building_request_list')
+    
+    return render(request, 'properties/delete_building_request.html', {
+        'building_request': building_request
+    })
 
 
 @login_required
@@ -4453,6 +4762,97 @@ def hotels_list(request):
         'hotels': hotels,
         'form': form,
     })
+
+
+@login_required
+def hotel_create(request):
+    """View for creating a new hotel"""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description')
+        star_rating = request.POST.get('star_rating')
+        governorate = request.POST.get('governorate')
+        city = request.POST.get('city')
+        address = request.POST.get('address')
+        phone = request.POST.get('phone')
+        email = request.POST.get('email')
+        website = request.POST.get('website')
+        min_price = request.POST.get('min_price')
+        max_price = request.POST.get('max_price')
+        duration_days = request.POST.get('duration_days')
+        
+        hotel = Hotel.objects.create(
+            name=name,
+            description=description,
+            star_rating=star_rating,
+            governorate=governorate,
+            city=city,
+            address=address,
+            phone=phone,
+            email=email,
+            website=website,
+            min_price=min_price,
+            max_price=max_price,
+            duration_days=int(duration_days) if duration_days else 30,
+            user=request.user
+        )
+        
+        messages.success(request, 'تم إضافة الفندق بنجاح')
+        return redirect('hotels_list')
+    
+    return render(request, 'properties/hotel_form.html')
+
+
+@login_required
+def hotel_update(request, hotel_id):
+    """View for updating a hotel"""
+    hotel = get_object_or_404(Hotel, id=hotel_id)
+    
+    if hotel.user != request.user and not request.user.is_superuser:
+        messages.error(request, 'ليس لديك صلاحية تعديل هذا الفندق')
+        return redirect('hotels_list')
+    
+    if request.method == 'POST':
+        hotel.name = request.POST.get('name', hotel.name)
+        hotel.description = request.POST.get('description', hotel.description)
+        hotel.star_rating = request.POST.get('star_rating', hotel.star_rating)
+        hotel.governorate = request.POST.get('governorate', hotel.governorate)
+        hotel.city = request.POST.get('city', hotel.city)
+        hotel.address = request.POST.get('address', hotel.address)
+        hotel.phone = request.POST.get('phone', hotel.phone)
+        hotel.email = request.POST.get('email', hotel.email)
+        hotel.website = request.POST.get('website', hotel.website)
+        hotel.min_price = request.POST.get('min_price', hotel.min_price)
+        hotel.max_price = request.POST.get('max_price', hotel.max_price)
+        hotel.save()
+        
+        messages.success(request, 'تم تحديث الفندق بنجاح')
+        return redirect('hotels_list')
+    
+    context = {
+        'hotel': hotel,
+    }
+    return render(request, 'properties/hotel_form.html', context)
+
+
+@login_required
+def hotel_delete(request, hotel_id):
+    """View for deleting a hotel"""
+    hotel = get_object_or_404(Hotel, id=hotel_id)
+    
+    if hotel.user != request.user and not request.user.is_superuser:
+        messages.error(request, 'ليس لديك صلاحية حذف هذا الفندق')
+        return redirect('hotels_list')
+    
+    if request.method == 'POST':
+        hotel.delete()
+        messages.success(request, 'تم حذف الفندق بنجاح')
+        return redirect('hotels_list')
+    
+    context = {
+        'hotel': hotel,
+    }
+    return render(request, 'properties/hotel_confirm_delete.html', context)
 
 
 def resorts_list(request):
@@ -8010,7 +8410,7 @@ def properties_inside_iraq_view(request):
         properties = [p for p in properties if p.type == property_type]
     
     if listing_type == 'sale':
-        properties = [p for p in properties if p.status == 'ready']
+        properties = [p for p in properties if p.status in PUBLIC_STATUSES]
     elif listing_type == 'rent':
         properties = [p for p in properties if p.status == 'rent']
     elif listing_type == 'collective_rent':
@@ -8065,7 +8465,7 @@ def hotels_category_view(request):
     price_min = request.GET.get('price_min', '')
     price_max = request.GET.get('price_max', '')
     
-    hotels = PropertyHotel.objects.filter(country_code='IQ')
+    hotels = PropertyHotel.objects.filter(property__country__code='IQ')
     
     if star_rating:
         hotels = hotels.filter(star_rating=int(star_rating))
@@ -8110,7 +8510,7 @@ def hotels_outside_category_view(request):
     price_min = request.GET.get('price_min', '')
     price_max = request.GET.get('price_max', '')
     
-    hotels = PropertyHotel.objects.exclude(country_code='IQ')
+    hotels = PropertyHotel.objects.exclude(property__country__code='IQ')
     
     if star_rating:
         hotels = hotels.filter(star_rating=int(star_rating))
@@ -8149,6 +8549,7 @@ def hotels_outside_category_view(request):
 def resorts_category_view(request):
     """View for resorts category"""
     from properties.models import PropertyResort
+    from properties.constants import IRAQ_GOVERNORATES
     
     # Get filters
     resort_type = request.GET.get('resort_type', '')
@@ -8170,6 +8571,7 @@ def resorts_category_view(request):
         'resort_type': resort_type,
         'price_min': price_min,
         'price_max': price_max,
+        'governorates': IRAQ_GOVERNORATES,
         'category_title': 'منتجعات وأماكن سياحية',
         'category_icon': '🏖️',
     })
@@ -8200,7 +8602,7 @@ def outside_iraq_category_view(request):
         properties = [p for p in properties if p.type == property_type]
     
     if status == 'sale':
-        properties = [p for p in properties if p.status == 'ready']
+        properties = [p for p in properties if p.status in PUBLIC_STATUSES]
     elif status == 'rent':
         properties = [p for p in properties if p.status == 'rent']
     elif status == 'collective_rent':
@@ -8294,6 +8696,7 @@ def dynamic_add_property(request):
         PropertyOutsideIraqForm, PropertyHotelForm, PropertyResortForm
     )
     from .models import PropertyImage, PropertyVideo, BrokerPlanSubscription, Broker
+    from .services import SubscriptionService
     from django.utils import timezone
     from datetime import timedelta
     from django.core.exceptions import ValidationError
@@ -8323,26 +8726,30 @@ def dynamic_add_property(request):
                 'category': category,
             })
         
-        # Check if subscription is active
-        if broker.is_subscription_expired():
-            messages.error(request, 'اشتراكك منتهي. يرجى تجديد الاشتراك لإضافة عقارات')
+        # Use SubscriptionService for secure subscription check
+        ip_address = request.META.get('REMOTE_ADDR')
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        
+        # Check subscription before action
+        is_allowed, message = SubscriptionService.check_subscription_before_action(
+            request.user,
+            "Add property",
+            ip_address,
+            user_agent
+        )
+        
+        if not is_allowed:
+            messages.error(request, message)
             return render(request, template_name, {
                 'category_form': category_form,
                 'property_form': property_form,
                 'category': category,
             })
         
-        # Check property limit
-        property_limit = broker.get_property_limit()
-        published_count = broker.get_published_properties_count()
-        remaining_properties = broker.get_remaining_properties()
-        
-        if remaining_properties <= 0:
-            messages.error(
-                request, 
-                f'وصلت للحد الأقصى من العقارات ({published_count}/{property_limit}). '
-                f'يرجى ترقية اشتراكك لإضافة المزيد.'
-            )
+        # Check property limit using SubscriptionService
+        can_add, limit_message = SubscriptionService.can_add_property(broker)
+        if not can_add:
+            messages.error(request, limit_message)
             return render(request, template_name, {
                 'category_form': category_form,
                 'property_form': property_form,
@@ -8351,11 +8758,7 @@ def dynamic_add_property(request):
         
         # Check if user has premium subscription for featured/pinned ads
         if publication_type in ['featured', 'pinned']:
-            active_subscription = BrokerPlanSubscription.objects.filter(
-                broker=broker,
-                status='active',
-                end_date__gt=timezone.now()
-            ).first()
+            active_subscription = SubscriptionService.get_broker_subscription(broker)
             
             if not active_subscription or active_subscription.plan.tier != 'premium':
                 messages.error(request, 'يتطلب الإعلان المميز أو المثبت اشتراك مميز. يرجى ترقية اشتراكك.')
@@ -8374,7 +8777,8 @@ def dynamic_add_property(request):
                 property.broker = broker
                 
                 # Set expiry date based on subscription
-                property.expiry_date = broker.subscription_end_date if broker.subscription_end_date else timezone.now() + timedelta(days=30)
+                subscription = SubscriptionService.get_broker_subscription(broker)
+                property.expiry_date = subscription.end_date if subscription else timezone.now() + timedelta(days=30)
                 
                 # Handle publication type
                 if publication_type == 'featured':
@@ -8386,6 +8790,16 @@ def dynamic_add_property(request):
                     if publication_days:
                         property.pinned_until = timezone.now() + timedelta(days=int(publication_days))
                 
+                # Increment property count using SubscriptionService
+                try:
+                    SubscriptionService.increment_property_count(broker)
+                except Exception as e:
+                    messages.error(request, str(e))
+                    return render(request, template_name, {
+                        'category_form': category_form,
+                        'property_form': property_form,
+                        'category': category,
+                    })
                 property.save()
                 
                 # Handle media uploads
@@ -8403,7 +8817,8 @@ def dynamic_add_property(request):
                 property.broker = broker
                 
                 # Set expiry date based on subscription
-                property.expiry_date = broker.subscription_end_date if broker.subscription_end_date else timezone.now() + timedelta(days=30)
+                subscription = SubscriptionService.get_broker_subscription(broker)
+                property.expiry_date = subscription.end_date if subscription else timezone.now() + timedelta(days=30)
                 
                 # Handle publication type
                 if publication_type == 'featured':
@@ -8414,6 +8829,17 @@ def dynamic_add_property(request):
                     property.is_pinned = True
                     if publication_days:
                         property.pinned_until = timezone.now() + timedelta(days=int(publication_days))
+                
+                # Increment property count using SubscriptionService
+                try:
+                    SubscriptionService.increment_property_count(broker)
+                except Exception as e:
+                    messages.error(request, str(e))
+                    return render(request, template_name, {
+                        'category_form': category_form,
+                        'property_form': property_form,
+                        'category': category,
+                    })
                 
                 property.save()
                 
@@ -8426,16 +8852,28 @@ def dynamic_add_property(request):
         elif category == 'hotel':
             property_form = PropertyHotelForm(request.POST, request.FILES)
             if property_form.is_valid():
+                # Set expiry date based on subscription
+                subscription = SubscriptionService.get_broker_subscription(broker)
+                expiry_date = subscription.end_date if subscription else timezone.now() + timedelta(days=30)
+                
                 # Create base property first
                 property = Property.objects.create(
                     title=property_form.cleaned_data['hotel_name'],
                     category='hotel',
+                    type='hotel',
                     owner=request.user,
                     broker=broker,
                     status='published',
                     price=property_form.cleaned_data.get('price_per_night') or 0,
                     currency=property_form.cleaned_data.get('currency', 'USD'),
-                    expiry_date=broker.subscription_end_date if broker.subscription_end_date else timezone.now() + timedelta(days=30),
+                    district=property_form.cleaned_data.get('district') or property_form.cleaned_data.get('city') or 'غير محدد',
+                    location=property_form.cleaned_data.get('address') or property_form.cleaned_data.get('city') or 'غير محدد',
+                    description=property_form.cleaned_data.get('description') or property_form.cleaned_data['hotel_name'],
+                    phone=property_form.cleaned_data.get('phone') or getattr(broker, 'phone', '') or '0000000000',
+                    area=property_form.cleaned_data.get('area') or 1,
+                    governorate=property_form.cleaned_data.get('governorate') or '',
+                    city=property_form.cleaned_data.get('city') or '',
+                    expiry_date=expiry_date,
                 )
                 
                 # Handle publication type for hotel
@@ -8447,6 +8885,18 @@ def dynamic_add_property(request):
                     property.is_pinned = True
                     if publication_days:
                         property.pinned_until = timezone.now() + timedelta(days=int(publication_days))
+                
+                # Increment property count using SubscriptionService
+                try:
+                    SubscriptionService.increment_property_count(broker)
+                except Exception as e:
+                    messages.error(request, str(e))
+                    property.delete()
+                    return render(request, template_name, {
+                        'category_form': category_form,
+                        'property_form': property_form,
+                        'category': category,
+                    })
                 
                 property.save()
                 
@@ -8494,14 +8944,28 @@ def dynamic_add_property(request):
             if name and resort_type and description and governorate and city and full_address and phone:
                 from .models import Resort, ResortAmenity, ResortService
                 
+                # Set expiry date based on subscription
+                subscription = SubscriptionService.get_broker_subscription(broker)
+                expiry_date = subscription.end_date if subscription else timezone.now() + timedelta(days=30)
+                
                 # Create base property first
                 property = Property.objects.create(
                     title=name,
                     category='resort',
+                    type='resort',
                     owner=request.user,
+                    broker=broker,
                     status='published',
                     price=min_price or 0,
                     currency=currency,
+                    district=city or 'غير محدد',
+                    location=full_address or city or 'غير محدد',
+                    description=description or name,
+                    phone=phone or getattr(broker, 'phone', '') or '0000000000',
+                    area=1,
+                    governorate=governorate or '',
+                    city=city or '',
+                    expiry_date=expiry_date,
                 )
                 
                 # Handle publication type for resort
@@ -8513,6 +8977,18 @@ def dynamic_add_property(request):
                     property.is_pinned = True
                     if publication_days:
                         property.pinned_until = timezone.now() + timedelta(days=int(publication_days))
+                
+                # Increment property count using SubscriptionService
+                try:
+                    SubscriptionService.increment_property_count(broker)
+                except Exception as e:
+                    messages.error(request, str(e))
+                    property.delete()
+                    return render(request, template_name, {
+                        'category_form': category_form,
+                        'property_form': property_form,
+                        'category': category,
+                    })
                 
                 property.save()
                 
@@ -8543,7 +9019,7 @@ def dynamic_add_property(request):
                     meta_title=meta_title,
                     meta_description=meta_description,
                     keywords=keywords,
-                    broker=request.user.broker if hasattr(request.user, 'broker') else None,
+                    broker=broker,
                     user=request.user,
                     property=property,  # Link resort to property
                 )
@@ -9048,6 +9524,9 @@ def broker_create_building_request(request):
             broker = request.user.broker_profile
             
             # إنشاء طلب البناء
+            # Set status to 'approved' automatically if broker has active subscription
+            request_status = 'approved' if broker.is_subscription_active() else 'pending'
+            
             building_request = BuildingRequest.objects.create(
                 broker=broker,
                 full_name=full_name,
@@ -9065,7 +9544,7 @@ def broker_create_building_request(request):
                 priority=priority,
                 description=description,
                 requirements=requirements,
-                status='pending'
+                status=request_status
             )
             
             # إشعار للإدارة
@@ -9273,6 +9752,51 @@ def service_advertisement_detail(request, ad_id):
     advertisement.save()
     
     return render(request, 'properties/service_advertisement_detail.html', {
+        'advertisement': advertisement
+    })
+
+
+@login_required
+def edit_service_advertisement(request, ad_id):
+    """تعديل إعلان خدمة"""
+    advertisement = get_object_or_404(ServiceAdvertisement, pk=ad_id)
+    
+    # Check ownership
+    if advertisement.service_provider.user != request.user and not request.user.is_superuser:
+        messages.error(request, 'ليس لديك صلاحية تعديل هذا الإعلان')
+        return redirect('service_provider_dashboard')
+    
+    if request.method == 'POST':
+        form = ServiceAdvertisementForm(request.POST, request.FILES, instance=advertisement)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'تم تحديث الإعلان بنجاح')
+            return redirect('service_provider_dashboard')
+    else:
+        form = ServiceAdvertisementForm(instance=advertisement)
+    
+    return render(request, 'properties/edit_service_advertisement.html', {
+        'form': form,
+        'advertisement': advertisement
+    })
+
+
+@login_required
+def delete_service_advertisement(request, ad_id):
+    """حذف إعلان خدمة"""
+    advertisement = get_object_or_404(ServiceAdvertisement, pk=ad_id)
+    
+    # Check ownership
+    if advertisement.service_provider.user != request.user and not request.user.is_superuser:
+        messages.error(request, 'ليس لديك صلاحية حذف هذا الإعلان')
+        return redirect('service_provider_dashboard')
+    
+    if request.method == 'POST':
+        advertisement.delete()
+        messages.success(request, 'تم حذف الإعلان بنجاح')
+        return redirect('service_provider_dashboard')
+    
+    return render(request, 'properties/delete_service_advertisement.html', {
         'advertisement': advertisement
     })
 
@@ -9592,6 +10116,9 @@ def broker_create_auction(request):
                     return redirect('broker_auctions')
                 
                 # إنشاء المزاد
+                # Set approval_status to 'approved' automatically if broker has active subscription
+                approval_status = 'approved' if broker.is_subscription_active() else 'pending'
+                
                 auction = Auction.objects.create(
                     property=property_obj,
                     broker=broker,
@@ -9612,7 +10139,7 @@ def broker_create_auction(request):
                     contact_phone=contact_phone,
                     contact_email=contact_email,
                     status='upcoming',
-                    approval_status='pending'
+                    approval_status=approval_status
                 )
                 
                 # إشعار للإدارة
@@ -10309,89 +10836,79 @@ def subscription_renewal_request(request):
     current_subscription = BrokerPlanSubscription.objects.filter(
         broker=broker,
         status='active'
-    ).first()
+    ).select_related('plan').first()
+    
+    # Get available plans
+    available_plans = AdvancedSubscriptionPlan.objects.filter(is_active=True).order_by('tier', 'price_per_day')
     
     if request.method == 'POST':
         try:
+            # Get form data
             property_types = request.POST.getlist('property_types')
             regular_count = int(request.POST.get('regular_count', 0))
             premium_count = int(request.POST.get('premium_count', 0))
             days_requested = int(request.POST.get('days_requested', 0))
             notes = request.POST.get('notes', '')
+            subscription_type = request.POST.get('subscription_type', '')
             
-            # Validate input ranges
+            # Validate at least one property type is selected
+            if not property_types and not subscription_type:
+                raise ValidationError('يجب اختيار نوع اشتراك أو نوع عقار')
+            
+            # Validate days
+            if days_requested < 1:
+                raise ValidationError('يجب إدخال عدد أيام صحيح (على الأقل يوم واحد)')
+            
+            if days_requested > 3650:  # Max 10 years
+                raise ValidationError('عدد الأيام يتجاوز الحد المسموح (الحد الأقصى 3650 يوم)')
+            
+            # Validate property counts
             if regular_count < 0 or premium_count < 0:
-                raise ValidationError('يجب إدخال أعداد صحيحة')
-            
-            if regular_count > 1000 or premium_count > 1000:
-                raise ValidationError('عدد العقارات يتجاوز الحد المسموح')
-            
-            if regular_count == 0 and premium_count == 0:
-                raise ValidationError('يجب تحديد عدد عقارات واحد على الأقل')
-            
-            if days_requested < 1 or days_requested > 3650:  # Max 10 years
-                raise ValidationError('يجب إدخال عدد أيام صحيح (1-3650 يوم)')
+                raise ValidationError('عدد العقارات لا يمكن أن يكون سالباً')
             
             # Validate notes length
             if len(notes) > 500:
-                raise ValidationError('الملاحظات طويلة جداً')
+                raise ValidationError('الملاحظات طويلة جداً (الحد الأقصى 500 حرف)')
             
             # Sanitize notes to prevent XSS
-            from django.utils.safestring import mark_safe
             from django.utils.html import strip_tags
             notes = strip_tags(notes)
             
-            # Get prices from plan configuration instead of hardcoded values
-            regular_price = 50  # Should come from configuration
-            premium_price = 1000  # Should come from configuration
-            
-            # Calculate cost with validation
-            regular_cost = regular_price * regular_count * days_requested
-            premium_cost = premium_price * premium_count * days_requested
-            estimated_cost = regular_cost + premium_cost
+            # Calculate cost based on subscription type or property counts
+            if subscription_type:
+                # For travel company or job posting, use unified pricing: 50 IQD per day
+                estimated_cost = 50 * days_requested
+            else:
+                # Calculate based on property counts with unified pricing: 50 IQD per item per day
+                unified_price = 50
+                regular_cost = unified_price * regular_count * days_requested
+                premium_cost = unified_price * premium_count * days_requested
+                estimated_cost = regular_cost + premium_cost
             
             # Validate cost doesn't exceed reasonable limits
             if estimated_cost > 10000000:  # 10 million IQD max
                 raise ValidationError('التكلفة تتجاوز الحد المسموح')
             
-            total_properties = regular_count + premium_count
-            
-            # Create combined plan name
-            plan_name_parts = []
-            if regular_count > 0:
-                plan_name_parts.append(f'{regular_count} عادي')
-            if premium_count > 0:
-                plan_name_parts.append(f'{premium_count} مميز')
-            plan_name = f'اشتراك مركب - {", ".join(plan_name_parts)}'
-            
-            # Find or create appropriate plan
-            plan = AdvancedSubscriptionPlan.objects.filter(
-                plan_type='combined',
-                name=plan_name
+            # Check if there's already a pending renewal request
+            pending_request = SubscriptionRenewalRequest.objects.filter(
+                broker=broker,
+                status='pending'
             ).first()
             
-            if not plan:
-                # Create plan if it doesn't exist
-                plan = AdvancedSubscriptionPlan.objects.create(
-                    name=plan_name,
-                    plan_type='combined',
-                    tier='mixed',
-                    price_per_day=estimated_cost // days_requested if days_requested > 0 else 0,
-                    max_properties=total_properties,
-                    allow_property_replacement=True,
-                    is_active=True
-                )
+            if pending_request:
+                raise ValidationError('لديك طلب تجديد قيد الانتظار بالفعل')
             
-            # Create renewal request
+            # Create renewal request without a specific plan
             renewal_request = SubscriptionRenewalRequest.objects.create(
                 broker=broker,
                 current_subscription=current_subscription,
-                plan=plan,
+                plan=None,  # No specific plan, admin will determine
                 days_requested=days_requested,
-                property_count=total_properties,
+                property_count=regular_count + premium_count,
                 regular_count=regular_count,
                 premium_count=premium_count,
                 property_types=property_types,
+                subscription_type=subscription_type,
                 estimated_cost=estimated_cost,
                 notes=notes,
                 status='pending',
@@ -10423,7 +10940,8 @@ def subscription_renewal_request(request):
             logger.error(f'Subscription renewal error: {str(e)}')
     
     return render(request, 'properties/subscription_renewal_request.html', {
-        'current_subscription': current_subscription
+        'current_subscription': current_subscription,
+        'available_plans': available_plans
     })
 
 
@@ -10448,73 +10966,100 @@ def subscription_renewal_requests_list(request):
 def approve_subscription_renewal(request, request_id):
     """الموافقة على طلب تجديد اشتراك"""
     from .permissions import is_platform_admin
-    from django.core.exceptions import ValidationError
-    
-    if not is_platform_admin(request.user):
+    from django.utils import timezone
+    from datetime import timedelta
+    from django.db import transaction
+    from .models import DallalSubscription
+
+    if not (is_platform_admin(request.user) or request.user.is_superuser or request.user.is_staff):
         return JsonResponse({'success': False, 'error': 'ليس لديك صلاحية'})
-    
-    # Validate CSRF token
-    if not request.META.get('CSRF_COOKIE'):
-        return JsonResponse({'success': False, 'error': 'Invalid CSRF token'})
-    
+
     try:
-        renewal_request = get_object_or_404(SubscriptionRenewalRequest, id=request_id)
-        
+        renewal_request = get_object_or_404(
+            SubscriptionRenewalRequest.objects.select_related('broker', 'plan', 'current_subscription'),
+            id=request_id,
+        )
+
         if renewal_request.status != 'pending':
             return JsonResponse({'success': False, 'error': 'الطلب ليس في حالة انتظار'})
-        
-        # Validate the request is not too old (prevent replay attacks)
-        from django.utils import timezone
+
         if (timezone.now() - renewal_request.created_at).days > 30:
             return JsonResponse({'success': False, 'error': 'الطلب منتهي الصلاحية'})
-        
-        # Validate cost doesn't exceed reasonable limits
+
         if renewal_request.estimated_cost > 10000000:
             return JsonResponse({'success': False, 'error': 'التكلفة تتجاوز الحد المسموح'})
-        
-        # Create or update subscription
-        subscription = renewal_request.current_subscription
-        if not subscription:
-            # Create new subscription
-            subscription = BrokerPlanSubscription.objects.create(
-                broker=renewal_request.broker,
-                plan=renewal_request.plan,
-                start_date=timezone.now(),
-                end_date=timezone.now() + timezone.timedelta(days=renewal_request.days_requested),
-                status='active',
-                total_paid=renewal_request.estimated_cost
-            )
-        else:
-            # Renew existing subscription
-            subscription.renew(renewal_request.days_requested)
-            subscription.total_paid += renewal_request.estimated_cost
-            subscription.save()
-        
-        # Update request status
-        renewal_request.status = 'approved'
-        renewal_request.approved_by = request.user
-        renewal_request.approved_at = timezone.now()
-        renewal_request.approval_ip = request.META.get('REMOTE_ADDR')
-        renewal_request.save()
-        
-        # Log the approval
-        from django.contrib.admin.models import LogEntry
-        LogEntry.objects.log_action(
-            user_id=request.user.id,
-            content_type_id=None,
-            object_id=renewal_request.id,
-            object_repr=f'Approved renewal for {renewal_request.broker.display_name}',
-            action_flag=2,  # CHANGE
-            change_message=f'Approved subscription renewal: {renewal_request.estimated_cost} IQD'
-        )
-        
+
+        with transaction.atomic():
+            subscription = renewal_request.current_subscription
+            if not subscription:
+                plan = renewal_request.plan
+                if not plan:
+                    plan = AdvancedSubscriptionPlan.objects.filter(is_active=True).order_by('price_per_day').first()
+                if not plan:
+                    return JsonResponse({'success': False, 'error': 'لا توجد خطة اشتراك متاحة لتفعيل الطلب'}, status=400)
+
+                subscription = BrokerPlanSubscription.objects.create(
+                    broker=renewal_request.broker,
+                    plan=plan,
+                    start_date=timezone.now(),
+                    end_date=timezone.now() + timedelta(days=renewal_request.days_requested),
+                    status='active',
+                    total_paid=renewal_request.estimated_cost,
+                )
+                renewal_request.current_subscription = subscription
+            else:
+                subscription.renew(renewal_request.days_requested)
+                subscription.total_paid = (subscription.total_paid or 0) + renewal_request.estimated_cost
+                subscription.save()
+
+            dallal_sub_type = None
+            if renewal_request.subscription_type:
+                allowed = {c[0] for c in DallalSubscription.SUBSCRIPTION_TYPE_CHOICES}
+                if renewal_request.subscription_type in allowed:
+                    dallal_sub_type = renewal_request.subscription_type
+            elif renewal_request.property_types or renewal_request.premium_count or renewal_request.regular_count:
+                dallal_sub_type = 'premium' if renewal_request.premium_count > 0 else 'basic'
+
+            if dallal_sub_type:
+                end_date = (timezone.now() + timedelta(days=renewal_request.days_requested)).date()
+                start_date = timezone.now().date()
+                dallal_subscription = DallalSubscription.objects.filter(
+                    broker=renewal_request.broker,
+                    is_active=True,
+                ).first()
+
+                if dallal_subscription:
+                    dallal_subscription.subscription_type = dallal_sub_type
+                    dallal_subscription.start_date = start_date
+                    dallal_subscription.end_date = end_date
+                    dallal_subscription.is_active = True
+                    dallal_subscription.save()
+                else:
+                    DallalSubscription.objects.create(
+                        broker=renewal_request.broker,
+                        subscription_type=dallal_sub_type,
+                        start_date=start_date,
+                        end_date=end_date,
+                        auto_renewal=False,
+                    )
+
+            # Sync classic broker subscription dates
+            broker = renewal_request.broker
+            broker.subscription_start_date = timezone.now().date()
+            broker.subscription_end_date = (timezone.now() + timedelta(days=renewal_request.days_requested)).date()
+            broker.save(update_fields=['subscription_start_date', 'subscription_end_date'])
+
+            renewal_request.status = 'approved'
+            renewal_request.approved_by = request.user
+            renewal_request.approved_at = timezone.now()
+            renewal_request.approval_ip = request.META.get('REMOTE_ADDR')
+            renewal_request.save()
+
         return JsonResponse({'success': True})
-        
+
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f'Subscription approval error: {str(e)}')
-        return JsonResponse({'success': False, 'error': 'حدث خطأ أثناء المعالجة'})
+        logger.exception(f'Subscription approval error: {e}')
+        return JsonResponse({'success': False, 'error': f'حدث خطأ أثناء المعالجة: {str(e)}'})
 
 
 @login_required
@@ -10522,55 +11067,39 @@ def approve_subscription_renewal(request, request_id):
 def reject_subscription_renewal(request, request_id):
     """رفض طلب تجديد اشتراك"""
     from .permissions import is_platform_admin
-    from django.core.exceptions import ValidationError
-    
-    if not is_platform_admin(request.user):
+    from django.utils import timezone
+    from django.utils.html import strip_tags
+
+    if not (is_platform_admin(request.user) or request.user.is_superuser or request.user.is_staff):
         return JsonResponse({'success': False, 'error': 'ليس لديك صلاحية'})
-    
-    # Validate CSRF token
-    if not request.META.get('CSRF_COOKIE'):
-        return JsonResponse({'success': False, 'error': 'Invalid CSRF token'})
-    
+
     try:
         renewal_request = get_object_or_404(SubscriptionRenewalRequest, id=request_id)
-        
+
         if renewal_request.status != 'pending':
             return JsonResponse({'success': False, 'error': 'الطلب ليس في حالة انتظار'})
-        
-        # Validate and sanitize rejection reason
-        rejection_reason = request.POST.get('reason', '')
+
+        try:
+            data = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            data = {}
+        rejection_reason = data.get('reason') or request.POST.get('reason', '')
         if len(rejection_reason) > 500:
             return JsonResponse({'success': False, 'error': 'سبب الرفض طويل جداً'})
-        
-        # Sanitize rejection reason to prevent XSS
-        from django.utils.html import strip_tags
         rejection_reason = strip_tags(rejection_reason)
-        
+
         renewal_request.status = 'rejected'
         renewal_request.rejection_reason = rejection_reason
         renewal_request.rejected_by = request.user
         renewal_request.rejected_at = timezone.now()
         renewal_request.rejection_ip = request.META.get('REMOTE_ADDR')
         renewal_request.save()
-        
-        # Log the rejection
-        from django.contrib.admin.models import LogEntry
-        LogEntry.objects.log_action(
-            user_id=request.user.id,
-            content_type_id=None,
-            object_id=renewal_request.id,
-            object_repr=f'Rejected renewal for {renewal_request.broker.display_name}',
-            action_flag=2,  # CHANGE
-            change_message=f'Rejected subscription renewal: {rejection_reason}'
-        )
-        
+
         return JsonResponse({'success': True})
-        
+
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f'Subscription rejection error: {str(e)}')
-        return JsonResponse({'success': False, 'error': 'حدث خطأ أثناء المعالجة'})
+        logger.exception(f'Subscription rejection error: {e}')
+        return JsonResponse({'success': False, 'error': f'حدث خطأ أثناء المعالجة: {str(e)}'})
 
 
 @login_required
@@ -11494,6 +12023,7 @@ def resort_create(request):
         meta_title = request.POST.get('meta_title')
         meta_description = request.POST.get('meta_description')
         keywords = request.POST.get('keywords')
+        duration_days = request.POST.get('duration_days')
         
         resort = Resort.objects.create(
             name=name,
@@ -11519,6 +12049,7 @@ def resort_create(request):
             meta_title=meta_title,
             meta_description=meta_description,
             keywords=keywords,
+            duration_days=int(duration_days) if duration_days else 30,
             broker=request.user.broker if hasattr(request.user, 'broker') else None,
             user=request.user,
         )
@@ -11803,7 +12334,7 @@ def resort_my_bookings(request):
 def travel_companies_view(request):
     """View for all travel companies"""
     from properties.models import TravelCompany
-    from properties.constants import TRAVEL_COMPANY_TYPES, TRAVEL_TYPES
+    from properties.constants import TRAVEL_COMPANY_TYPES, TRAVEL_TYPES, IRAQ_GOVERNORATES
     
     # Get filters
     company_type = request.GET.get('company_type', '')
@@ -11850,7 +12381,7 @@ def travel_company_detail(request, pk):
 def resorts_inside_iraq_view(request):
     """View for resorts inside Iraq"""
     from properties.models import ResortInsideIraq
-    from properties.constants import RESORT_TYPES
+    from properties.constants import RESORT_TYPES, IRAQ_GOVERNORATES
     
     # Get filters
     resort_type = request.GET.get('resort_type', '')
@@ -11945,3 +12476,772 @@ def resort_outside_detail(request, pk):
     return render(request, 'properties/resort_outside_detail.html', {
         'resort': resort,
     })
+
+
+def jobs_list(request):
+    """صفحة عرض فرص العمل مع نظام البحث"""
+    from django.db.models import Q
+    from properties.models import JobPosting
+    
+    # Get active job postings
+    jobs = JobPosting.objects.filter(is_active=True).select_related('user', 'country').order_by('-is_featured', '-is_urgent', '-created_at')
+    
+    # Apply filters
+    location_type = request.GET.get('location_type')
+    if location_type:
+        jobs = jobs.filter(location_type=location_type)
+    
+    governorate = request.GET.get('governorate')
+    if governorate:
+        jobs = jobs.filter(governorate=governorate)
+    
+    country = request.GET.get('country')
+    if country:
+        jobs = jobs.filter(country_id=country)
+    
+    job_type = request.GET.get('job_type')
+    if job_type:
+        jobs = jobs.filter(job_type=job_type)
+    
+    salary_range = request.GET.get('salary_range')
+    if salary_range:
+        jobs = jobs.filter(salary_range=salary_range)
+    
+    field = request.GET.get('field')
+    if field:
+        jobs = jobs.filter(field__icontains=field)
+    
+    education = request.GET.get('education')
+    if education:
+        jobs = jobs.filter(education=education)
+    
+    experience = request.GET.get('experience')
+    if experience:
+        jobs = jobs.filter(experience=experience)
+    
+    # Search
+    search_query = request.GET.get('q')
+    if search_query:
+        jobs = jobs.filter(
+            Q(job_title__icontains=search_query) |
+            Q(company_name__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(field__icontains=search_query) |
+            Q(skills__icontains=search_query)
+        )
+    
+    return render(request, 'properties/jobs_list.html', {
+        'jobs': jobs,
+        'location_type': location_type,
+        'governorate': governorate,
+        'country': country,
+        'job_type': job_type,
+        'salary_range': salary_range,
+        'field': field,
+        'education': education,
+        'experience': experience,
+        'search_query': search_query,
+    })
+
+
+def job_detail(request, pk):
+    """صفحة تفاصيل فرصة العمل"""
+    from properties.models import JobPosting
+    
+    job = get_object_or_404(JobPosting, pk=pk, is_active=True)
+    
+    # Increment views count
+    job.views_count += 1
+    job.save(update_fields=['views_count'])
+    
+    return render(request, 'properties/job_detail.html', {
+        'job': job,
+    })
+
+
+def job_create(request):
+    """صفحة نشر فرصة عمل جديدة"""
+    from properties.models import JobPosting, Country, JobImage, JobVideo, FreelanceJob, FreelanceJobImage, FreelanceJobVideo
+    from django.contrib import messages
+    from .permissions import get_broker
+    from .services import SubscriptionService
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
+    if request.method == 'POST':
+        job_posting_type = request.POST.get('job_posting_type')
+        
+        if job_posting_type == 'freelance':
+            # Handle freelance job creation
+            broker = get_broker(request.user)
+            if not broker:
+                messages.error(request, 'يجب أن يكون لديك حساب دلال لإضافة فرص عمل حرة')
+                return redirect('job_create')
+            
+            # Check subscription limits
+            can_add, limit_message = SubscriptionService.can_add_property(broker)
+            if not can_add:
+                messages.error(request, limit_message)
+                return redirect('job_create')
+            
+            # Get freelance job data
+            job_title = request.POST.get('job_title')
+            job_description = request.POST.get('job_description')
+            employer_type = request.POST.get('employer_type')
+            industry_type = request.POST.get('industry_type')
+            required_experience = request.POST.get('required_experience')
+            required_specialization = request.POST.get('required_specialization')
+            required_skills = request.POST.get('required_skills')
+            required_education = request.POST.get('required_education')
+            salary = request.POST.get('salary')
+            payment_method = request.POST.get('payment_method')
+            start_date = request.POST.get('start_date')
+            work_type = request.POST.get('work_type')
+            governorate = request.POST.get('governorate')
+            city = request.POST.get('city')
+            address = request.POST.get('address')
+            work_days = request.POST.get('work_days')
+            work_hours = request.POST.get('work_hours')
+            tools_equipment_provided = request.POST.get('tools_equipment_provided')
+            certificates_required = request.POST.get('certificates_required')
+            employer_name = request.POST.get('employer_name')
+            employer_description = request.POST.get('employer_description')
+            website = request.POST.get('website')
+            phone = request.POST.get('phone')
+            whatsapp = request.POST.get('whatsapp')
+            email = request.POST.get('email')
+            duration_days = request.POST.get('duration_days')
+            is_featured = request.POST.get('is_featured') == 'on'
+            is_urgent = request.POST.get('is_urgent') == 'on'
+            
+            # Create freelance job
+            freelance_job = FreelanceJob.objects.create(
+                employer=broker,
+                job_title=job_title,
+                job_description=job_description,
+                employer_type=employer_type,
+                industry_type=industry_type,
+                required_experience=required_experience,
+                required_specialization=required_specialization,
+                required_skills=required_skills,
+                required_education=required_education,
+                salary=salary,
+                payment_method=payment_method,
+                start_date=start_date,
+                work_type=work_type,
+                governorate=governorate,
+                city=city,
+                address=address,
+                work_days=work_days,
+                work_hours=work_hours,
+                tools_equipment_provided=tools_equipment_provided,
+                certificates_required=certificates_required,
+                employer_name=employer_name,
+                employer_description=employer_description,
+                website=website,
+                phone=phone,
+                whatsapp=whatsapp,
+                email=email,
+                duration_days=duration_days if duration_days else 30,
+                is_featured=is_featured,
+                is_urgent=is_urgent,
+                status='published',
+            )
+            
+            # Validate duration_days against subscription
+            if duration_days:
+                subscription = SubscriptionService.get_broker_subscription(broker)
+                if subscription:
+                    subscription_duration_days = (subscription.end_date.date() - subscription.start_date.date()).days
+                    if int(duration_days) > subscription_duration_days:
+                        messages.error(request, f'مدة النشر المحددة ({duration_days} يوم) تتجاوز مدة اشتراكك ({subscription_duration_days} يوم)')
+                        return redirect('job_create')
+            
+            # Set expiry date based on duration_days from publish time (created_at)
+            if duration_days:
+                freelance_job.expiry_date = freelance_job.created_at.date() + timedelta(days=int(duration_days))
+            else:
+                freelance_job.expiry_date = freelance_job.created_at.date() + timedelta(days=30)
+            freelance_job.save()
+            
+            # Handle images
+            images = request.FILES.getlist('images')
+            for i, image in enumerate(images):
+                FreelanceJobImage.objects.create(job=freelance_job, image=image, order=i)
+            
+            # Handle videos
+            videos = request.FILES.getlist('videos')
+            for i, video in enumerate(videos):
+                FreelanceJobVideo.objects.create(job=freelance_job, video=video, order=i)
+            
+            # Increment property count
+            try:
+                SubscriptionService.increment_property_count(broker)
+            except Exception as e:
+                messages.error(request, str(e))
+            
+            messages.success(request, 'تم نشر فرصة العمل الحرة بنجاح')
+            return redirect('freelance_job_detail', pk=freelance_job.pk)
+        
+        else:
+            # Handle company job creation (existing logic)
+            job_title = request.POST.get('job_title')
+            company_name = request.POST.get('company_name')
+            location_type = request.POST.get('location_type')
+            governorate = request.POST.get('governorate')
+            city = request.POST.get('city')
+            country_id = request.POST.get('country')
+            job_type = request.POST.get('job_type')
+            salary_range = request.POST.get('salary_range')
+            field = request.POST.get('field')
+            education = request.POST.get('education')
+            experience = request.POST.get('experience')
+            description = request.POST.get('description')
+            responsibilities = request.POST.get('responsibilities')
+            benefits = request.POST.get('benefits')
+            skills = request.POST.get('skills')
+            contact_phone = request.POST.get('contact_phone')
+            whatsapp = request.POST.get('whatsapp')
+            contact_email = request.POST.get('contact_email')
+            company_website = request.POST.get('company_website')
+            address = request.POST.get('address')
+            is_featured = request.POST.get('is_featured') == 'on'
+            is_urgent = request.POST.get('is_urgent') == 'on'
+            
+            # Create job posting
+            job = JobPosting.objects.create(
+                user=request.user,
+                job_title=job_title,
+                company_name=company_name,
+                location_type=location_type,
+                governorate=governorate,
+                city=city,
+                country_id=country_id if country_id else None,
+                job_type=job_type,
+                salary_range=salary_range,
+                field=field,
+                education=education,
+                experience=experience,
+                description=description,
+                responsibilities=responsibilities,
+                benefits=benefits,
+                skills=skills,
+                contact_phone=contact_phone,
+                whatsapp=whatsapp,
+                contact_email=contact_email,
+                company_website=company_website,
+                address=address,
+                is_featured=is_featured,
+                is_urgent=is_urgent,
+            )
+            
+            # Handle cover image
+            if 'cover_image' in request.FILES:
+                job.cover_image = request.FILES['cover_image']
+                job.save()
+            
+            # Handle company logo
+            if 'company_logo' in request.FILES:
+                job.company_logo = request.FILES['company_logo']
+                job.save()
+            
+            # Handle images
+            images = request.FILES.getlist('images')
+            for image in images:
+                JobImage.objects.create(job=job, image=image)
+            
+            # Handle videos
+            videos = request.FILES.getlist('videos')
+            for video in videos:
+                JobVideo.objects.create(job=job, video=video)
+            
+            messages.success(request, 'تم نشر فرصة العمل بنجاح')
+            return redirect('job_detail', pk=job.pk)
+    
+    countries = Country.objects.all()
+    
+    return render(request, 'properties/job_create.html', {
+        'countries': countries,
+    })
+
+
+def my_jobs(request):
+    """صفحة إدارة فرص العمل المنشورة من قبل المستخدم"""
+    from properties.models import JobPosting
+    
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
+    jobs = JobPosting.objects.filter(user=request.user).order_by('-created_at')
+    
+    return render(request, 'properties/my_jobs.html', {
+        'jobs': jobs,
+    })
+
+
+def job_edit(request, pk):
+    """صفحة تعديل فرصة عمل"""
+    from properties.models import JobPosting, Country, JobImage, JobVideo
+    from django.contrib import messages
+    
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
+    job = get_object_or_404(JobPosting, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        # Update job posting
+        job.job_title = request.POST.get('job_title', job.job_title)
+        job.company_name = request.POST.get('company_name', job.company_name)
+        job.location_type = request.POST.get('location_type', job.location_type)
+        job.governorate = request.POST.get('governorate', job.governorate)
+        job.city = request.POST.get('city', job.city)
+        country_id = request.POST.get('country')
+        job.country_id = country_id if country_id else job.country_id
+        job.job_type = request.POST.get('job_type', job.job_type)
+        job.salary_range = request.POST.get('salary_range', job.salary_range)
+        job.field = request.POST.get('field', job.field)
+        job.education = request.POST.get('education', job.education)
+        job.experience = request.POST.get('experience', job.experience)
+        job.description = request.POST.get('description', job.description)
+        job.responsibilities = request.POST.get('responsibilities', job.responsibilities)
+        job.benefits = request.POST.get('benefits', job.benefits)
+        job.skills = request.POST.get('skills', job.skills)
+        job.contact_phone = request.POST.get('contact_phone', job.contact_phone)
+        job.whatsapp = request.POST.get('whatsapp', job.whatsapp)
+        job.contact_email = request.POST.get('contact_email', job.contact_email)
+        job.company_website = request.POST.get('company_website', job.company_website)
+        job.address = request.POST.get('address', job.address)
+        job.is_featured = request.POST.get('is_featured') == 'on'
+        job.is_urgent = request.POST.get('is_urgent') == 'on'
+        
+        # Handle cover image
+        if 'cover_image' in request.FILES:
+            job.cover_image = request.FILES['cover_image']
+        
+        # Handle company logo
+        if 'company_logo' in request.FILES:
+            job.company_logo = request.FILES['company_logo']
+        
+        job.save()
+        
+        # Handle new images
+        images = request.FILES.getlist('images')
+        for image in images:
+            JobImage.objects.create(job=job, image=image)
+        
+        # Handle new videos
+        videos = request.FILES.getlist('videos')
+        for video in videos:
+            JobVideo.objects.create(job=job, video=video)
+        
+        messages.success(request, 'تم تحديث فرصة العمل بنجاح')
+        return redirect('job_detail', pk=job.pk)
+
+
+# Backup Views
+@login_required
+def create_backup(request):
+    """إنشاء نسخة احتياطية جديدة"""
+    if not request.user.is_superuser and not request.user.is_staff:
+        return JsonResponse({'success': False, 'error': 'غير مصرح'}, status=403)
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'طلب غير صالح'}, status=400)
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        backup_type = data.get('type', 'full')
+        
+        from .models import Backup
+        import os
+        from django.conf import settings
+        from django.utils import timezone
+        import shutil
+        
+        # Create backup directory if it doesn't exist
+        backup_dir = os.path.join(settings.BASE_DIR, 'backups')
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        # Generate backup filename
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        backup_filename = f'backup_{backup_type}_{timestamp}'
+        
+        # Create backup based on type
+        backup_path = ''
+        backup_size = 0
+        
+        if backup_type == 'database':
+            # Database backup
+            db_path = os.path.join(settings.BASE_DIR, 'db.sqlite3')
+            if os.path.exists(db_path):
+                backup_path = os.path.join(backup_dir, f'{backup_filename}.db')
+                shutil.copy2(db_path, backup_path)
+                backup_size = os.path.getsize(backup_path) / (1024 * 1024)  # MB
+        
+        elif backup_type == 'files':
+            # Media files backup
+            media_path = settings.MEDIA_ROOT
+            if os.path.exists(media_path):
+                backup_path = os.path.join(backup_dir, f'{backup_filename}.zip')
+                shutil.make_archive(backup_path.replace('.zip', ''), 'zip', media_path)
+                backup_size = os.path.getsize(backup_path) / (1024 * 1024)  # MB
+        
+        else:  # full backup
+            # Full backup (database + files)
+            db_path = os.path.join(settings.BASE_DIR, 'db.sqlite3')
+            media_path = settings.MEDIA_ROOT
+            
+            # Create a temporary directory for the full backup
+            temp_dir = os.path.join(backup_dir, f'temp_{timestamp}')
+            os.makedirs(temp_dir, exist_ok=True)
+            
+            # Copy database
+            if os.path.exists(db_path):
+                shutil.copy2(db_path, os.path.join(temp_dir, 'db.sqlite3'))
+            
+            # Copy mediaFiles
+            if os.path.exists(media_path):
+                shutil.copytree(media_path, os.path.join(temp_dir, 'media'))
+            
+            # Create zip
+            backup_path = os.path.join(backup_dir, f'{backup_filename}.zip')
+            shutil.make_archive(backup_path.replace('.zip', ''), 'zip', temp_dir)
+            backup_size = os.path.getsize(backup_path) / (1024 * 1024)  # MB
+            
+            # Clean up temp directory
+            shutil.rmtree(temp_dir)
+        
+        # Save backup record to database
+        backup = Backup.objects.create(
+            name=backup_filename,
+            backup_type=backup_type,
+            file_path=backup_path,
+            size=round(backup_size, 2),
+            description=f'نسخة احتياطية {backup_type}',
+            created_by=request.user
+        )
+        
+        return JsonResponse({'success': True, 'backup_id': backup.id})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def restore_backup(request, backup_id):
+    """استعادة نسخة احتياطية"""
+    if not request.user.is_superuser and not request.user.is_staff:
+        return JsonResponse({'success': False, 'error': 'غير مصرح'}, status=403)
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'طلب غير صالح'}, status=400)
+    
+    try:
+        from .models import Backup
+        import os
+        import shutil
+        from django.conf import settings
+        
+        backup = get_object_or_404(Backup, pk=backup_id)
+        
+        if not os.path.exists(backup.file_path):
+            return JsonResponse({'success': False, 'error': 'ملف النسخة الاحتياطية غير موجود'}, status=404)
+        
+        # Restore based on backup type
+        if backup.backup_type == 'database':
+            db_path = os.path.join(settings.BASE_DIR, 'db.sqlite3')
+            shutil.copy2(backup.file_path, db_path)
+        
+        elif backup.backup_type == 'files':
+            media_path = settings.MEDIA_ROOT
+            shutil.rmtree(media_path, ignore_errors=True)
+            os.makedirs(media_path, exist_ok=True)
+            shutil.unpack_archive(backup.file_path, media_path)
+        
+        else:  # full backup
+            temp_dir = os.path.join(settings.BASE_DIR, 'temp_restore')
+            os.makedirs(temp_dir, exist_ok=True)
+            shutil.unpack_archive(backup.file_path, temp_dir)
+            
+            # Restore database
+            db_path = os.path.join(settings.BASE_DIR, 'db.sqlite3')
+            temp_db = os.path.join(temp_dir, 'db.sqlite3')
+            if os.path.exists(temp_db):
+                shutil.copy2(temp_db, db_path)
+            
+            # Restore media files
+            media_path = settings.MEDIA_ROOT
+            temp_media = os.path.join(temp_dir, 'media')
+            if os.path.exists(temp_media):
+                shutil.rmtree(media_path, ignore_errors=True)
+                shutil.copytree(temp_media, media_path)
+            
+            # Clean up
+            shutil.rmtree(temp_dir)
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def download_backup(request, backup_id):
+    """تحميل نسخة احتياطية"""
+    if not request.user.is_superuser and not request.user.is_staff:
+        return JsonResponse({'success': False, 'error': 'غير مصرح'}, status=403)
+    
+    try:
+        from .models import Backup
+        import os
+        from django.http import FileResponse
+        
+        backup = get_object_or_404(Backup, pk=backup_id)
+        
+        if not os.path.exists(backup.file_path):
+            return JsonResponse({'success': False, 'error': 'ملف النسخة الاحتياطية غير موجود'}, status=404)
+        
+        return FileResponse(open(backup.file_path, 'rb'), as_attachment=True, filename=f'{backup.name}.zip')
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def delete_backup(request, backup_id):
+    """حذف نسخة احتياطية"""
+    if not request.user.is_superuser and not request.user.is_staff:
+        return JsonResponse({'success': False, 'error': 'غير مصرح'}, status=403)
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'طلب غير صالح'}, status=400)
+    
+    try:
+        from .models import Backup
+        import os
+        
+        backup = get_object_or_404(Backup, pk=backup_id)
+        
+        # Delete file
+        if os.path.exists(backup.file_path):
+            os.remove(backup.file_path)
+        
+        # Delete record
+        backup.delete()
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def export_data(request):
+    """تصدير جميع بيانات الموقع كملف JSON"""
+    if not request.user.is_superuser and not request.user.is_staff:
+        return JsonResponse({'success': False, 'error': 'غير مصرح'}, status=403)
+    
+    try:
+        from django.core import serializers
+        from django.http import HttpResponse
+        from django.utils import timezone
+        import json
+        
+        # Get all models to export
+        from .models import (
+            Property, PropertyImage, Broker, ServiceAdvertisement, 
+            Hotel, Resort, BuildingRequest, Auction, JobPosting,
+            ServiceProvider, UserSettings
+        )
+        
+        models_to_export = [
+            Property, PropertyImage, Broker, ServiceAdvertisement,
+            Hotel, Resort, BuildingRequest, Auction, JobPosting,
+            ServiceProvider, UserSettings
+        ]
+        
+        # Serialize all data
+        data = []
+        for model in models_to_export:
+            objects = model.objects.all()
+            serialized = serializers.serialize('json', objects)
+            data.append({
+                'model': model.__name__,
+                'data': json.loads(serialized)
+            })
+        
+        # Create response
+        response = HttpResponse(
+            json.dumps(data, ensure_ascii=False, indent=2),
+            content_type='application/json'
+        )
+        
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        response['Content-Disposition'] = f'attachment; filename="dalal_export_{timestamp}.json"'
+        
+        return response
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def import_data(request):
+    """استيراد البيانات من ملف JSON"""
+    if not request.user.is_superuser and not request.user.is_staff:
+        return JsonResponse({'success': False, 'error': 'غير مصرح'}, status=403)
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'طلب غير صالح'}, status=400)
+    
+    try:
+        from django.core import serializers
+        import json
+        
+        if 'file' not in request.FILES:
+            return JsonResponse({'success': False, 'error': 'لم يتم إرفاق ملف'}, status=400)
+        
+        file = request.FILES['file']
+        
+        # Read JSON data
+        data = json.loads(file.read().decode('utf-8'))
+        
+        # Import data for each model
+        imported_count = 0
+        for model_data in data:
+            model_name = model_data['model']
+            objects_data = model_data['data']
+            
+            # Deserialize and save
+            for obj in serializers.deserialize('json', json.dumps(objects_data)):
+                obj.save()
+                imported_count += 1
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'تم استيراد {imported_count} عنصر بنجاح'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+def job_delete(request, pk):
+    """حذف فرصة عمل"""
+    from properties.models import JobPosting
+    from django.contrib import messages
+    
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
+    job = get_object_or_404(JobPosting, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        job.delete()
+        messages.success(request, 'تم حذف فرصة العمل بنجاح')
+        return redirect('my_jobs')
+    
+    return render(request, 'properties/job_delete.html', {
+        'job': job,
+    })
+
+
+@login_required
+def add_freelance_job(request):
+    """Add a freelance job posting"""
+    from .forms import FreelanceJobForm, FreelanceJobImageForm, FreelanceJobVideoForm
+    from .permissions import get_broker
+    from .services import SubscriptionService
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    broker = get_broker(request.user)
+    if not broker:
+        messages.error(request, 'يجب أن يكون لديك حساب دلال لإضافة فرص عمل حرة')
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        form = FreelanceJobForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            # Check subscription limits
+            can_add, limit_message = SubscriptionService.can_add_property(broker)
+            if not can_add:
+                messages.error(request, limit_message)
+                return render(request, 'properties/add_freelance_job.html', {'form': form})
+            
+            freelance_job = form.save(commit=False)
+            freelance_job.employer = broker
+            freelance_job.status = 'published'
+            freelance_job.created_at = timezone.now()
+            
+            # Validate duration_days against subscription
+            subscription = SubscriptionService.get_broker_subscription(broker)
+            if subscription:
+                subscription_duration_days = (subscription.end_date.date() - subscription.start_date.date()).days
+                if freelance_job.duration_days > subscription_duration_days:
+                    messages.error(request, f'مدة النشر المحددة ({freelance_job.duration_days} يوم) تتجاوز مدة اشتراكك ({subscription_duration_days} يوم)')
+                    return render(request, 'properties/add_freelance_job.html', {'form': form})
+            
+            # Set expiry date based on duration_days from publish time (created_at)
+            if freelance_job.duration_days:
+                freelance_job.expiry_date = freelance_job.created_at.date() + timedelta(days=freelance_job.duration_days)
+            else:
+                freelance_job.expiry_date = freelance_job.created_at.date() + timedelta(days=30)
+            
+            freelance_job.save()
+            
+            # Handle images
+            images = request.FILES.getlist('images')
+            for i, image in enumerate(images):
+                FreelanceJobImage.objects.create(
+                    job=freelance_job,
+                    image=image,
+                    order=i
+                )
+            
+            # Handle videos
+            videos = request.FILES.getlist('videos')
+            for i, video in enumerate(videos):
+                FreelanceJobVideo.objects.create(
+                    job=freelance_job,
+                    video=video,
+                    order=i
+                )
+            
+            # Increment property count
+            try:
+                SubscriptionService.increment_property_count(broker)
+            except Exception as e:
+                messages.error(request, str(e))
+            
+            messages.success(request, 'تم إضافة فرصة العمل الحرة بنجاح')
+            return redirect('dashboard')
+    else:
+        form = FreelanceJobForm()
+    
+    return render(request, 'properties/add_freelance_job.html', {'form': form})
+
+
+@login_required
+def freelance_job_detail(request, pk):
+    """View freelance job details"""
+    from .models import FreelanceJob
+    
+    job = get_object_or_404(FreelanceJob, pk=pk)
+    
+    # Check if job has expired and update status
+    if job.status == 'published' and job.is_expired():
+        job.status = 'expired'
+        job.save(update_fields=['status'])
+    
+    # Increment view count
+    job.views_count += 1
+    job.save(update_fields=['views_count'])
+    
+    return render(request, 'properties/freelance_job_detail.html', {'job': job})

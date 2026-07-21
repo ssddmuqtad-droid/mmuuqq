@@ -52,6 +52,11 @@
                                 <i class="fas fa-user-plus"></i> متابعة
                             </a>
                         {% endif %}
+                        {% if user == page.user or user.is_superuser %}
+                        <a href="{% url 'hotel_page_delete' page.slug %}" class="btn btn-danger" onclick="return confirm('هل أنت متأكد من حذف هذه الصفحة؟')">
+                            <i class="fas fa-trash"></i> حذف
+                        </a>
+                        {% endif %}
                     {% else %}
                         <a href="{% url 'login' %}" class="btn btn-primary">
                             <i class="fas fa-user-plus"></i> متابعة

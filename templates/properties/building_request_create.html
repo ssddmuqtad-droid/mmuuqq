@@ -22,6 +22,15 @@
       </div>
 
       <div class="form-section">
+        <h3>مدة النشر</h3>
+        <div class="form-group">
+          <label>{{ form.duration_days.label }} *</label>
+          {{ form.duration_days }}
+          <small class="form-text text-muted">مدة ظهور الطلب (افتراضي: 30 يوم)</small>
+        </div>
+      </div>
+
+      <div class="form-section">
         <h3>معلومات صاحب الطلب</h3>
         <div class="form-group">
           <label>{{ form.owner_name.label }} *</label>

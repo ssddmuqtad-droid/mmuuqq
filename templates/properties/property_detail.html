@@ -88,6 +88,12 @@
           <span class="btn-icon">⚖️</span>
           <span>مقارنة</span>
         </button>
+        {% if request.user == property.owner or request.user.is_superuser %}
+        <a href="{% url 'delete_property' property.id %}" class="btn btn-outline delete-btn" onclick="return confirm('هل أنت متأكد من حذف هذا العقار؟')">
+          <span class="btn-icon">🗑️</span>
+          <span>حذف</span>
+        </a>
+        {% endif %}
         <a href="tel:{{ property.phone }}" class="btn btn-primary call-btn">
           <span class="btn-icon">📞</span>
           <span>اتصال</span>
@@ -295,6 +301,12 @@
           <div class="detail-item">
             <span class="detail-label">الناحية:</span>
             <span class="detail-value">{{ property.nahiyah }}</span>
+          </div>
+          {% endif %}
+          {% if property.region %}
+          <div class="detail-item">
+            <span class="detail-label">المنطقة:</span>
+            <span class="detail-value">{{ property.region }}</span>
           </div>
           {% endif %}
           {% if property.landmark %}
@@ -2179,20 +2191,28 @@ window.PROPERTY_PRICE = {{ property.price }};
 document.addEventListener('DOMContentLoaded', function() {
   {% for tour in virtual_tours %}
   if (document.getElementById('panorama-{{ tour.id }}')) {
+    {% if tour.tour_type == 'external' and tour.external_url %}
+    document.getElementById('panorama-{{ tour.id }}').innerHTML =
+      '<iframe src="{{ tour.external_url }}" style="width:100%;height:100%;border:0;" allowfullscreen loading="lazy"></iframe>';
+    {% elif tour.image %}
     new VirtualTour360('#panorama-{{ tour.id }}', {
       imageUrl: "{{ tour.image.url }}",
-      autoRotate: {{ tour.auto_rotate|lower }},
-      autoRotateSpeed: {{ tour.auto_rotate_speed }},
-      enableZoom: {{ tour.enable_zoom|lower }},
-      minZoom: {{ tour.min_zoom }},
-      maxZoom: {{ tour.max_zoom }},
-      enableFullscreen: {{ tour.enable_fullscreen|lower }},
-      enableVR: {{ tour.enable_vr|lower }},
-      initialPitch: {{ tour.initial_view_pitch }},
-      initialYaw: {{ tour.initial_view_yaw }},
-      startInAutoplay: {{ tour.start_in_autoplay|lower }},
-      autoplayDuration: {{ tour.autoplay_duration }}
+      autoRotate: {{ tour.auto_rotate|yesno:"true,false" }},
+      autoRotateSpeed: {{ tour.auto_rotate_speed|default:1 }},
+      enableZoom: {{ tour.enable_zoom|yesno:"true,false" }},
+      minZoom: {{ tour.min_zoom|default:0.5 }},
+      maxZoom: {{ tour.max_zoom|default:3 }},
+      enableFullscreen: {{ tour.enable_fullscreen|yesno:"true,false" }},
+      enableVR: {{ tour.enable_vr|yesno:"true,false" }},
+      initialPitch: {{ tour.initial_view_pitch|default:0 }},
+      initialYaw: {{ tour.initial_view_yaw|default:0 }},
+      startInAutoplay: {{ tour.start_in_autoplay|yesno:"true,false" }},
+      autoplayDuration: {{ tour.autoplay_duration|default:10 }}
     });
+    {% else %}
+    document.getElementById('panorama-{{ tour.id }}').innerHTML =
+      '<div style="display:grid;place-items:center;height:100%;opacity:.7;">لا تتوفر صورة 360° لهذه الجولة</div>';
+    {% endif %}
   }
   {% endfor %}
 });

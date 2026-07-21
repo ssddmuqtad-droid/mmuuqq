@@ -56,6 +56,14 @@
       </div>
 
       <div class="form-group">
+        <label>{{ form.duration_days.label }} *</label>
+        {{ form.duration_days }}
+        <small style="color: var(--text-light); display: block; margin-top: 8px;">
+          مدة ظهور المزاد (افتراضي: 30 يوم)
+        </small>
+      </div>
+
+      <div class="form-group">
         <label>{{ form.terms.label }} *</label>
         {{ form.terms }}
         <small style="color: var(--text-light); display: block; margin-top: 8px;">

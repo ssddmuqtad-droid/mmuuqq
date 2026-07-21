@@ -578,6 +578,12 @@
       <span>📤</span>
       <span>مشاركة</span>
     </button>
+    {% if user.is_authenticated and (user == resort.user or user.is_superuser) %}
+    <a href="{% url 'resort_delete' resort.slug %}" class="contact-btn" style="background: #dc3545; color: white;" onclick="return confirm('هل أنت متأكد من حذف هذا المنتجع؟')">
+      <span>🗑️</span>
+      <span>حذف</span>
+    </a>
+    {% endif %}
   </div>
 </div>
 

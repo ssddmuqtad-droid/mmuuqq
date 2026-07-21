@@ -1,0 +1,286 @@
+{% extends 'properties/base.html' %}
+
+{% block title %}{{ job.job_title }} - فرصة عمل حرة{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: 40px 20px;">
+    <div class="job-detail-container" style="max-width: 900px; margin: 0 auto;">
+        <!-- Header -->
+        <div class="job-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; border-radius: 12px; margin-bottom: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
+                <div>
+                    <h1 style="font-size: 32px; margin-bottom: 10px; color: white;">{{ job.job_title }}</h1>
+                    <p style="color: rgba(255,255,255,0.8); font-size: 18px;">{{ job.employer_name }}</p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    {% if job.status == 'expired' %}
+                    <span style="background: #FF6B6B; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold;">⏰ منتهي</span>
+                    {% endif %}
+                    {% if job.is_featured %}
+                    <span style="background: #FFD700; color: #333; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold;">⭐ مميز</span>
+                    {% endif %}
+                    {% if job.is_urgent %}
+                    <span style="background: #FF6B6B; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold;">🔥 عاجل</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px; display: flex; gap: 20px; flex-wrap: wrap; color: rgba(255,255,255,0.9);">
+                <span>📍 {{ job.governorate }} - {{ job.city }}</span>
+                <span>💼 {{ job.get_work_type_display }}</span>
+                <span>👁️ {{ job.views_count }} مشاهدة</span>
+                <span>📋 {{ job.applications_count }} متقدم</span>
+                <span>📅 نشر: {{ job.created_at|date:"Y-m-d H:i" }}</span>
+                {% if job.expiry_date %}
+                <span>⏰ ينتهي: {{ job.expiry_date|date:"Y-m-d" }}</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Contact Buttons -->
+        <div class="contact-buttons" style="display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap;">
+            <a href="tel:{{ job.phone }}" 
+               style="flex: 1; min-width: 150px; padding: 15px; background: #25D366; color: white; border: none; border-radius: 8px; text-align: center; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                📞 اتصال
+            </a>
+            {% if job.whatsapp %}
+            <a href="https://wa.me/{{ job.whatsapp }}" target="_blank"
+               style="flex: 1; min-width: 150px; padding: 15px; background: #25D366; color: white; border: none; border-radius: 8px; text-align: center; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                💬 واتساب
+            </a>
+            {% endif %}
+            {% if job.email %}
+            <a href="mailto:{{ job.email }}"
+               style="flex: 1; min-width: 150px; padding: 15px; background: #667eea; color: white; border: none; border-radius: 8px; text-align: center; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                📧 بريد إلكتروني
+            </a>
+            {% endif %}
+            <button onclick="saveJob()" 
+                    style="flex: 1; min-width: 150px; padding: 15px; background: rgba(255,255,255,0.1); color: white; border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                ❤️ حفظ
+            </button>
+            <button onclick="shareJob()" 
+                    style="flex: 1; min-width: 150px; padding: 15px; background: rgba(255,255,255,0.1); color: white; border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                📤 مشاركة
+            </button>
+            {% if request.user.is_authenticated and (request.user == job.user or request.user.is_superuser) %}
+            <a href="{% url 'delete_freelance_job' job.id %}" 
+               style="flex: 1; min-width: 150px; padding: 15px; background: #dc3545; color: white; border: none; border-radius: 8px; text-align: center; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px;"
+               onclick="return confirm('هل أنت متأكد من حذف هذه الوظيفة؟')">
+                🗑️ حذف
+            </a>
+            {% endif %}
+        </div>
+        
+        <!-- Main Content -->
+        <div style="display: grid; gap: 30px;">
+            <!-- Job Description -->
+            <div class="section" style="background: rgba(255,255,255,0.05); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                <h2 style="color: #667eea; margin-bottom: 20px; font-size: 24px;">💼 وصف الوظيفة</h2>
+                <p style="color: rgba(255,255,255,0.8); line-height: 1.8;">{{ job.job_description }}</p>
+                
+                <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <span style="color: rgba(255,255,255,0.6); display: block; margin-bottom: 5px;">نوع صاحب العمل</span>
+                        <span style="color: white; font-size: 18px; font-weight: bold;">{{ job.get_employer_type_display }}</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <span style="color: rgba(255,255,255,0.6); display: block; margin-bottom: 5px;">نوع النشاط</span>
+                        <span style="color: white; font-size: 18px; font-weight: bold;">{{ job.get_industry_type_display }}</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <span style="color: rgba(255,255,255,0.6); display: block; margin-bottom: 5px;">التخصص المطلوب</span>
+                        <span style="color: white; font-size: 18px; font-weight: bold;">{{ job.required_specialization }}</span>
+                    </div>
+                    {% if job.required_education %}
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <span style="color: rgba(255,255,255,0.6); display: block; margin-bottom: 5px;">المؤهل المطلوب</span>
+                        <span style="color: white; font-size: 18px; font-weight: bold;">{{ job.required_education }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Required Qualifications -->
+            <div class="section" style="background: rgba(255,255,255,0.05); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                <h2 style="color: #667eea; margin-bottom: 20px; font-size: 24px;">🎓 المؤهلات المطلوبة</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <span style="color: rgba(255,255,255,0.6); display: block; margin-bottom: 5px;">سنوات الخبرة المطلوبة</span>
+                        <span style="color: white; font-size: 18px; font-weight: bold;">{{ job.required_experience }} سنة</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <h3 style="color: rgba(255,255,255,0.7); margin-bottom: 10px;">المهارات المطلوبة</h3>
+                    <p style="color: rgba(255,255,255,0.8); line-height: 1.8; white-space: pre-line;">{{ job.required_skills }}</p>
+                </div>
+                
+                {% if job.certificates_required %}
+                <div style="margin-top: 20px;">
+                    <h3 style="color: rgba(255,255,255,0.7); margin-bottom: 10px;">الشهادات المطلوبة</h3>
+                    <p style="color: rgba(255,255,255,0.8); line-height: 1.8; white-space: pre-line;">{{ job.certificates_required }}</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Salary -->
+            <div class="section" style="background: rgba(255,255,255,0.05); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                <h2 style="color: #667eea; margin-bottom: 20px; font-size: 24px;">💰 الراتب وطريقة الدفع</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <span style="color: rgba(255,255,255,0.6); display: block; margin-bottom: 5px;">الراتب المقدم</span>
+                        <span style="color: white; font-size: 18px; font-weight: bold;">{% if job.salary %}{{ job.salary }} دينار{% else %}حسب الاتفاق{% endif %}</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <span style="color: rgba(255,255,255,0.6); display: block; margin-bottom: 5px;">طريقة الدفع</span>
+                        <span style="color: white; font-size: 18px; font-weight: bold;">{{ job.get_payment_method_display }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Work Schedule -->
+            <div class="section" style="background: rgba(255,255,255,0.05); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                <h2 style="color: #667eea; margin-bottom: 20px; font-size: 24px;">⏰ جدول العمل</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <span style="color: rgba(255,255,255,0.6); display: block; margin-bottom: 5px;">تاريخ البدء</span>
+                        <span style="color: white; font-size: 18px; font-weight: bold;">{{ job.start_date|date:"Y-m-d" }}</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <span style="color: rgba(255,255,255,0.6); display: block; margin-bottom: 5px;">نوع العمل</span>
+                        <span style="color: white; font-size: 18px; font-weight: bold;">{{ job.get_work_type_display }}</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <span style="color: rgba(255,255,255,0.6); display: block; margin-bottom: 5px;">أيام العمل</span>
+                        <span style="color: white; font-size: 18px; font-weight: bold;">{{ job.work_days }}</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <span style="color: rgba(255,255,255,0.6); display: block; margin-bottom: 5px;">ساعات العمل</span>
+                        <span style="color: white; font-size: 18px; font-weight: bold;">{{ job.work_hours }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Location -->
+            <div class="section" style="background: rgba(255,255,255,0.05); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                <h2 style="color: #667eea; margin-bottom: 20px; font-size: 24px;">� الموقع</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <span style="color: rgba(255,255,255,0.6); display: block; margin-bottom: 5px;">المحافظة</span>
+                        <span style="color: white; font-size: 18px; font-weight: bold;">{{ job.governorate }}</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <span style="color: rgba(255,255,255,0.6); display: block; margin-bottom: 5px;">المدينة</span>
+                        <span style="color: white; font-size: 18px; font-weight: bold;">{{ job.city }}</span>
+                    </div>
+                </div>
+                {% if job.address %}
+                <div style="margin-top: 20px;">
+                    <h3 style="color: rgba(255,255,255,0.7); margin-bottom: 10px;">العنوان التفصيلي</h3>
+                    <p style="color: rgba(255,255,255,0.8); line-height: 1.8;">{{ job.address }}</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Equipment Provided -->
+            {% if job.tools_equipment_provided %}
+            <div class="section" style="background: rgba(255,255,255,0.05); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                <h2 style="color: #667eea; margin-bottom: 20px; font-size: 24px;">🛠️ المعدات المتوفرة</h2>
+                <p style="color: rgba(255,255,255,0.8); line-height: 1.8; white-space: pre-line;">{{ job.tools_equipment_provided }}</p>
+            </div>
+            {% endif %}
+            
+            <!-- Images/Videos -->
+            {% if job.images.all or job.videos.all %}
+            <div class="section" style="background: rgba(255,255,255,0.05); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                <h2 style="color: #667eea; margin-bottom: 20px; font-size: 24px;">📸 صور المشروع</h2>
+                
+                {% if job.images.all %}
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    {% for image in job.images.all %}
+                    <img src="{{ image.image.url }}" alt="{{ image.caption }}" 
+                         style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; cursor: pointer;"
+                         onclick="openImage('{{ image.image.url }}')">
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% if job.videos.all %}
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    {% for video in job.videos.all %}
+                    <video controls style="width: 100%; border-radius: 8px;">
+                        <source src="{{ video.video.url }}" type="video/mp4">
+                    </video>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <!-- Employer Info -->
+            <div class="section" style="background: rgba(255,255,255,0.05); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                <h2 style="color: #667eea; margin-bottom: 20px; font-size: 24px;">🏢 معلومات صاحب العمل</h2>
+                <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px;">
+                        🏢
+                    </div>
+                    <div>
+                        <h3 style="color: white; font-size: 20px; margin-bottom: 5px;">{{ job.employer_name }}</h3>
+                        <p style="color: rgba(255,255,255,0.6);">عضو منذ {{ job.employer.created_at|date:"Y-m-d" }}</p>
+                    </div>
+                </div>
+                
+                {% if job.employer_description %}
+                <div style="margin-top: 20px;">
+                    <h3 style="color: rgba(255,255,255,0.7); margin-bottom: 10px;">نبذة عن صاحب العمل</h3>
+                    <p style="color: rgba(255,255,255,0.8); line-height: 1.8;">{{ job.employer_description }}</p>
+                </div>
+                {% endif %}
+                
+                {% if job.website %}
+                <div style="margin-top: 20px;">
+                    <a href="{{ job.website }}" target="_blank" 
+                       style="display: inline-block; padding: 12px 25px; background: #667eea; color: white; border-radius: 8px; text-decoration: none;">
+                        🌐 زيارة الموقع
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Back Button -->
+        <div style="margin-top: 30px; text-align: center;">
+            <a href="{% url 'dashboard' %}" 
+               style="display: inline-block; padding: 15px 40px; background: rgba(255,255,255,0.1); color: white; border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; text-decoration: none;">
+                العودة للرئيسية
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+function saveJob() {
+    // Implement save functionality
+    alert('تم حفظ الإعلان في المفضلة');
+}
+
+function shareJob() {
+    if (navigator.share) {
+        navigator.share({
+            title: '{{ job.job_title }}',
+            text: '{{ job.job_description }}',
+            url: window.location.href
+        });
+    } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(window.location.href);
+        alert('تم نسخ الرابط');
+    }
+}
+
+function openImage(url) {
+    window.open(url, '_blank');
+}
+</script>
+{% endblock %}
